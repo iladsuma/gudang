@@ -14,9 +14,10 @@ import { Loader2 } from 'lucide-react';
 
 const productFormSchema = z.object({
   id: z.string().optional(),
-  name: z.string().min(1, 'Product name is required'),
-  code: z.string().min(1, 'Product code is required'),
-  stock: z.coerce.number().int().min(0, 'Stock cannot be negative'),
+  name: z.string().min(1, 'Nama produk harus diisi'),
+  code: z.string().min(1, 'Kode produk harus diisi'),
+  stock: z.coerce.number().int().min(0, 'Stok tidak boleh negatif'),
+  receiptNumber: z.string().min(1, 'Nomor resi harus diisi'),
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
@@ -35,6 +36,7 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
       name: '',
       code: '',
       stock: 0,
+      receiptNumber: '',
     },
   });
 
@@ -42,14 +44,14 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
     const result = await handleAddOrUpdateProduct(data);
     if (result.success && result.products) {
       toast({
-        title: 'Success!',
-        description: `Product ${product ? 'updated' : 'added'} successfully.`,
+        title: 'Sukses!',
+        description: `Produk berhasil ${product ? 'diperbarui' : 'ditambahkan'}.`,
       });
       onSuccess(result.products);
     } else {
       toast({
         variant: 'destructive',
-        title: 'Error',
+        title: 'Kesalahan',
         description: result.message,
       });
     }
@@ -63,9 +65,9 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Product Name</FormLabel>
+              <FormLabel>Nama Produk</FormLabel>
               <FormControl>
-                <Input placeholder="e.g. Wireless Mouse" {...field} />
+                <Input placeholder="cth. Mouse Nirkabel" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -76,9 +78,9 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
           name="code"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Product Code</FormLabel>
+              <FormLabel>Kode Produk</FormLabel>
               <FormControl>
-                <Input placeholder="e.g. SKU001" {...field} />
+                <Input placeholder="cth. SKU001" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -89,7 +91,7 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
           name="stock"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Stock</FormLabel>
+              <FormLabel>Stok</FormLabel>
               <FormControl>
                 <Input type="number" {...field} />
               </FormControl>
@@ -97,13 +99,26 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
             </FormItem>
           )}
         />
+        <FormField
+          control={form.control}
+          name="receiptNumber"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Nomor Resi</FormLabel>
+              <FormControl>
+                <Input placeholder="cth. RESI001" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
+            Batal
           </Button>
           <Button type="submit" disabled={form.formState.isSubmitting}>
             {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {product ? 'Save Changes' : 'Add Product'}
+            {product ? 'Simpan Perubahan' : 'Tambah Produk'}
           </Button>
         </DialogFooter>
       </form>

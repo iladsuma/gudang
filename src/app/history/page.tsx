@@ -15,9 +15,9 @@ export default async function HistoryPage() {
     <div className="container mx-auto p-4 md:p-8">
       <Card>
         <CardHeader>
-          <CardTitle>Checkout History</CardTitle>
+          <CardTitle>Riwayat Checkout</CardTitle>
           <CardDescription>
-            View a comprehensive history of all checkout transactions.
+            Lihat riwayat lengkap semua transaksi checkout.
           </CardDescription>
         </CardHeader>
         <CardContent>

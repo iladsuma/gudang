@@ -15,9 +15,9 @@ export default async function ProductsPage() {
     <div className="container mx-auto p-4 md:p-8">
       <Card>
         <CardHeader>
-          <CardTitle>Manage Products</CardTitle>
+          <CardTitle>Kelola Produk</CardTitle>
           <CardDescription>
-            Here you can add, edit, and delete your products.
+            Di sini Anda dapat menambah, mengedit, dan menghapus produk Anda.
           </CardDescription>
         </CardHeader>
         <CardContent>

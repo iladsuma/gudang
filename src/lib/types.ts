@@ -3,6 +3,7 @@ export interface Product {
   code: string;
   name: string;
   stock: number;
+  receiptNumber: string;
 }
 
 export interface CheckoutItem extends Product {

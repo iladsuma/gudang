@@ -25,11 +25,12 @@ const checkoutItemSchema = z.object({
   name: z.string(),
   stock: z.number(),
   quantity: z.coerce.number().min(1, 'Min 1').int(),
+  receiptNumber: z.string(),
 });
 
 const checkoutFormSchema = z.object({
-  customerName: z.string().min(1, 'Customer name is required'),
-  items: z.array(checkoutItemSchema).min(1, 'At least one item is required for checkout'),
+  customerName: z.string().min(1, 'Nama pelanggan harus diisi'),
+  items: z.array(checkoutItemSchema).min(1, 'Minimal satu item diperlukan untuk checkout'),
 });
 
 type CheckoutFormValues = z.infer<typeof checkoutFormSchema>;
@@ -57,14 +58,14 @@ export function CheckoutForm({ allProducts }: { allProducts: Product[] }) {
     const result = await handleCheckout(data);
     if (result.success) {
       toast({
-        title: 'Success!',
+        title: 'Sukses!',
         description: result.message,
       });
       form.reset();
     } else {
       toast({
         variant: 'destructive',
-        title: 'Error',
+        title: 'Kesalahan',
         description: result.message,
       });
     }
@@ -77,13 +78,13 @@ export function CheckoutForm({ allProducts }: { allProducts: Product[] }) {
       if (existingItem.quantity < product.stock) {
         update(existingItemIndex, { ...existingItem, quantity: existingItem.quantity + 1 });
       } else {
-        toast({ variant: 'destructive', title: 'Out of stock', description: `Cannot add more ${product.name}.` });
+        toast({ variant: 'destructive', title: 'Stok habis', description: `Tidak bisa menambah ${product.name} lagi.` });
       }
     } else {
         if (product.stock > 0) {
             append({ ...product, quantity: 1 });
         } else {
-            toast({ variant: 'destructive', title: 'Out of stock', description: `${product.name} is out of stock.` });
+            toast({ variant: 'destructive', title: 'Stok habis', description: `${product.name} stok habis.` });
         }
     }
   };
@@ -100,7 +101,7 @@ export function CheckoutForm({ allProducts }: { allProducts: Product[] }) {
         const result = await handleAIIngestion(dataUri);
         
         if (result.success && result.data) {
-            toast({ title: 'Success', description: 'Data ingested successfully.' });
+            toast({ title: 'Sukses', description: 'Data berhasil diproses.' });
             const { transactionData } = result.data;
             if (transactionData.customerName && typeof transactionData.customerName === 'string') {
                 form.setValue('customerName', transactionData.customerName);
@@ -116,13 +117,13 @@ export function CheckoutForm({ allProducts }: { allProducts: Product[] }) {
                 }
             }
         } else {
-            toast({ variant: 'destructive', title: 'Ingestion Failed', description: result.message });
+            toast({ variant: 'destructive', title: 'Gagal Memproses', description: result.message });
         }
         setIsIngesting(false);
         if(fileInputRef.current) fileInputRef.current.value = '';
     };
     reader.onerror = () => {
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not read file.' });
+        toast({ variant: 'destructive', title: 'Kesalahan', description: 'Tidak bisa membaca file.' });
         setIsIngesting(false);
     };
   };
@@ -134,8 +135,8 @@ export function CheckoutForm({ allProducts }: { allProducts: Product[] }) {
           <div className="space-y-8 lg:col-span-2">
             <Card>
               <CardHeader>
-                <CardTitle>Checkout Details</CardTitle>
-                <CardDescription>Enter customer and item details for this transaction.</CardDescription>
+                <CardTitle>Detail Checkout</CardTitle>
+                <CardDescription>Masukkan detail pelanggan dan item untuk transaksi ini.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <FormField
@@ -143,9 +144,9 @@ export function CheckoutForm({ allProducts }: { allProducts: Product[] }) {
                   name="customerName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Customer Name</FormLabel>
+                      <FormLabel>Nama Pelanggan</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g. John Doe" {...field} />
+                        <Input placeholder="cth. Budi" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -153,14 +154,14 @@ export function CheckoutForm({ allProducts }: { allProducts: Product[] }) {
                 />
 
                 <div>
-                    <FormLabel>Items</FormLabel>
+                    <FormLabel>Item</FormLabel>
                     <div className="mt-2 rounded-md border">
                     <Table>
                         <TableHeader>
                         <TableRow>
-                            <TableHead className="w-[40%]">Product</TableHead>
-                            <TableHead>Stock</TableHead>
-                            <TableHead className="w-[120px]">Quantity</TableHead>
+                            <TableHead className="w-[40%]">Produk</TableHead>
+                            <TableHead>Stok</TableHead>
+                            <TableHead className="w-[120px]">Kuantitas</TableHead>
                             <TableHead className="text-right"></TableHead>
                         </TableRow>
                         </TableHeader>
@@ -193,7 +194,7 @@ export function CheckoutForm({ allProducts }: { allProducts: Product[] }) {
                         ) : (
                             <TableRow>
                             <TableCell colSpan={4} className="h-24 text-center">
-                                No items added.
+                                Belum ada item.
                             </TableCell>
                             </TableRow>
                         )}
@@ -208,8 +209,8 @@ export function CheckoutForm({ allProducts }: { allProducts: Product[] }) {
           <div className="space-y-8">
              <Card>
                 <CardHeader>
-                    <CardTitle>Add Items</CardTitle>
-                    <CardDescription>Search and add products to the checkout list.</CardDescription>
+                    <CardTitle>Tambah Item</CardTitle>
+                    <CardDescription>Cari dan tambahkan produk ke daftar checkout.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
@@ -220,15 +221,15 @@ export function CheckoutForm({ allProducts }: { allProducts: Product[] }) {
                             aria-expanded={openCombobox}
                             className="w-full justify-between"
                             >
-                            Select product...
+                            Pilih produk...
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                             <Command>
-                            <CommandInput placeholder="Search product by name or code..." />
+                            <CommandInput placeholder="Cari produk berdasarkan nama atau kode..." />
                             <CommandList>
-                                <CommandEmpty>No product found.</CommandEmpty>
+                                <CommandEmpty>Produk tidak ditemukan.</CommandEmpty>
                                 <CommandGroup>
                                 {allProducts.map((product) => (
                                     <CommandItem
@@ -258,8 +259,8 @@ export function CheckoutForm({ allProducts }: { allProducts: Product[] }) {
 
             <Card>
               <CardHeader>
-                <CardTitle>Auto Data Ingestion</CardTitle>
-                <CardDescription>Scan a transaction code or receipt to auto-fill data.</CardDescription>
+                <CardTitle>Pengambilan Data Otomatis</CardTitle>
+                <CardDescription>Pindai kode transaksi atau struk untuk mengisi data secara otomatis.</CardDescription>
               </CardHeader>
               <CardContent>
                 <input type="file" ref={fileInputRef} accept="image/*" onChange={handleFileChange} className="hidden" />
@@ -269,19 +270,19 @@ export function CheckoutForm({ allProducts }: { allProducts: Product[] }) {
                   ) : (
                     <Upload className="mr-2 h-4 w-4" />
                   )}
-                  {isIngesting ? 'Scanning...' : 'Scan Code'}
+                  {isIngesting ? 'Memindai...' : 'Pindai Kode'}
                 </Button>
               </CardContent>
             </Card>
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Complete Transaction</CardTitle>
+                    <CardTitle>Selesaikan Transaksi</CardTitle>
                 </CardHeader>
                 <CardFooter>
                     <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
                         {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Complete Checkout
+                        Selesaikan Checkout
                     </Button>
                 </CardFooter>
             </Card>

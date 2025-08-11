@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar as CalendarIcon, X } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { format, isValid, startOfDay, endOfDay } from 'date-fns';
+import { id } from 'date-fns/locale';
 import type { DateRange } from 'react-day-picker';
 import {
   Table,
@@ -46,7 +47,7 @@ export function HistoryClient({ transactions }: { transactions: Transaction[] })
     <div className="space-y-4">
       <div className="flex flex-col gap-4 md:flex-row">
         <Input
-          placeholder="Filter by customer name..."
+          placeholder="Filter berdasarkan nama pelanggan..."
           value={customerFilter}
           onChange={(e) => setCustomerFilter(e.target.value)}
           className="max-w-sm"
@@ -62,14 +63,14 @@ export function HistoryClient({ transactions }: { transactions: Transaction[] })
                 {dateFilter?.from ? (
                     dateFilter.to ? (
                     <>
-                        {format(dateFilter.from, 'LLL dd, y')} -{' '}
-                        {format(dateFilter.to, 'LLL dd, y')}
+                        {format(dateFilter.from, 'LLL dd, y', { locale: id })} -{' '}
+                        {format(dateFilter.to, 'LLL dd, y', { locale: id })}
                     </>
                     ) : (
-                    format(dateFilter.from, 'LLL dd, y')
+                    format(dateFilter.from, 'LLL dd, y', { locale: id })
                     )
                 ) : (
-                    <span>Pick a date range</span>
+                    <span>Pilih rentang tanggal</span>
                 )}
                 </Button>
             </PopoverTrigger>
@@ -81,6 +82,7 @@ export function HistoryClient({ transactions }: { transactions: Transaction[] })
                 selected={dateFilter}
                 onSelect={setDateFilter}
                 numberOfMonths={2}
+                locale={id}
                 />
             </PopoverContent>
             </Popover>
@@ -95,10 +97,10 @@ export function HistoryClient({ transactions }: { transactions: Transaction[] })
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Items</TableHead>
-              <TableHead className="text-right">Total Quantity</TableHead>
+              <TableHead>Tanggal</TableHead>
+              <TableHead>Pelanggan</TableHead>
+              <TableHead>Item</TableHead>
+              <TableHead className="text-right">Total Kuantitas</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -106,7 +108,7 @@ export function HistoryClient({ transactions }: { transactions: Transaction[] })
               filteredTransactions.map((tx) => (
                 <TableRow key={tx.id}>
                   <TableCell className="font-medium">
-                    {format(new Date(tx.date), 'PPpp')}
+                    {format(new Date(tx.date), 'PPpp', { locale: id })}
                   </TableCell>
                   <TableCell>{tx.customerName}</TableCell>
                   <TableCell>
@@ -124,13 +126,13 @@ export function HistoryClient({ transactions }: { transactions: Transaction[] })
             ) : (
               <TableRow>
                 <TableCell colSpan={4} className="h-24 text-center">
-                  No transactions found.
+                  Tidak ada transaksi ditemukan.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
           {filteredTransactions.length > 0 && (
-            <TableCaption>A list of your recent checkouts.</TableCaption>
+            <TableCaption>Daftar checkout terakhir Anda.</TableCaption>
           )}
         </Table>
       </div>

@@ -2,14 +2,14 @@ import type { Product, Transaction, CheckoutItem } from '@/lib/types';
 
 // Mock product data
 let products: Product[] = [
-  { id: '1', code: 'SKU001', name: 'Wireless Mouse', stock: 150 },
-  { id: '2', code: 'SKU002', name: 'Mechanical Keyboard', stock: 80 },
-  { id: '3', code: 'SKU003', name: '27-inch 4K Monitor', stock: 50 },
-  { id: '4', code: 'SKU004', name: 'USB-C Hub', stock: 200 },
-  { id: '5', code: 'SKU005', name: 'Webcam 1080p', stock: 120 },
-  { id: '6', code: 'SKU006', name: 'Laptop Stand', stock: 300 },
-  { id: '7', code: 'SKU007', name: 'Noise Cancelling Headphones', stock: 75 },
-  { id: '8', code: 'SKU008', name: 'Ergonomic Chair', stock: 25 },
+  { id: '1', code: 'SKU001', name: 'Mouse Nirkabel', stock: 150, receiptNumber: 'RESI001' },
+  { id: '2', code: 'SKU002', name: 'Keyboard Mekanikal', stock: 80, receiptNumber: 'RESI001' },
+  { id: '3', code: 'SKU003', name: 'Monitor 4K 27-inci', stock: 50, receiptNumber: 'RESI002' },
+  { id: '4', code: 'SKU004', name: 'Hub USB-C', stock: 200, receiptNumber: 'RESI003' },
+  { id: '5', code: 'SKU005', name: 'Webcam 1080p', stock: 120, receiptNumber: 'RESI004' },
+  { id: '6', code: 'SKU006', name: 'Stand Laptop', stock: 300, receiptNumber: 'RESI004' },
+  { id: '7', code: 'SKU007', name: 'Headphone Peredam Bising', stock: 75, receiptNumber: 'RESI005' },
+  { id: '8', code: 'SKU008', name: 'Kursi Ergonomis', stock: 25, receiptNumber: 'RESI006' },
 ];
 
 // Mock transaction history data
@@ -40,16 +40,16 @@ export async function addOrUpdateProduct(productData: Omit<Product, 'id'> & { id
     const index = products.findIndex(p => p.id === productData.id);
     if (index > -1) {
       if (products.some(p => p.code.toLowerCase() === productData.code.toLowerCase() && p.id !== productData.id)) {
-        throw new Error('Product code must be unique.');
+        throw new Error('Kode produk harus unik.');
       }
       products[index] = { ...products[index], ...productData };
       return products[index];
     }
-    throw new Error('Product not found for update.');
+    throw new Error('Produk tidak ditemukan untuk diperbarui.');
   } else {
     // Add
     if (products.some(p => p.code.toLowerCase() === productData.code.toLowerCase())) {
-        throw new Error('Product code must be unique.');
+        throw new Error('Kode produk harus unik.');
     }
     const newProduct: Product = {
       ...productData,
@@ -66,7 +66,7 @@ export async function deleteProduct(productId: string): Promise<void> {
   if (index > -1) {
     products.splice(index, 1);
   } else {
-    throw new Error('Product not found.');
+    throw new Error('Produk tidak ditemukan.');
   }
 }
 
@@ -89,11 +89,11 @@ export async function addCheckout(transaction: {customerName: string, items: Che
     const product = products.find(p => p.id === item.id);
     if (product) {
       if (product.stock < item.quantity) {
-        throw new Error(`Not enough stock for ${product.name}. Only ${product.stock} left.`);
+        throw new Error(`Stok tidak cukup untuk ${product.name}. Hanya tersisa ${product.stock}.`);
       }
       product.stock -= item.quantity;
     } else {
-        throw new Error(`Product with id ${item.id} not found.`);
+        throw new Error(`Produk dengan id ${item.id} tidak ditemukan.`);
     }
   }
 

@@ -23,13 +23,13 @@ export function Header() {
               href="/products"
               className="text-foreground/60 transition-colors hover:text-foreground/80"
             >
-              Products
+              Produk
             </Link>
             <Link
               href="/history"
               className="text-foreground/60 transition-colors hover:text-foreground/80"
             >
-              History
+              Riwayat
             </Link>
           </nav>
         </div>

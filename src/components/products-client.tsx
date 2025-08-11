@@ -67,13 +67,13 @@ export function ProductsClient({ products: initialProducts }: { products: Produc
     if (result.success) {
       setProducts(products.filter((p) => p.id !== productId));
       toast({
-        title: 'Success!',
-        description: 'Product deleted successfully.',
+        title: 'Sukses!',
+        description: 'Produk berhasil dihapus.',
       });
     } else {
       toast({
         variant: 'destructive',
-        title: 'Error',
+        title: 'Kesalahan',
         description: result.message,
       });
     }
@@ -87,16 +87,16 @@ export function ProductsClient({ products: initialProducts }: { products: Produc
           <DialogTrigger asChild>
             <Button onClick={onAddNew}>
               <PlusCircle className="mr-2" />
-              Add New Product
+              Tambah Produk Baru
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{selectedProduct ? 'Edit Product' : 'Add New Product'}</DialogTitle>
+              <DialogTitle>{selectedProduct ? 'Edit Produk' : 'Tambah Produk Baru'}</DialogTitle>
               <DialogDescription>
                 {selectedProduct
-                  ? 'Update the details of your product.'
-                  : 'Fill in the details for the new product.'}
+                  ? 'Perbarui detail produk Anda.'
+                  : 'Isi detail untuk produk baru.'}
               </DialogDescription>
             </DialogHeader>
             <ProductForm
@@ -111,10 +111,11 @@ export function ProductsClient({ products: initialProducts }: { products: Produc
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Product Name</TableHead>
-              <TableHead>Product Code</TableHead>
-              <TableHead>Stock</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>Nama Produk</TableHead>
+              <TableHead>Kode Produk</TableHead>
+              <TableHead>Stok</TableHead>
+              <TableHead>No. Resi</TableHead>
+              <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -124,6 +125,7 @@ export function ProductsClient({ products: initialProducts }: { products: Produc
                   <TableCell className="font-medium">{product.name}</TableCell>
                   <TableCell>{product.code}</TableCell>
                   <TableCell>{product.stock}</TableCell>
+                  <TableCell>{product.receiptNumber}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => onEdit(product)}>
                       <Edit className="h-4 w-4" />
@@ -137,19 +139,19 @@ export function ProductsClient({ products: initialProducts }: { products: Produc
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogTitle>Apakah Anda yakin?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the product.
+                            Tindakan ini tidak dapat dibatalkan. Ini akan menghapus produk secara permanen.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogCancel>Batal</AlertDialogCancel>
                           <AlertDialogAction
                             onClick={() => onDelete(product.id)}
                             disabled={isDeleting}
                           >
                             {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Continue
+                            Lanjutkan
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
@@ -159,14 +161,14 @@ export function ProductsClient({ products: initialProducts }: { products: Produc
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">
-                  No products found.
+                <TableCell colSpan={5} className="h-24 text-center">
+                  Tidak ada produk ditemukan.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
           {products.length > 0 && (
-            <TableCaption>A list of your products.</TableCaption>
+            <TableCaption>Daftar produk Anda.</TableCaption>
           )}
         </Table>
       </div>

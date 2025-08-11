@@ -6,7 +6,7 @@ import { Header } from '@/components/header';
 
 export const metadata: Metadata = {
   title: 'GudangCheckout',
-  description: 'Efficient warehouse checkout system',
+  description: 'Sistem checkout gudang yang efisien',
 };
 
 export default function RootLayout({
@@ -15,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="id" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
