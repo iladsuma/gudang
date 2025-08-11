@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import type { Product } from '@/lib/types';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Edit, Trash2, Loader2 } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Loader2, FileDown } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -16,12 +18,9 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter,
-  DialogClose,
 } from '@/components/ui/dialog';
 import { ProductForm } from './product-form';
 import { handleDeleteProduct } from '@/lib/actions';
@@ -37,12 +36,18 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+
+interface JsPDFWithAutoTable extends jsPDF {
+  autoTable: (options: any) => jsPDF;
+}
 
 export function ProductsClient({ products: initialProducts }: { products: Product[] }) {
   const [products, setProducts] = useState(initialProducts);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const { toast } = useToast();
 
   const handleFormSuccess = (updatedProducts: Product[]) => {
@@ -79,10 +84,48 @@ export function ProductsClient({ products: initialProducts }: { products: Produc
     }
     setIsDeleting(false);
   };
+  
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedProductIds(products.map((p) => p.id));
+    } else {
+      setSelectedProductIds([]);
+    }
+  };
+
+  const handleSelectOne = (productId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedProductIds((prev) => [...prev, productId]);
+    } else {
+      setSelectedProductIds((prev) => prev.filter((id) => id !== productId));
+    }
+  };
+
+  const handleExportPdf = () => {
+    const doc = new jsPDF() as JsPDFWithAutoTable;
+    const selected = products.filter((p) => selectedProductIds.includes(p.id));
+
+    doc.text('Daftar Produk yang Dipilih', 14, 16);
+    doc.autoTable({
+      startY: 20,
+      head: [['Nama Produk', 'Kode Produk', 'Stok', 'No. Resi']],
+      body: selected.map(p => [p.name, p.code, p.stock, p.receiptNumber]),
+    });
+    doc.save('daftar-produk.pdf');
+  };
+
+  const allSelected = selectedProductIds.length === products.length && products.length > 0;
+  const isAnySelected = selectedProductIds.length > 0;
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        {isAnySelected && (
+            <Button variant="outline" onClick={handleExportPdf}>
+                <FileDown className="mr-2" />
+                Ekspor PDF ({selectedProductIds.length})
+            </Button>
+        )}
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
           <DialogTrigger asChild>
             <Button onClick={onAddNew}>
@@ -93,11 +136,6 @@ export function ProductsClient({ products: initialProducts }: { products: Produc
           <DialogContent>
             <DialogHeader>
               <DialogTitle>{selectedProduct ? 'Edit Produk' : 'Tambah Produk Baru'}</DialogTitle>
-              <DialogDescription>
-                {selectedProduct
-                  ? 'Perbarui detail produk Anda.'
-                  : 'Isi detail untuk produk baru.'}
-              </DialogDescription>
             </DialogHeader>
             <ProductForm
               product={selectedProduct}
@@ -111,6 +149,13 @@ export function ProductsClient({ products: initialProducts }: { products: Produc
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-10">
+                <Checkbox
+                  checked={allSelected}
+                  onCheckedChange={handleSelectAll}
+                  aria-label="Pilih semua"
+                />
+              </TableHead>
               <TableHead>Nama Produk</TableHead>
               <TableHead>Kode Produk</TableHead>
               <TableHead>Stok</TableHead>
@@ -121,7 +166,14 @@ export function ProductsClient({ products: initialProducts }: { products: Produc
           <TableBody>
             {products.length > 0 ? (
               products.map((product) => (
-                <TableRow key={product.id}>
+                <TableRow key={product.id} data-state={selectedProductIds.includes(product.id) && "selected"}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedProductIds.includes(product.id)}
+                      onCheckedChange={(checked) => handleSelectOne(product.id, !!checked)}
+                      aria-label={`Pilih ${product.name}`}
+                    />
+                  </TableCell>
                   <TableCell className="font-medium">{product.name}</TableCell>
                   <TableCell>{product.code}</TableCell>
                   <TableCell>{product.stock}</TableCell>
@@ -161,7 +213,7 @@ export function ProductsClient({ products: initialProducts }: { products: Produc
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
+                <TableCell colSpan={6} className="h-24 text-center">
                   Tidak ada produk ditemukan.
                 </TableCell>
               </TableRow>

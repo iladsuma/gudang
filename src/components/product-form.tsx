@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { DialogFooter } from '@/components/ui/dialog';
+import { DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Loader2 } from 'lucide-react';
 
 const productFormSchema = z.object({
@@ -60,6 +60,11 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <DialogDescription>
+            {product
+                ? 'Perbarui detail produk Anda.'
+                : 'Isi detail untuk produk baru.'}
+        </DialogDescription>
         <FormField
           control={form.control}
           name="name"
