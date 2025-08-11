@@ -20,6 +20,12 @@ export function Header() {
               Checkout
             </Link>
             <Link
+              href="/products"
+              className="text-foreground/60 transition-colors hover:text-foreground/80"
+            >
+              Products
+            </Link>
+            <Link
               href="/history"
               className="text-foreground/60 transition-colors hover:text-foreground/80"
             >
