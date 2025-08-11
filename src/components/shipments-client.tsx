@@ -109,18 +109,19 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
     
     doc.text('Laporan Data Pengiriman', 14, 16);
     
-    const tableData = selectedShipments.map(id => {
-      const shipment = shipments.find(s => s.id === id);
-      if (!shipment) return [];
-      const products = shipment.products.map(p => `${p.name} (x${p.quantity})`).join('\n');
-      return [
-        shipment.user,
-        shipment.transactionId,
-        shipment.receipt.fileName,
-        products,
-        shipment.totalItems,
-        format(new Date(shipment.createdAt), 'PPpp', { locale: id })
-      ];
+    const tableData = selectedShipments
+      .map(id => shipments.find(s => s.id === id))
+      .filter((shipment): shipment is Shipment => !!shipment)
+      .map(shipment => {
+        const products = shipment.products.map(p => `${p.name} (x${p.quantity})`).join('\n');
+        return [
+          shipment.user,
+          shipment.transactionId,
+          shipment.receipt.fileName,
+          products,
+          shipment.totalItems,
+          format(new Date(shipment.createdAt), 'PPpp', { locale: id })
+        ];
     });
 
     doc.autoTable({
@@ -209,7 +210,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
                     <div className="flex flex-col gap-1">
                       {shipment.products.map((p, index) => (
                         <Badge key={index} variant="secondary">
-                          {p.name} (x{p.quantity})
+                          {p.name} (x${p.quantity})
                         </Badge>
                       ))}
                     </div>
