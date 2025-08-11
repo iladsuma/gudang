@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { Transaction } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
@@ -20,10 +20,16 @@ import {
   TableCaption,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from './ui/skeleton';
 
 export function HistoryClient({ transactions }: { transactions: Transaction[] }) {
   const [customerFilter, setCustomerFilter] = useState('');
   const [dateFilter, setDateFilter] = useState<DateRange | undefined>(undefined);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter((transaction) => {
@@ -108,7 +114,11 @@ export function HistoryClient({ transactions }: { transactions: Transaction[] })
               filteredTransactions.map((tx) => (
                 <TableRow key={tx.id}>
                   <TableCell className="font-medium">
-                    {format(new Date(tx.date), 'PPpp', { locale: id })}
+                    {isClient ? (
+                        format(new Date(tx.date), 'PPpp', { locale: id })
+                    ) : (
+                        <Skeleton className="h-4 w-3/4" />
+                    )}
                   </TableCell>
                   <TableCell>{tx.customerName}</TableCell>
                   <TableCell>

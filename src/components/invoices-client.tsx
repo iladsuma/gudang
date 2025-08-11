@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import type { Transaction, CheckoutItem } from '@/lib/types';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -15,6 +16,7 @@ import {
   TableCaption,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 
@@ -23,6 +25,11 @@ interface jsPDFWithAutoTable extends jsPDF {
 }
 
 export function InvoicesClient({ transactions }: { transactions: Transaction[] }) {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const generateInvoice = (transaction: Transaction) => {
     const doc = new jsPDF() as jsPDFWithAutoTable;
@@ -132,7 +139,11 @@ export function InvoicesClient({ transactions }: { transactions: Transaction[] }
               transactions.map((tx) => (
                 <TableRow key={tx.id}>
                   <TableCell className="font-medium">
-                    {format(new Date(tx.date), 'PPpp', { locale: id })}
+                    {isClient ? (
+                        format(new Date(tx.date), 'PPpp', { locale: id })
+                    ) : (
+                        <Skeleton className="h-4 w-3/4" />
+                    )}
                   </TableCell>
                   <TableCell>{tx.customerName}</TableCell>
                   <TableCell>

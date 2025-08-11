@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Shipment } from '@/lib/types';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Badge } from './ui/badge';
 import { Checkbox } from './ui/checkbox';
+import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 
@@ -51,6 +52,11 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [selectedShipments, setSelectedShipments] = useState<string[]>([]);
   const { toast } = useToast();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const handleFormSuccess = (updatedShipments: Shipment[]) => {
     setShipments(updatedShipments);
@@ -210,7 +216,11 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
                   </TableCell>
                   <TableCell className="text-right">{shipment.totalItems}</TableCell>
                    <TableCell>
-                    {format(new Date(shipment.createdAt), 'PPpp', { locale: id })}
+                    {isClient ? (
+                        format(new Date(shipment.createdAt), 'PPpp', { locale: id })
+                    ) : (
+                        <Skeleton className="h-4 w-3/4" />
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
                     <AlertDialog>
