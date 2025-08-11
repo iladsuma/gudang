@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import type { Shipment } from '@/lib/types';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2, Loader2, FileText } from 'lucide-react';
+import { PlusCircle, Trash2, Loader2, FileText, Download } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -35,17 +37,22 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Badge } from './ui/badge';
+import { Checkbox } from './ui/checkbox';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
+
+interface jsPDFWithAutoTable extends jsPDF {
+  autoTable: (options: any) => jsPDF;
+}
 
 export function ShipmentsClient({ shipments: initialShipments }: { shipments: Shipment[] }) {
   const [shipments, setShipments] = useState(initialShipments);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [selectedShipments, setSelectedShipments] = useState<string[]>([]);
   const { toast } = useToast();
 
   const handleFormSuccess = (updatedShipments: Shipment[]) => {
-    // This assumes the server action returns the full updated list
     setShipments(updatedShipments);
     setIsFormOpen(false);
   };
@@ -55,6 +62,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
     const result = await handleDeleteShipment(shipmentId);
     if (result.success) {
       setShipments((prev) => prev.filter((s) => s.id !== shipmentId));
+      setSelectedShipments((prev) => prev.filter((id) => id !== shipmentId));
       toast({
         title: 'Sukses!',
         description: 'Data pengiriman berhasil dihapus.',
@@ -74,9 +82,63 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
     pdfWindow?.document.write(`<iframe width='100%' height='100%' src='${dataUrl}' title='pratinjau-pdf'></iframe>`);
   };
 
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedShipments(shipments.map((s) => s.id));
+    } else {
+      setSelectedShipments([]);
+    }
+  };
+
+  const handleSelectSingle = (shipmentId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedShipments((prev) => [...prev, shipmentId]);
+    } else {
+      setSelectedShipments((prev) => prev.filter((id) => id !== shipmentId));
+    }
+  };
+
+  const handleExportPdf = () => {
+    const doc = new jsPDF() as jsPDFWithAutoTable;
+    
+    doc.text('Laporan Data Pengiriman', 14, 16);
+    
+    const tableData = selectedShipments.map(id => {
+      const shipment = shipments.find(s => s.id === id);
+      if (!shipment) return [];
+      const products = shipment.products.map(p => `${p.name} (x${p.quantity})`).join('\n');
+      return [
+        shipment.user,
+        shipment.transactionId,
+        shipment.receipt.fileName,
+        products,
+        shipment.totalItems,
+        format(new Date(shipment.createdAt), 'PPpp', { locale: id })
+      ];
+    });
+
+    doc.autoTable({
+      head: [['User', 'No. Transaksi', 'Resi', 'Produk', 'Total Item', 'Tanggal Dibuat']],
+      body: tableData,
+      startY: 20,
+      styles: {
+        fontSize: 8
+      },
+      headStyles: {
+        fillColor: [36, 128, 75]
+      }
+    });
+
+    doc.save(`laporan-pengiriman-${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-end gap-2">
+        <Button onClick={handleExportPdf} disabled={selectedShipments.length === 0}>
+            <Download className="mr-2" />
+            Ekspor ke PDF ({selectedShipments.length})
+        </Button>
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
           <DialogTrigger asChild>
             <Button onClick={() => setIsFormOpen(true)}>
@@ -102,6 +164,13 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[50px]">
+                <Checkbox
+                    checked={selectedShipments.length === shipments.length && shipments.length > 0}
+                    onCheckedChange={handleSelectAll}
+                    aria-label="Pilih semua"
+                />
+              </TableHead>
               <TableHead>User</TableHead>
               <TableHead>No. Transaksi</TableHead>
               <TableHead>Resi</TableHead>
@@ -114,7 +183,14 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
           <TableBody>
             {shipments.length > 0 ? (
               shipments.map((shipment) => (
-                <TableRow key={shipment.id}>
+                <TableRow key={shipment.id} data-state={selectedShipments.includes(shipment.id) && "selected"}>
+                  <TableCell>
+                      <Checkbox
+                        checked={selectedShipments.includes(shipment.id)}
+                        onCheckedChange={(checked) => handleSelectSingle(shipment.id, !!checked)}
+                        aria-label={`Pilih pengiriman ${shipment.transactionId}`}
+                      />
+                  </TableCell>
                   <TableCell className="font-medium">{shipment.user}</TableCell>
                   <TableCell>{shipment.transactionId}</TableCell>
                   <TableCell>
@@ -166,7 +242,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
+                <TableCell colSpan={8} className="h-24 text-center">
                   Tidak ada data pengiriman.
                 </TableCell>
               </TableRow>

@@ -16,7 +16,53 @@ let products: Product[] = [
 let transactions: Transaction[] = [];
 
 // Mock shipment data
-let shipments: Shipment[] = [];
+let shipments: Shipment[] = [
+    {
+        id: 'ship_1722885934988',
+        user: 'Andi',
+        transactionId: 'TRX-001',
+        receipt: {
+            fileName: 'resi_shopee_1.pdf',
+            dataUrl: 'data:application/pdf;base64,JVBERi0xLjcgCiXi48/TIAoxIDAgb2JqIAo8PCAKL3R5cGUgL0NhdGFsb2cgCi9wYWdlcyAyIDAgUiAKPj4gCmVuZG9iagoyIDAgb2JqIAo8PCAKL3R5cGUgL1BhZ2VzIAovY291bnQgMSAKL2tpZHMgWyAzIDAgUiBdIAo+PiAKZW5kb2JqCjMgMCBvYmogCjw8IAovdHlwZSAvUGFnZSAKL3BhcmVudCAyIDAgUiAKL3Jlc291cmNlcyA8PCAKL2ZvbnQgPDwgCi9GMSA0IDAgUiAKPj4gCj4+IAovbWVkaWFCb3ggWyAwIDAgNTk1IDg0MiBdIAovY29udGVudHMgNSAwIFIgCj4+IAplbmRvYmoKNiAwIG9iagogPDwgCi9MZW5ndGggNTIgCi9GaWx0ZXIgL0ZsYXRlRGVjb2RlIAo+PiAKc3RyZWFtCnicK+ZyYGAEUnBnoiBDAwMDUwMUAxczEwMTAxs/FzE3Eyc3FzI3Oxs6AzYFBgYGBgY/jH6Y4wIAm9iAOKgYmZiZmFlYmlmYeBgYGBgAAAA//8AAnRleHQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqIAo8PCAKL0xlbmd0aCA2MiAKL0ZpbHRlciAvRmxhdGVEZWNvZGUgCj4+IApzdHJlYW0KeJwr5HAAAAAFgADCZW5kc3RyZWFtCmVuZG9iago0IDAgb2JqIAo8PCAKL3R5cGUgL0ZvbnQgCi9zdWJ0eXBlIC9UeXBlMSAKL2Jhc2Vmb250IC9IZWx2ZXRpY2EgCi9lbmNvZGluZyAvV2luQW5zaUVuY29kaW5nIAo+PiAKZW5kb2JqCnhyZWYKMCA3CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAxNyAwMDAwMCBuIAowMDAwMDAwMDY5IDAwMDAwIG4gCjAwMDAwMDAxMjggMDAwMDAgbiAKMDAwMDAwMDM5OCAwMDAwMCBuIAowMDAwMDAwMzI1IDAwMDAwIG4gCjAwMDAwMDAxOTQgMDAwMDAgbiAKdHJhaWxlcgogIDw8IAovU2l6ZSA3IAovUm9vdCAxIDAgUiAKPj4gCnN0YXJ0eHJlZgo0NzYKJSVFT0YK'
+        },
+        products: [
+            { name: 'Mouse Nirkabel', quantity: 2 },
+            { name: 'Keyboard Mekanikal', quantity: 1 }
+        ],
+        totalItems: 3,
+        createdAt: '2024-08-05T12:25:34.988Z'
+    },
+    {
+        id: 'ship_1722885987123',
+        user: 'Budi',
+        transactionId: 'TRX-002',
+        receipt: {
+            fileName: 'invoice_456.pdf',
+            dataUrl: 'data:application/pdf;base64,JVBERi0xLjcgCiXi48/TIAoxIDAgb2JqIAo8PCAKL3R5cGUgL0NhdGFsb2cgCi9wYWdlcyAyIDAgUiAKPj4gCmVuZG9iagoyIDAgb2JqIAo8PCAKL3R5cGUgL1BhZ2VzIAovY291bnQgMSAKL2tpZHMgWyAzIDAgUiBdIAo+PiAKZW5kb2JqCjMgMCBvYmogCjw8IAovdHlwZSAvUGFnZSAKL3BhcmVudCAyIDAgUiAKL3Jlc291cmNlcyA8PCAKL2ZvbnQgPDwgCi9GMSA0IDAgUiAKPj4gCj4+IAovbWVkaWFCb3ggWyAwIDAgNTk1IDg0MiBdIAovY29udGVudHMgNSAwIFIgCj4+IAplbmRvYmoKNiAwIG9iagogPDwgCi9MZW5ndGggNTIgCi9GaWx0ZXIgL0ZsYXRlRGVjb2RlIAo+PiAKc3RyZWFtCnicK+ZyYGAEUnBnoiBDAwMDUwMUAxczEwMTAxs/FzE3Eyc3FzI3Oxs6AzYFBgYGBgY/jH6Y4wIAm9iAOKgYmZiZmFlYmlmYeBgYGBgAAAA//8AAnRleHQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqIAo8PCAKL0xlbmd0aCA2MiAKL0ZpbHRlciAvRmxhdGVEZWNvZGUgCj4+IApzdHJlYW0KeJwr5HAAAAAFgADCZW5kc3RyZWFtCmVuZG9iago0IDAgb2JqIAo8PCAKL3R5cGUgL0ZvbnQgCi9zdWJ0eXBlIC9UeXBlMSAKL2Jhc2Vmb250IC9IZWx2ZXRpY2EgCi9lbmNvZGluZyAvV2luQW5zaUVuY29kaW5nIAo+PiAKZW5kb2JqCnhyZWYKMCA3CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAxNyAwMDAwMCBuIAowMDAwMDAwMDY5IDAwMDAwIG4gCjAwMDAwMDAxMjggMDAwMDAgbiAKMDAwMDAwMzk4IDAwMDAwIG4gCjAwMDAwMDAzMjUgMDAwMDAgbiAKMDAwMDAwMTk0IDAwMDAwIG4gCnRyYWlsZXIKICA8PCAKL1Jvb3QgMSAwIFIgCi9TaXplIDcgCj4+IApzdGFydHhyZWYKNDc2CiUlRU9GCg=='
+        },
+        products: [
+            { name: 'Monitor 4K 27-inci', quantity: 1 }
+        ],
+        totalItems: 1,
+        createdAt: '2024-08-05T10:10:10.123Z'
+    },
+    {
+        id: 'ship_1722886014567',
+        user: 'Andi',
+        transactionId: 'TRX-003',
+        receipt: {
+            fileName: 'resi_blibli_2.pdf',
+            dataUrl: 'data:application/pdf;base64,JVBERi0xLjcgCiXi48/TIAoxIDAgb2JqIAo8PCAKL3R5cGUgL0NhdGFsb2cgCi9wYWdlcyAyIDAgUiAKPj4gCmVuZG9iagoyIDAgb2JqIAo8PCAKL3R5cGUgL1BhZ2VzIAovY291bnQgMSAKL2tpZHMgWyAzIDAgUiBdIAo+PiAKZW5kb2JqCjMgMCBvYmogCjw8IAovdHlwZSAvUGFnZSAKL3BhcmVudCAyIDAgUiAKL3Jlc291cmNlcyA8PCAKL2ZvbnQgPDwgCi9GMSA0IDAgUiAKPj4gCj4+IAovbWVkaWFCb3ggWyAwIDAgNTk1IDg0MiBdIAovY29udGVudHMgNSAwIFIgCj4+IAplbmRvYmoKNiAwIG9iagogPDwgCi9MZW5ndGggNTIgCi9GaWx0ZXIgL0ZsYXRlRGVjb2RlIAo+PiAKc3RyZWFtCnicK+ZyYGAEUnBnoiBDAwMDUwMUAxczEwMTAxs/FzE3Eyc3FzI3Oxs6AzYFBgYGBgY/jH6Y4wIAm9iAOKgYmZiZmFlYmlmYeBgYGBgAAAA//8AAnRleHQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqIAo8PCAKL0xlbmd0aCA2MiAKL0ZpbHRlciAvRmxhdGVEZWNvZGUgCj4+IApzdHJlYW0KeJwr5HAAAAAFgADCZW5kc3RyZWFtCmVuZG9iago0IDAgb2JqIAo8PCAKL3R5cGUgL0ZvbnQgCi9zdWJ0eXBlIC9UeXBlMSAKL2Jhc2Vmb250IC9IZWx2ZXRpY2EgCi9lbmNvZGluZyAvV2luQW5zaUVuY29kaW5nIAo+PiAKZW5kb2JqCnhyZWYKMCA3CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAxNyAwMDAwMCBuIAowMDAwMDAwMDY5IDAwMDAwIG4gCjAwMDAwMDAxMjggMDAwMDAgbiAKMDAwMDAwMzk4IDAwMDAwIG4gCjAwMDAwMDAzMjUgMDAwMDAwIG4gCjAwMDAwMDAxOTQgMDAwMDAwIG4gCnRyYWlsZXIKICA8PCAKL1Jvb3QgMSAwIFIgCi9TaXplIDcgCj4+IApzdGFydHhyZWYKNDc2CiUlRU9GCg=='
+        },
+        products: [
+            { name: 'Hub USB-C', quantity: 5 },
+            { name: 'Stand Laptop', quantity: 3 },
+            { name: 'Webcam 1080p', quantity: 2 }
+        ],
+        totalItems: 10,
+        createdAt: '2024-08-04T08:45:00.567Z'
+    }
+];
 
 
 export async function getProducts(query?: string): Promise<Product[]> {
