@@ -26,6 +26,12 @@ export function Header() {
               Lacak Pengiriman
             </Link>
             <Link
+              href="/invoices"
+              className="text-foreground/60 transition-colors hover:text-foreground/80"
+            >
+              Faktur
+            </Link>
+            <Link
               href="/history"
               className="text-foreground/60 transition-colors hover:text-foreground/80"
             >
