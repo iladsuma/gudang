@@ -44,11 +44,12 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const handleFormSuccess = (newShipment: Shipment) => {
-    setShipments((prev) => [newShipment, ...prev]);
+  const handleFormSuccess = (updatedShipments: Shipment[]) => {
+    // This assumes the server action returns the full updated list
+    setShipments(updatedShipments);
     setIsFormOpen(false);
   };
-
+  
   const onDelete = async (shipmentId: string) => {
     setIsDeleting(shipmentId);
     const result = await handleDeleteShipment(shipmentId);
@@ -70,7 +71,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
 
   const openPdf = (dataUrl: string) => {
     const pdfWindow = window.open("");
-    pdfWindow?.document.write(`<iframe width='100%' height='100%' src='${dataUrl}'></iframe>`);
+    pdfWindow?.document.write(`<iframe width='100%' height='100%' src='${dataUrl}' title='pratinjau-pdf'></iframe>`);
   };
 
   return (
@@ -78,7 +79,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
       <div className="flex justify-end gap-2">
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button onClick={() => setIsFormOpen(true)}>
               <PlusCircle className="mr-2" />
               Tambah Pengiriman
             </Button>
@@ -87,7 +88,13 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
             <DialogHeader>
               <DialogTitle>Tambah Data Pengiriman Baru</DialogTitle>
             </DialogHeader>
-            <ShipmentForm onSuccess={handleFormSuccess} onCancel={() => setIsFormOpen(false)} />
+            <ShipmentForm
+              onSuccess={(newShipments) => {
+                setShipments(newShipments)
+                setIsFormOpen(false)
+              }}
+              onCancel={() => setIsFormOpen(false)}
+            />
           </DialogContent>
         </Dialog>
       </div>

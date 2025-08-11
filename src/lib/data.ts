@@ -1,19 +1,23 @@
-import type { Product, Transaction, CheckoutItem } from '@/lib/types';
+import type { Product, Transaction, CheckoutItem, Shipment, ShipmentProduct } from '@/lib/types';
 
 // Mock product data
 let products: Product[] = [
-  { id: '1', code: 'SKU001', name: 'Mouse Nirkabel', stock: 150, receiptNumber: 'RESI001' },
-  { id: '2', code: 'SKU002', name: 'Keyboard Mekanikal', stock: 80, receiptNumber: 'RESI001' },
-  { id: '3', code: 'SKU003', name: 'Monitor 4K 27-inci', stock: 50, receiptNumber: 'RESI002' },
-  { id: '4', code: 'SKU004', name: 'Hub USB-C', stock: 200, receiptNumber: 'RESI003' },
-  { id: '5', code: 'SKU005', name: 'Webcam 1080p', stock: 120, receiptNumber: 'RESI004' },
-  { id: '6', code: 'SKU006', name: 'Stand Laptop', stock: 300, receiptNumber: 'RESI004' },
-  { id: '7', code: 'SKU007', name: 'Headphone Peredam Bising', stock: 75, receiptNumber: 'RESI005' },
-  { id: '8', code: 'SKU008', name: 'Kursi Ergonomis', stock: 25, receiptNumber: 'RESI006' },
+  { id: '1', code: 'SKU001', name: 'Mouse Nirkabel', stock: 150 },
+  { id: '2', code: 'SKU002', name: 'Keyboard Mekanikal', stock: 80 },
+  { id: '3', code: 'SKU003', name: 'Monitor 4K 27-inci', stock: 50 },
+  { id: '4', code: 'SKU004', name: 'Hub USB-C', stock: 200 },
+  { id: '5', code: 'SKU005', name: 'Webcam 1080p', stock: 120 },
+  { id: '6', code: 'SKU006', name: 'Stand Laptop', stock: 300 },
+  { id: '7', code: 'SKU007', name: 'Headphone Peredam Bising', stock: 75 },
+  { id: '8', code: 'SKU008', name: 'Kursi Ergonomis', stock: 25 },
 ];
 
 // Mock transaction history data
 let transactions: Transaction[] = [];
+
+// Mock shipment data
+let shipments: Shipment[] = [];
+
 
 export async function getProducts(query?: string): Promise<Product[]> {
   await new Promise(resolve => setTimeout(resolve, 100)); // Simulate network delay
@@ -32,7 +36,7 @@ export async function getProductByCode(code: string): Promise<Product | undefine
     return products.find((p) => p.code.toLowerCase() === code.toLowerCase());
 }
 
-export async function addOrUpdateProduct(productData: Omit<Product, 'id'> & { id?: string }): Promise<Product> {
+export async function addOrUpdateProduct(productData: Omit<Product, 'id' | 'receiptNumber'> & { id?: string }): Promise<Product> {
   await new Promise(resolve => setTimeout(resolve, 500));
   
   if (productData.id) {
@@ -99,4 +103,36 @@ export async function addCheckout(transaction: {customerName: string, items: Che
 
   transactions.unshift(newTransaction);
   return newTransaction;
+}
+
+
+// Shipment Functions
+export async function getShipments(): Promise<Shipment[]> {
+  await new Promise(resolve => setTimeout(resolve, 100));
+  return [...shipments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'totalItems'>): Promise<Shipment> {
+  await new Promise(resolve => setTimeout(resolve, 500));
+  if (shipments.some(s => s.transactionId.toLowerCase() === data.transactionId.toLowerCase())) {
+    throw new Error('ID Transaksi harus unik.');
+  }
+  const newShipment: Shipment = {
+    ...data,
+    id: `ship_${Date.now()}`,
+    createdAt: new Date().toISOString(),
+    totalItems: data.products.reduce((sum, p) => sum + p.quantity, 0),
+  };
+  shipments.unshift(newShipment);
+  return newShipment;
+}
+
+export async function deleteShipment(shipmentId: string): Promise<void> {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    const index = shipments.findIndex(s => s.id === shipmentId);
+    if (index > -1) {
+        shipments.splice(index, 1);
+    } else {
+        throw new Error('Pengiriman tidak ditemukan.');
+    }
 }

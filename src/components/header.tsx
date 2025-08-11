@@ -20,10 +20,10 @@ export function Header() {
               Checkout
             </Link>
             <Link
-              href="/products"
+              href="/shipments"
               className="text-foreground/60 transition-colors hover:text-foreground/80"
             >
-              Produk
+              Lacak Pengiriman
             </Link>
             <Link
               href="/history"

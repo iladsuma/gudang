@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { ingestTransactionData } from '@/ai/flows/ingest-transaction-data';
-import { addCheckout, getProducts, addOrUpdateProduct, deleteProduct } from '@/lib/data';
+import { addCheckout, getProducts, addShipment, deleteShipment } from '@/lib/data';
 import { revalidatePath } from 'next/cache';
 
 const checkoutItemSchema = z.object({
@@ -11,7 +11,6 @@ const checkoutItemSchema = z.object({
   name: z.string(),
   stock: z.number(),
   quantity: z.coerce.number().min(1, 'Kuantitas minimal 1'),
-  receiptNumber: z.string(),
 });
 
 const checkoutFormSchema = z.object({
@@ -52,39 +51,44 @@ export async function handleAIIngestion(photoDataUri: string) {
   }
 }
 
-const productFormSchema = z.object({
-  id: z.string().optional(),
+const shipmentProductSchema = z.object({
   name: z.string().min(1, 'Nama produk harus diisi'),
-  code: z.string().min(1, 'Kode produk harus diisi'),
-  stock: z.coerce.number().int().min(0, 'Stok tidak boleh negatif'),
-  receiptNumber: z.string().min(1, "Nomor resi harus diisi"),
+  quantity: z.coerce.number().int().min(1, 'Kuantitas min 1'),
 });
 
-export async function handleAddOrUpdateProduct(formData: unknown) {
-  const parsed = productFormSchema.safeParse(formData);
-  if (!parsed.success) {
-    const errorMessages = parsed.error.issues.map(issue => issue.message).join(' ');
-    return { success: false, message: `Data formulir tidak valid. ${errorMessages}` };
-  }
-  try {
-    await addOrUpdateProduct(parsed.data);
-    revalidatePath('/products');
-    revalidatePath('/');
-    const products = await getProducts();
-    return { success: true, message: `Produk berhasil ${parsed.data.id ? 'diperbarui' : 'ditambahkan'}.`, products };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Terjadi kesalahan yang tidak diketahui.';
-    return { success: false, message };
-  }
+const shipmentFormSchema = z.object({
+  user: z.string().min(1, 'User harus diisi'),
+  transactionId: z.string().min(1, 'No. Transaksi harus diisi'),
+  receipt: z.object({
+      fileName: z.string().min(1, 'Nama file resi harus ada'),
+      dataUrl: z.string().min(1, 'Data resi harus ada'),
+  }),
+  products: z.array(shipmentProductSchema).min(1, 'Minimal harus ada satu produk'),
+});
+
+export async function handleAddShipment(formData: unknown) {
+    const parsed = shipmentFormSchema.safeParse(formData);
+    if (!parsed.success) {
+        console.error(parsed.error.issues);
+        const errorMessages = parsed.error.issues.map(issue => issue.message).join(', ');
+        return { success: false, message: `Data formulir tidak valid: ${errorMessages}` };
+    }
+    try {
+        await addShipment(parsed.data);
+        revalidatePath('/shipments');
+        return { success: true, message: 'Data pengiriman berhasil ditambahkan.' };
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Terjadi kesalahan yang tidak diketahui.';
+        return { success: false, message };
+    }
 }
 
-export async function handleDeleteProduct(productId: string) {
+export async function handleDeleteShipment(shipmentId: string) {
     try {
-        await deleteProduct(productId);
-        revalidatePath('/products');
-        revalidatePath('/');
-        return { success: true, message: 'Produk berhasil dihapus.' };
+        await deleteShipment(shipmentId);
+        revalidatePath('/shipments');
+        return { success: true, message: 'Pengiriman berhasil dihapus.' };
     } catch (error) {
-        return { success: false, message: 'Gagal menghapus produk.' };
+        return { success: false, message: 'Gagal menghapus pengiriman.' };
     }
 }
