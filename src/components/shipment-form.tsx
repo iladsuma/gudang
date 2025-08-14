@@ -4,7 +4,6 @@ import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { handleAddShipment } from '@/lib/actions';
 import type { Shipment } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
@@ -15,6 +14,7 @@ import { DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Loader2, PlusCircle, Trash2, Upload } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { addShipment } from '@/lib/data';
 
 const shipmentProductSchema = z.object({
   name: z.string().min(1, 'Nama produk harus diisi'),
@@ -43,6 +43,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
   const { toast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const { user } = useAuth();
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const form = useForm<ShipmentFormValues>({
     resolver: zodResolver(shipmentFormSchema),
@@ -88,19 +89,23 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
   };
 
   const onSubmit = async (data: ShipmentFormValues) => {
-    const result = await handleAddShipment(data);
-    if (result.success && result.data) {
-      toast({
-        title: 'Sukses!',
-        description: result.message,
-      });
-      onSuccess(result.data);
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Kesalahan',
-        description: result.message,
-      });
+    setIsSubmitting(true);
+    try {
+        const newShipment = await addShipment(data);
+        toast({
+            title: 'Sukses!',
+            description: 'Data pengiriman berhasil ditambahkan.',
+        });
+        onSuccess(newShipment);
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Terjadi kesalahan yang tidak diketahui.';
+        toast({
+            variant: 'destructive',
+            title: 'Kesalahan',
+            description: message,
+        });
+    } finally {
+        setIsSubmitting(false);
     }
   };
   
@@ -250,8 +255,8 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
           <Button type="button" variant="outline" onClick={onCancel}>
             Batal
           </Button>
-          <Button type="submit" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Simpan Pengiriman
           </Button>
         </DialogFooter>

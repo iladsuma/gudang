@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import type { Shipment } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Trash2, Loader2, FileText, Printer } from 'lucide-react';
@@ -23,7 +22,6 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { ShipmentForm } from './shipment-form';
-import { handleDeleteShipment, handleProcessShipments } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -41,6 +39,7 @@ import { Checkbox } from './ui/checkbox';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { deleteShipment, processAndMoveToHistory } from '@/lib/data';
 
 export function ShipmentsClient({ shipments: initialShipments }: { shipments: Shipment[] }) {
   const [shipments, setShipments] = useState(initialShipments);
@@ -50,8 +49,6 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
   const [selectedShipments, setSelectedShipments] = useState<string[]>([]);
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
-  const router = useRouter();
-
 
   useEffect(() => {
     setShipments(initialShipments);
@@ -68,22 +65,24 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
   
   const onDelete = async (shipmentId: string) => {
     setIsDeleting(shipmentId);
-    const result = await handleDeleteShipment(shipmentId);
-    if (result.success) {
-      setShipments((prev) => prev.filter((s) => s.id !== shipmentId));
-      setSelectedShipments((prev) => prev.filter((id) => id !== shipmentId));
-      toast({
-        title: 'Sukses!',
-        description: 'Data pengiriman berhasil dihapus.',
-      });
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Kesalahan',
-        description: result.message,
-      });
+    try {
+        await deleteShipment(shipmentId);
+        setShipments((prev) => prev.filter((s) => s.id !== shipmentId));
+        setSelectedShipments((prev) => prev.filter((id) => id !== shipmentId));
+        toast({
+            title: 'Sukses!',
+            description: 'Data pengiriman berhasil dihapus.',
+        });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Terjadi kesalahan.';
+        toast({
+            variant: 'destructive',
+            title: 'Kesalahan',
+            description: message,
+        });
+    } finally {
+        setIsDeleting(null);
     }
-    setIsDeleting(null);
   };
 
   const openPdf = (dataUrl: string) => {
@@ -124,36 +123,34 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
             .map(id => shipments.find(s => s.id === id))
             .filter((s): s is Shipment => !!s);
         
-        const processResult = await handleProcessShipments(selectedShipments);
-        if (!processResult.success) {
-            throw new Error(processResult.message);
-        }
-
+        await processAndMoveToHistory(selectedShipments);
+       
         const mergedPdf = await PDFDocument.create();
         const font = await mergedPdf.embedFont(StandardFonts.HelveticaBold);
 
         for (const [index, shipment] of shipmentsToProcess.entries()) {
             const pdfDataUrl = shipment.receipt.dataUrl;
-            // Convert base64 data URI to ArrayBuffer directly
             const base64 = pdfDataUrl.split(',')[1];
+            if (!base64) {
+                console.error('Invalid Data URL for PDF:', pdfDataUrl);
+                continue; // Skip if data URL is malformed
+            }
             const existingPdfBytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
             const pdfDoc = await PDFDocument.load(existingPdfBytes);
             
-            const [firstPage] = await mergedPdf.copyPages(pdfDoc, [0]);
-            const { height } = firstPage.getSize();
-            firstPage.drawText(`resi-sel-${index + 1}`, {
+            const copiedPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+
+            // Add marker to the first page of the copied document
+            const { height } = copiedPages[0].getSize();
+            copiedPages[0].drawText(`resi-sel-${index + 1}`, {
                 x: 20,
                 y: height - 25,
                 font: font,
                 size: 14,
                 color: rgb(0.9, 0.1, 0.1),
             });
-            mergedPdf.addPage(firstPage);
-            
-            if (pdfDoc.getPageCount() > 1) {
-                const otherPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices().slice(1));
-                otherPages.forEach((page) => mergedPdf.addPage(page));
-            }
+
+            copiedPages.forEach((page) => mergedPdf.addPage(page));
         }
         
         const mergedPdfBytes = await mergedPdf.save();
@@ -318,5 +315,3 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
     </div>
   );
 }
-
-    
