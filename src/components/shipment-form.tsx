@@ -22,7 +22,7 @@ const shipmentProductSchema = z.object({
   quantity: z.coerce.number().int().min(1, 'Kuantitas min 1'),
   price: z.coerce.number().min(0, 'Harga tidak boleh negatif'),
   discount: z.coerce.number().min(0, 'Diskon min 0').max(100, 'Diskon maks 100'),
-  imageUrl: z.string().url('URL gambar tidak valid').optional().or(z.literal('')),
+  imageUrl: z.string().optional().or(z.literal('')),
 });
 
 const shipmentFormSchema = z.object({
@@ -45,9 +45,11 @@ interface ShipmentFormProps {
 
 export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
   const { toast } = useToast();
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const pdfFileInputRef = React.useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  // Create a ref for each product image input
+  const imageInputRefs = React.useRef<(HTMLInputElement | null)[]>([]);
 
   const form = useForm<ShipmentFormValues>({
     resolver: zodResolver(shipmentFormSchema),
@@ -84,7 +86,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     }
   }, [user, form]);
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePdfFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -103,6 +105,26 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     };
     reader.onerror = () => {
         toast({ variant: 'destructive', title: 'Kesalahan', description: 'Tidak bisa membaca file.' });
+    };
+  };
+
+  const handleProductImageChange = (event: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+        toast({ variant: 'destructive', title: 'File tidak valid', description: 'Silakan pilih file gambar.' });
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+        form.setValue(`products.${index}.imageUrl`, reader.result as string, { shouldValidate: true });
+    };
+    reader.onerror = (error) => {
+        console.error("Error reading file:", error);
+        toast({ variant: 'destructive', title: 'Kesalahan', description: 'Gagal membaca file gambar.' });
     };
   };
 
@@ -198,11 +220,11 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                             <input
                                 type="file"
                                 accept="application/pdf"
-                                ref={fileInputRef}
-                                onChange={handleFileChange}
+                                ref={pdfFileInputRef}
+                                onChange={handlePdfFileChange}
                                 className="hidden"
                             />
-                            <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                            <Button type="button" variant="outline" onClick={() => pdfFileInputRef.current?.click()}>
                                 <Upload className="mr-2 h-4 w-4" />
                                 {receiptValue?.fileName ? 'Ganti File' : 'Unggah PDF'}
                             </Button>
@@ -221,8 +243,8 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                 <Table>
                     <TableHeader>
                         <TableRow>
+                            <TableHead>Gambar Produk</TableHead>
                             <TableHead>Nama Produk</TableHead>
-                            <TableHead>URL Gambar</TableHead>
                             <TableHead className="w-[100px]">Jumlah</TableHead>
                             <TableHead className="w-[150px]">Harga</TableHead>
                             <TableHead className="w-[120px]">Diskon (%)</TableHead>
@@ -233,25 +255,50 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                     <TableBody>
                         {fields.map((field, index) => {
                             const product = productsWatch[index] || {};
-                            const { quantity = 0, price = 0, discount = 0 } = product;
+                            const { quantity = 0, price = 0, discount = 0, imageUrl } = product;
                             const subtotal = (price * quantity) * (1 - (discount || 0) / 100);
                             return (
                             <TableRow key={field.id}>
                                 <TableCell>
+                                    <div className='flex flex-col items-center gap-2'>
+                                        <Image 
+                                            src={imageUrl || 'https://placehold.co/100x100.png'}
+                                            alt={product.name || 'Pratinjau Gambar'}
+                                            width={64}
+                                            height={64}
+                                            className='rounded-md object-cover h-16 w-16'
+                                            data-ai-hint="product image preview"
+                                        />
+                                         <input
+                                            type="file"
+                                            accept="image/*"
+                                            ref={(el) => (imageInputRefs.current[index] = el)}
+                                            onChange={(e) => handleProductImageChange(e, index)}
+                                            className="hidden"
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => imageInputRefs.current[index]?.click()}
+                                        >
+                                           <Upload className='mr-2 h-3 w-3'/> Unggah
+                                        </Button>
+                                    </div>
                                     <FormField
                                         control={form.control}
-                                        name={`products.${index}.name`}
+                                        name={`products.${index}.imageUrl`}
                                         render={({ field }) => (
-                                            <FormItem><FormControl><Input placeholder="cth. Baju" {...field} /></FormControl><FormMessage /></FormItem>
+                                            <FormItem><FormControl><Input type="hidden" {...field} /></FormControl><FormMessage /></FormItem>
                                         )}
                                     />
                                 </TableCell>
                                 <TableCell>
                                     <FormField
                                         control={form.control}
-                                        name={`products.${index}.imageUrl`}
+                                        name={`products.${index}.name`}
                                         render={({ field }) => (
-                                            <FormItem><FormControl><Input placeholder="https://..." {...field} /></FormControl><FormMessage /></FormItem>
+                                            <FormItem><FormControl><Input placeholder="cth. Baju" {...field} /></FormControl><FormMessage /></FormItem>
                                         )}
                                     />
                                 </TableCell>
