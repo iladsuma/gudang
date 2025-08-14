@@ -8,6 +8,7 @@ import { handleAddShipment } from '@/lib/actions';
 import { getShipments } from '@/lib/data';
 import type { Shipment, ShipmentProduct } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -42,11 +43,12 @@ interface ShipmentFormProps {
 export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
   const { toast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const { user } = useAuth();
 
   const form = useForm<ShipmentFormValues>({
     resolver: zodResolver(shipmentFormSchema),
     defaultValues: {
-      user: '',
+      user: user?.name || '',
       transactionId: '',
       expedition: '',
       products: [{ name: '', quantity: 1 }],
@@ -57,6 +59,12 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     control: form.control,
     name: 'products',
   });
+
+  React.useEffect(() => {
+    if (user) {
+      form.setValue('user', user.name);
+    }
+  }, [user, form]);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -115,7 +123,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                 <FormItem>
                 <FormLabel>User</FormLabel>
                 <FormControl>
-                    <Input placeholder="cth. User A" {...field} />
+                    <Input placeholder="cth. User A" {...field} readOnly />
                 </FormControl>
                 <FormMessage />
                 </FormItem>
