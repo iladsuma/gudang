@@ -92,6 +92,7 @@ export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'tot
     createdAt: new Date().toISOString(),
     totalItems,
     totalAmount,
+    products: data.products.map(p => ({ ...p }))
   };
   
   const updatedShipments = [newShipment, ...shipments];
@@ -123,11 +124,6 @@ export async function processShipments(shipmentIds: string[]): Promise<Checkout[
     const newHistoryItems: Checkout[] = [];
 
     for (const shipment of shipmentsToProcess) {
-        // Prevent adding duplicates to history
-        if (checkoutHistory.some(c => c.transactionId === shipment.transactionId)) {
-            continue; 
-        }
-
         const newCheckout: Checkout = {
             id: `checkout_${Date.now()}_${shipment.id}`,
             transactionId: shipment.transactionId,
