@@ -30,7 +30,7 @@ export async function handleAddShipment(formData: unknown) {
     }
     try {
         const newShipment = await addShipment(parsed.data);
-        revalidatePath('/shipments');
+        revalidatePath('/shipments'); // Keep for potential future use with real DB
         return { success: true, message: 'Data pengiriman berhasil ditambahkan.', data: newShipment };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Terjadi kesalahan yang tidak diketahui.';
@@ -72,7 +72,6 @@ export async function handleCheckout(formData: unknown) {
         const newCheckout = await performCheckout(parsed.data);
         revalidatePath('/');
         revalidatePath('/history');
-        revalidatePath('/products');
         revalidatePath('/invoices');
         return { success: true, message: 'Checkout berhasil!', data: newCheckout };
     } catch (error) {

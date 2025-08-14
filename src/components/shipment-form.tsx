@@ -5,8 +5,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { handleAddShipment } from '@/lib/actions';
-import { getShipments } from '@/lib/data';
-import type { Shipment, ShipmentProduct } from '@/lib/types';
+import type { Shipment } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
@@ -36,7 +35,7 @@ const shipmentFormSchema = z.object({
 type ShipmentFormValues = z.infer<typeof shipmentFormSchema>;
 
 interface ShipmentFormProps {
-  onSuccess: (shipments: Shipment[]) => void;
+  onSuccess: (newShipment: Shipment) => void;
   onCancel: () => void;
 }
 
@@ -90,13 +89,12 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
 
   const onSubmit = async (data: ShipmentFormValues) => {
     const result = await handleAddShipment(data);
-    if (result.success) {
+    if (result.success && result.data) {
       toast({
         title: 'Sukses!',
         description: result.message,
       });
-      const updatedShipments = await getShipments();
-      onSuccess(updatedShipments);
+      onSuccess(result.data);
     } else {
       toast({
         variant: 'destructive',

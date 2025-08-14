@@ -58,8 +58,8 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
     setIsClient(true);
   }, []);
 
-  const handleFormSuccess = (updatedShipments: Shipment[]) => {
-    setShipments(updatedShipments);
+  const handleFormSuccess = (newShipment: Shipment) => {
+    setShipments((prev) => [newShipment, ...prev]);
     setIsFormOpen(false);
   };
   
