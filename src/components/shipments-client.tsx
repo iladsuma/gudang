@@ -39,7 +39,7 @@ import { Checkbox } from './ui/checkbox';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { deleteShipment, processAndMoveToHistory } from '@/lib/data';
+import { deleteShipment, processAndMoveToHistory, getShipments } from '@/lib/data';
 
 export function ShipmentsClient({ shipments: initialShipments }: { shipments: Shipment[] }) {
   const [shipments, setShipments] = useState(initialShipments);
@@ -57,6 +57,11 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  const refreshShipments = async () => {
+    const freshShipments = await getShipments();
+    setShipments(freshShipments);
+  };
 
   const handleFormSuccess = (newShipment: Shipment) => {
     setShipments((prev) => [newShipment, ...prev]);
@@ -171,7 +176,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
         });
 
         // Update UI locally
-        setShipments(prev => prev.filter(s => !selectedShipments.includes(s.id)));
+        await refreshShipments();
         setSelectedShipments([]);
 
     } catch (error) {

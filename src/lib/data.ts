@@ -74,7 +74,7 @@ export async function getShipments(): Promise<Shipment[]> {
 
 export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'totalItems'>): Promise<Shipment> {
   await new Promise(resolve => setTimeout(resolve, 500));
-  const shipments = getFromStorage('shipments', initialShipments);
+  const shipments = await getShipments();
 
   if (shipments.some(s => s.transactionId.toLowerCase() === data.transactionId.toLowerCase())) {
     throw new Error('ID Transaksi harus unik.');
@@ -95,7 +95,7 @@ export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'tot
 
 export async function deleteShipment(shipmentId: string): Promise<void> {
     await new Promise(resolve => setTimeout(resolve, 500));
-    let shipments = getFromStorage('shipments', initialShipments);
+    let shipments = await getShipments();
     const updatedShipments = shipments.filter(s => s.id !== shipmentId);
     
     if (shipments.length === updatedShipments.length) {
@@ -109,8 +109,8 @@ export async function deleteShipment(shipmentId: string): Promise<void> {
 export async function processAndMoveToHistory(shipmentIds: string[]): Promise<Checkout[]> {
     await new Promise(resolve => setTimeout(resolve, 200));
 
-    let shipments = getFromStorage('shipments', initialShipments);
-    let checkoutHistory = getFromStorage<Checkout[]>('checkoutHistory', []);
+    let shipments = await getShipments();
+    let checkoutHistory = await getCheckoutHistory();
     
     const shipmentsToProcess = shipments.filter(s => shipmentIds.includes(s.id));
     const newHistoryItems: Checkout[] = [];
