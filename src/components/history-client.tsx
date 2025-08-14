@@ -58,11 +58,14 @@ export function HistoryClient({ initialHistory }: { initialHistory: Checkout[] }
                                     <Accordion type="single" collapsible className="w-full">
                                         <AccordionItem value="item-1" className='border-b-0'>
                                             <AccordionTrigger className='py-0 font-normal'>
-                                                {batch.processedShipments.length} pengiriman diproses
+                                                {(batch.processedShipments && batch.processedShipments.length > 0) 
+                                                    ? `${batch.processedShipments.length} pengiriman diproses`
+                                                    : 'Detail tidak tersedia'
+                                                }
                                             </AccordionTrigger>
                                             <AccordionContent className='pt-2'>
                                                <div className='flex flex-col gap-1 text-xs text-muted-foreground'>
-                                                {batch.processedShipments.map(shipment => (
+                                                {batch.processedShipments && batch.processedShipments.map(shipment => (
                                                     <div key={shipment.transactionId} className='flex items-center gap-2'>
                                                         <ArrowRight className='h-3 w-3'/>
                                                         <span>{shipment.transactionId} ({formatRupiah(shipment.totalAmount)})</span>
