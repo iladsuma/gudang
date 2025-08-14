@@ -172,10 +172,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
             description: 'Resi berhasil diproses dan file gabungan diunduh.'
         });
 
-        // 3. Update UI
-        setShipments(prev => prev.filter(s => !selectedShipments.includes(s.id)));
-        setSelectedShipments([]);
-        // Force re-fetch on the client-side for this page.
+        // 3. Update UI - Force a hard refresh of the page to get fresh data
         router.refresh();
 
     } catch (error) {
@@ -188,6 +185,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
         });
     } finally {
         setIsProcessing(false);
+        setSelectedShipments([]);
     }
   };
 
@@ -319,5 +317,3 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
     </div>
   );
 }
-
-    
