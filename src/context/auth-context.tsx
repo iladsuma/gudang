@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (user) {
         if(pathIsPublic){
-            router.push('/');
+            router.push('/shipments');
         }
     }
 

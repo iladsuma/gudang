@@ -24,6 +24,7 @@ export function HistoryClient({ initialHistory }: { initialHistory: Checkout[] }
     }, []);
 
     const formatRupiah = (number: number) => {
+        if (number === 0) return '-';
         return new Intl.NumberFormat('id-ID', {
             style: 'currency',
             currency: 'IDR',
@@ -37,10 +38,10 @@ export function HistoryClient({ initialHistory }: { initialHistory: Checkout[] }
                 <TableHeader>
                     <TableRow>
                         <TableHead>No. Transaksi</TableHead>
-                        <TableHead>Nama Pelanggan</TableHead>
+                        <TableHead>Asal/User</TableHead>
                         <TableHead>Produk</TableHead>
                         <TableHead className="text-right">Total</TableHead>
-                        <TableHead>Tanggal</TableHead>
+                        <TableHead>Tanggal Diproses</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -71,13 +72,13 @@ export function HistoryClient({ initialHistory }: { initialHistory: Checkout[] }
                     ) : (
                         <TableRow>
                             <TableCell colSpan={5} className="h-24 text-center">
-                                Tidak ada riwayat checkout.
+                                Tidak ada riwayat. Proses pengiriman untuk menambah data.
                             </TableCell>
                         </TableRow>
                     )}
                 </TableBody>
                 {initialHistory.length > 0 && (
-                    <TableCaption>Daftar semua transaksi checkout.</TableCaption>
+                    <TableCaption>Daftar semua pengiriman yang sudah diproses.</TableCaption>
                 )}
             </Table>
         </div>

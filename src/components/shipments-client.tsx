@@ -22,7 +22,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { ShipmentForm } from './shipment-form';
-import { handleDeleteShipment } from '@/lib/actions';
+import { handleDeleteShipment, handleProcessShipments } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -100,12 +100,12 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
     }
   };
 
-  const handlePrintReceipts = async () => {
+  const handleProcessAndPrintReceipts = async () => {
     if (selectedShipments.length === 0) {
         toast({
             variant: 'destructive',
             title: 'Tidak Ada Resi Terpilih',
-            description: 'Pilih setidaknya satu resi untuk dicetak.'
+            description: 'Pilih setidaknya satu resi untuk diproses.'
         });
         return;
     }
@@ -113,21 +113,26 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
     setIsPrinting(true);
 
     try {
-        const mergedPdf = await PDFDocument.create();
-        const shipmentsToPrint = selectedShipments
+        const shipmentsToProcess = selectedShipments
             .map(id => shipments.find(s => s.id === id))
             .filter((s): s is Shipment => !!s);
         
+        // 1. Process shipments and add them to history
+        const processResult = await handleProcessShipments(shipmentsToProcess);
+        if (!processResult.success) {
+            throw new Error(processResult.message);
+        }
+
+        // 2. Merge PDFs for printing
+        const mergedPdf = await PDFDocument.create();
         const font = await mergedPdf.embedFont(StandardFonts.HelveticaBold);
 
-        for (const [index, shipment] of shipmentsToPrint.entries()) {
-            // Load the existing PDF
+        for (const [index, shipment] of shipmentsToProcess.entries()) {
             const pdfDataUrl = shipment.receipt.dataUrl;
             const existingPdfBytes = await fetch(pdfDataUrl).then(res => res.arrayBuffer());
             const pdfDoc = await PDFDocument.load(existingPdfBytes);
             const copiedPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
 
-            // Add the text to the first page of the copied document
             if (copiedPages.length > 0) {
               const firstPage = copiedPages[0];
               const { height } = firstPage.getSize();
@@ -136,18 +141,16 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
                 y: height - 25,
                 font: font,
                 size: 14,
-                color: rgb(0.9, 0.1, 0.1), // Bright red color
+                color: rgb(0.9, 0.1, 0.1),
               });
             }
             
-            // Add the (now modified) pages to the merged document
             copiedPages.forEach((page) => {
                 mergedPdf.addPage(page);
             });
         }
         
         const mergedPdfBytes = await mergedPdf.save();
-
         const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
         const url = URL.createObjectURL(blob);
         
@@ -161,15 +164,16 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
         
         toast({
             title: 'Sukses!',
-            description: 'File resi gabungan berhasil diunduh.'
+            description: 'Resi berhasil diproses dan file gabungan diunduh.'
         });
 
     } catch (error) {
-        console.error("Failed to merge PDFs", error);
+        console.error("Failed to process or merge PDFs", error);
+        const message = error instanceof Error ? error.message : 'Terjadi kesalahan saat memproses resi.';
         toast({
             variant: 'destructive',
-            title: 'Gagal Menggabungkan PDF',
-            description: 'Terjadi kesalahan saat mencoba menggabungkan resi.'
+            title: 'Gagal Memproses',
+            description: message
         });
     } finally {
         setIsPrinting(false);
@@ -180,9 +184,9 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
   return (
     <div className="space-y-4">
       <div className="flex justify-end gap-2">
-        <Button onClick={handlePrintReceipts} disabled={selectedShipments.length === 0 || isPrinting}>
+        <Button onClick={handleProcessAndPrintReceipts} disabled={selectedShipments.length === 0 || isPrinting}>
             {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
-            Cetak Resi Terpilih ({selectedShipments.length})
+            Proses & Cetak Resi ({selectedShipments.length})
         </Button>
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
           <DialogTrigger asChild>

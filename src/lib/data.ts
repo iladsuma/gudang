@@ -139,42 +139,37 @@ export async function deleteShipment(shipmentId: string): Promise<void> {
     }
 }
 
-// Checkout Functions
-export async function handleCheckout(data: { customerName: string; items: CheckoutItem[] }): Promise<Checkout> {
-    await new Promise(resolve => setTimeout(resolve, 500));
+// History/Checkout Functions
+export async function addCheckoutToHistory(shipments: Shipment[]): Promise<void> {
+    await new Promise(resolve => setTimeout(resolve, 200));
 
-    // Validate stock
-    for (const item of data.items) {
-        const product = products.find(p => p.code === item.code);
-        if (!product || product.stock < item.quantity) {
-            throw new Error(`Stok tidak mencukupi untuk produk: ${item.name}. Sisa ${product?.stock || 0}.`);
+    for (const shipment of shipments) {
+         // Prevent adding duplicates to history
+        if (checkoutHistory.some(c => c.transactionId === shipment.transactionId)) {
+            continue;
         }
+
+        const newCheckout: Checkout = {
+            id: `checkout_${Date.now()}_${shipment.id}`,
+            transactionId: shipment.transactionId,
+            // In a real app, customer name might come from shipment details
+            customerName: shipment.user, 
+            items: shipment.products.map(p => ({
+                code: p.name, // Using name as code as we don't have product codes in shipments
+                name: p.name,
+                quantity: p.quantity,
+                // These would be looked up from a products table in a real app
+                price: 0, 
+                stock: 0,
+            })),
+            totalItems: shipment.totalItems,
+            totalAmount: 0, // Price is not available in shipment, so total is 0
+            createdAt: shipment.createdAt,
+        };
+        checkoutHistory.unshift(newCheckout);
     }
-
-    // Update stock
-    for (const item of data.items) {
-        const productIndex = products.findIndex(p => p.code === item.code);
-        if (productIndex > -1) {
-            products[productIndex].stock -= item.quantity;
-        }
-    }
-    
-    const totalAmount = data.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const totalItems = data.items.reduce((sum, item) => sum + item.quantity, 0);
-
-    const newCheckout: Checkout = {
-        id: `checkout_${Date.now()}`,
-        transactionId: `T-${Date.now()}`,
-        customerName: data.customerName,
-        items: data.items,
-        totalItems,
-        totalAmount,
-        createdAt: new Date().toISOString(),
-    };
-
-    checkoutHistory.unshift(newCheckout);
-    return newCheckout;
 }
+
 
 export async function getCheckoutHistory(): Promise<Checkout[]> {
     await new Promise(resolve => setTimeout(resolve, 100));

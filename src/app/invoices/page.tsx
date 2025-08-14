@@ -66,7 +66,7 @@ export default function InvoicesPage() {
         <CardHeader>
           <CardTitle>Manajemen Faktur</CardTitle>
           <CardDescription>
-            Buat dan kelola faktur untuk transaksi penjualan.
+            Buat faktur berdasarkan data pengiriman yang sudah diproses.
           </CardDescription>
         </CardHeader>
         <CardContent>

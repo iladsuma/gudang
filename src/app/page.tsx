@@ -1,28 +1,18 @@
 'use client';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
-import { CheckoutForm } from '@/components/checkout-form';
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from '@/components/ui/card';
+// This page is a temporary redirector to the main page /shipments
+export default function HomePage() {
+  const router = useRouter();
 
-export default function CheckoutPage() {
+  useEffect(() => {
+    router.replace('/shipments');
+  }, [router]);
+
   return (
-    <div className="container mx-auto p-4 md:p-8">
-      <Card className="mx-auto max-w-4xl">
-        <CardHeader>
-          <CardTitle>Checkout Barang</CardTitle>
-          <CardDescription>
-            Catat barang yang keluar dari gudang di sini.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <CheckoutForm />
-        </CardContent>
-      </Card>
+    <div className="flex h-screen w-full items-center justify-center">
+        <p>Mengalihkan ke halaman utama...</p>
     </div>
   );
 }

@@ -1,9 +1,9 @@
 'use server';
 
 import { z } from 'zod';
-import { addShipment, deleteShipment, handleCheckout as performCheckout } from '@/lib/data';
+import { addShipment, deleteShipment, addCheckoutToHistory } from '@/lib/data';
 import { revalidatePath } from 'next/cache';
-import { ingestTransactionData } from '@/ai/flows/ingest-transaction-data';
+import type { Shipment } from '@/lib/types';
 
 const shipmentProductSchema = z.object({
   name: z.string().min(1, 'Nama produk harus diisi'),
@@ -48,48 +48,14 @@ export async function handleDeleteShipment(shipmentId: string) {
     }
 }
 
-const checkoutItemSchema = z.object({
-  code: z.string().min(1, 'Kode produk harus diisi'),
-  name: z.string().min(1, 'Nama produk harus diisi'),
-  quantity: z.coerce.number().int().min(1, 'Kuantitas minimal 1'),
-  stock: z.number(),
-  price: z.number(),
-});
-
-const checkoutFormSchema = z.object({
-  customerName: z.string().min(1, 'Nama pelanggan harus diisi'),
-  items: z.array(checkoutItemSchema).min(1, 'Harus ada minimal 1 item'),
-});
-
-export async function handleCheckout(formData: unknown) {
-    const parsed = checkoutFormSchema.safeParse(formData);
-    if (!parsed.success) {
-        const errorMessages = parsed.error.issues.map(issue => issue.message).join(', ');
-        return { success: false, message: `Data formulir tidak valid: ${errorMessages}` };
-    }
-
+export async function handleProcessShipments(shipments: Shipment[]) {
     try {
-        const newCheckout = await performCheckout(parsed.data);
-        revalidatePath('/');
+        await addCheckoutToHistory(shipments);
         revalidatePath('/history');
         revalidatePath('/invoices');
-        return { success: true, message: 'Checkout berhasil!', data: newCheckout };
+        return { success: true, message: 'Pengiriman berhasil diproses dan ditambahkan ke riwayat.' };
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Terjadi kesalahan yang tidak diketahui.';
+        const message = error instanceof Error ? error.message : 'Terjadi kesalahan saat memproses pengiriman.';
         return { success: false, message };
     }
-}
-
-
-export async function handleScanReceipt(receiptDataUrl: string) {
-  try {
-    const transactionData = await ingestTransactionData({
-      receipt: receiptDataUrl,
-    });
-    return { success: true, data: transactionData };
-  } catch (error) {
-    console.error('AI receipt scan failed:', error);
-    const message = error instanceof Error ? error.message : 'Gagal memindai struk.';
-    return { success: false, message };
-  }
 }

@@ -64,9 +64,9 @@ export default function HistoryPage() {
     <div className="container mx-auto p-4 md:p-8">
       <Card>
         <CardHeader>
-          <CardTitle>Riwayat Checkout</CardTitle>
+          <CardTitle>Riwayat Pemrosesan</CardTitle>
           <CardDescription>
-            Lihat semua catatan transaksi barang keluar.
+            Lihat semua catatan pengiriman yang telah diproses.
           </CardDescription>
         </CardHeader>
         <CardContent>

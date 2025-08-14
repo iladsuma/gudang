@@ -29,12 +29,6 @@ export function Header() {
             {user && (
               <nav className="flex items-center gap-6 text-sm">
                  <Link
-                  href="/"
-                  className="text-foreground/60 transition-colors hover:text-foreground/80"
-                >
-                  Checkout
-                </Link>
-                <Link
                   href="/shipments"
                   className="text-foreground/60 transition-colors hover:text-foreground/80"
                 >
