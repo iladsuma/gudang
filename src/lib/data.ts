@@ -1,4 +1,4 @@
-import type { User, Product, Transaction, CheckoutItem, Shipment, ShipmentProduct } from '@/lib/types';
+import type { User, Product, Shipment } from '@/lib/types';
 
 // Mock user data
 const users: User[] = [
@@ -18,8 +18,6 @@ let products: Product[] = [
   { id: '8', code: 'SKU008', name: 'Kursi Ergonomis', stock: 25 },
 ];
 
-// Mock transaction history data
-let transactions: Transaction[] = [];
 
 // Mock shipment data
 let shipments: Shipment[] = [
@@ -143,39 +141,6 @@ export async function deleteProduct(productId: string): Promise<void> {
     throw new Error('Produk tidak ditemukan.');
   }
 }
-
-// Transaction Functions
-export async function getCheckoutHistory(): Promise<Transaction[]> {
-  // Sort by most recent
-  return [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-}
-
-export async function addCheckout(transaction: {customerName: string, items: CheckoutItem[]}): Promise<Transaction> {
-  await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
-  const newTransaction: Transaction = {
-    ...transaction,
-    id: `txn_${Date.now()}`,
-    date: new Date().toISOString(),
-    totalItems: transaction.items.reduce((sum, item) => sum + item.quantity, 0),
-  };
-
-  // Simulate stock update
-  for (const item of newTransaction.items) {
-    const product = products.find(p => p.id === item.id);
-    if (product) {
-      if (product.stock < item.quantity) {
-        throw new Error(`Stok tidak cukup untuk ${product.name}. Hanya tersisa ${product.stock}.`);
-      }
-      product.stock -= item.quantity;
-    } else {
-        throw new Error(`Produk dengan id ${item.id} tidak ditemukan.`);
-    }
-  }
-
-  transactions.unshift(newTransaction);
-  return newTransaction;
-}
-
 
 // Shipment Functions
 export async function getShipments(): Promise<Shipment[]> {

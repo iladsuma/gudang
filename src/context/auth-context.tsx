@@ -55,11 +55,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if(pathIsPublic){
             router.push('/');
         }
-        const adminPaths = ['/invoices', '/history'];
-        const pathIsAdminOnly = adminPaths.includes(pathname);
-        if (user.role !== 'admin' && pathIsAdminOnly) {
-            router.push('/');
-        }
     }
 
   }, [user, loading, pathname, router]);

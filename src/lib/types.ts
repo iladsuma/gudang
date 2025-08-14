@@ -5,18 +5,6 @@ export interface Product {
   stock: number;
 }
 
-export interface CheckoutItem extends Product {
-  quantity: number;
-}
-
-export interface Transaction {
-  id: string;
-  customerName: string;
-  items: CheckoutItem[];
-  totalItems: number;
-  date: string; // ISO string
-}
-
 export interface ShipmentProduct {
     name: string;
     quantity: number;
