@@ -17,66 +17,117 @@ import {
 } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { useAuth } from '@/context/auth-context';
 
 interface jsPDFWithAutoTable extends jsPDF {
   autoTable: (options: any) => jsPDF;
 }
 
 export function InvoicesClient({ checkouts }: { checkouts: Checkout[] }) {
-  const formatRupiah = (number: number) => {
-    if (number === 0) return '-';
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(number);
-  };
+  const { user } = useAuth();
 
   const handleCreateInvoice = (checkout: Checkout) => {
     const doc = new jsPDF() as jsPDFWithAutoTable;
+    const pageHeight = doc.internal.pageSize.height || doc.internal.pageSize.get('height');
+    const pageWidth = doc.internal.pageSize.width || doc.internal.pageSize.get('width');
+
+    // Set Font
+    doc.setFont('helvetica');
 
     // Header
-    doc.setFontSize(20);
-    doc.text('FAKTUR PENGIRIMAN', 105, 20, { align: 'center' });
-    doc.setFontSize(10);
-    doc.text('GudangCheckout Inc.', 14, 30);
-    doc.text('Jl. Merdeka No. 17', 14, 35);
-    doc.text('Jakarta, Indonesia', 14, 40);
-    
-    // Invoice Info
-    doc.setFontSize(12);
-    doc.text('Pengirim:', 14, 55);
-    doc.text(checkout.customerName, 14, 60);
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('FAKTUR PENJUALAN', 14, 20);
 
-    doc.text(`No. Faktur: INV-${checkout.transactionId}`, 140, 55);
-    doc.text(`Tanggal: ${format(new Date(checkout.createdAt), 'P', { locale: id })}`, 140, 60);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('GudangCheckout', 14, 26);
+    doc.text('Jl. Raya Aplikasi No. 1, Jakarta', 14, 31);
+
+    // Info Section
+    const infoX = pageWidth - 80;
+    doc.text(`No Transaksi`, infoX, 20);
+    doc.text(`: ${checkout.transactionId}`, infoX + 20, 20);
     
+    doc.text(`Pelanggan`, infoX, 25);
+    doc.text(`: ${checkout.customerName}`, infoX + 20, 25);
+
+    doc.text(`Alamat`, infoX, 30);
+    doc.text(`: -`, infoX + 20, 30);
+    
+    doc.text(`Tgl`, infoX, 35);
+    doc.text(`: ${format(new Date(checkout.createdAt), 'dd/MM/yyyy HH:mm')}`, infoX + 20, 35);
+    
+    doc.text(`Kasir`, infoX, 40);
+    doc.text(`: ${user?.name || '-'}`, infoX + 20, 40);
+    
+    doc.text(`Tgl. Jt`, infoX, 45);
+    doc.text(`: ${format(new Date(), 'dd/MM/yyyy')}`, infoX + 20, 45);
+
+
     // Table
-    const tableData = checkout.items.map(item => [
+    const tableData = checkout.items.map((item, index) => [
+      index + 1,
       item.name,
-      item.quantity,
+      `${item.quantity}`,
+      'PCS',
+      '0', // Harga - tidak ada data
+      '0', // Diskon - tidak ada data
+      '0', // Total - tidak ada data
     ]);
 
     doc.autoTable({
-      head: [['Deskripsi Produk', 'Jumlah']],
+      head: [['No.', 'Nama Item', 'Jml', 'Satuan', 'Harga', 'Diskon', 'Total']],
       body: tableData,
-      startY: 70,
+      startY: 55,
       headStyles: {
-        fillColor: [36, 128, 75]
+        fillColor: [22, 163, 74],
+        textColor: 255,
+        fontStyle: 'bold',
+      },
+      theme: 'grid',
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center' },
+        2: { cellWidth: 15, halign: 'center' },
+        3: { cellWidth: 15, halign: 'center' },
+        4: { halign: 'right' },
+        5: { halign: 'right' },
+        6: { halign: 'right' },
       }
     });
 
-    // Total
     const finalY = doc.autoTable.previous.finalY;
-    doc.setFontSize(12);
-    doc.text('Total Item:', 140, finalY + 10);
-    doc.setFont('helvetica', 'bold');
-    doc.text(String(checkout.totalItems), 170, finalY + 10);
-    
+
     // Footer
+    const footerY = finalY + 10;
     doc.setFontSize(10);
+
+    // Summary section
+    const summaryX = pageWidth - 80;
+    doc.text(`Jml Item`, summaryX, footerY);
+    doc.text(`: ${checkout.totalItems}`, summaryX + 20, footerY);
+
+    doc.text(`Sub Total`, summaryX, footerY + 5);
+    doc.text(`: 0`, summaryX + 20, footerY + 5);
+    
+    doc.text(`Potongan`, summaryX, footerY + 10);
+    doc.text(`: 0`, summaryX + 20, footerY + 10);
+    
+    doc.text(`Biaya Lain`, summaryX, footerY + 15);
+    doc.text(`: 0`, summaryX + 20, footerY + 15);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Total Akhir`, summaryX, footerY + 20);
+    doc.text(`: 0`, summaryX + 20, footerY + 20);
     doc.setFont('helvetica', 'normal');
-    doc.text('Dokumen ini adalah bukti penerimaan barang.', 105, finalY + 30, { align: 'center' });
+
+
+    // Signature Section
+    doc.text('Hormat Kami', 20, footerY + 5);
+    doc.text('Penerima', 80, footerY + 5);
+    doc.text('(..................)', 14, footerY + 25);
+    doc.text('(..................)', 74, footerY + 25);
+
 
     doc.save(`faktur-${checkout.transactionId}.pdf`);
   };
@@ -117,7 +168,7 @@ export function InvoicesClient({ checkouts }: { checkouts: Checkout[] }) {
             </TableRow>
           )}
         </TableBody>
-        <TableCaption>Daftar pengiriman yang siap dibuatkan faktur.</TableCaption>
+        {checkouts.length > 0 && <TableCaption>Daftar pengiriman yang siap dibuatkan faktur.</TableCaption>}
       </Table>
     </div>
   );
