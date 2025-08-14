@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/auth-context';
-import { getProcessedShipmentsForInvoicing } from '@/lib/data';
-import type { Shipment } from '@/lib/types';
+import { getCheckoutHistory } from '@/lib/data';
+import type { Checkout } from '@/lib/types';
 import {
   Card,
   CardHeader,
@@ -18,7 +18,7 @@ import { useRouter } from 'next/navigation';
 export default function InvoicesPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const [shipments, setShipments] = useState<Shipment[]>([]);
+  const [batches, setBatches] = useState<Checkout[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -29,9 +29,9 @@ export default function InvoicesPage() {
   
   useEffect(() => {
     if (user) {
-      // Mengambil data dari pengiriman yang sudah diproses
-      getProcessedShipmentsForInvoicing().then(data => {
-        setShipments(data);
+      // Mengambil data dari riwayat checkout/pemrosesan
+      getCheckoutHistory().then(data => {
+        setBatches(data);
         setLoading(false);
       });
     }
@@ -65,13 +65,13 @@ export default function InvoicesPage() {
     <div className="container mx-auto p-4 md:p-8">
       <Card>
         <CardHeader>
-          <CardTitle>Manajemen Faktur</CardTitle>
+          <CardTitle>Manajemen Faktur Batch</CardTitle>
           <CardDescription>
-            Buat faktur berdasarkan data pengiriman yang telah diproses.
-          </CardDescription>
+            Buat faktur gabungan berdasarkan batch pemrosesan di riwayat.
+          </Description>
         </CardHeader>
         <CardContent>
-          <InvoicesClient shipments={shipments} />
+          <InvoicesClient batches={batches} />
         </CardContent>
       </Card>
     </div>
