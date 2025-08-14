@@ -1,15 +1,21 @@
-import type { Product, Transaction, CheckoutItem, Shipment, ShipmentProduct } from '@/lib/types';
+import type { User, Product, Transaction, CheckoutItem, Shipment, ShipmentProduct } from '@/lib/types';
+
+// Mock user data
+const users: User[] = [
+    { id: 'usr_1', username: 'admin', name: 'Admin', role: 'admin' },
+    { id: 'usr_2', username: 'user', name: 'User Biasa', role: 'user' },
+];
 
 // Mock product data
 let products: Product[] = [
-  { id: '1', code: 'SKU001', name: 'Mouse Nirkabel', stock: 150 },
-  { id: '2', code: 'SKU002', name: 'Keyboard Mekanikal', stock: 80 },
-  { id: '3', code: 'SKU003', name: 'Monitor 4K 27-inci', stock: 50 },
-  { id: '4', code: 'SKU004', name: 'Hub USB-C', stock: 200 },
-  { id: '5', code: 'SKU005', name: 'Webcam 1080p', stock: 120 },
-  { id: '6', code: 'SKU006', name: 'Stand Laptop', stock: 300 },
-  { id: '7', code: 'SKU007', name: 'Headphone Peredam Bising', stock: 75 },
-  { id: '8', code: 'SKU008', name: 'Kursi Ergonomis', stock: 25 },
+  { id: '1', code: 'SKU001', name: 'Mouse Nirkabel', stock: 150, receiptNumber: 'R-001' },
+  { id: '2', code: 'SKU002', name: 'Keyboard Mekanikal', stock: 80, receiptNumber: 'R-001' },
+  { id: '3', code: 'SKU003', name: 'Monitor 4K 27-inci', stock: 50, receiptNumber: 'R-002' },
+  { id: '4', code: 'SKU004', name: 'Hub USB-C', stock: 200, receiptNumber: 'R-003' },
+  { id: '5', code: 'SKU005', name: 'Webcam 1080p', stock: 120, receiptNumber: 'R-004' },
+  { id: '6', code: 'SKU006', name: 'Stand Laptop', stock: 300, receiptNumber: 'R-004' },
+  { id: '7', code: 'SKU007', name: 'Headphone Peredam Bising', stock: 75, receiptNumber: 'R-005' },
+  { id: '8', code: 'SKU008', name: 'Kursi Ergonomis', stock: 25, receiptNumber: 'R-005' },
 ];
 
 // Mock transaction history data
@@ -67,7 +73,22 @@ let shipments: Shipment[] = [
     }
 ];
 
+// User Functions
+export function getDummyUsers(): User[] {
+    return users;
+}
 
+export async function login(username: string, password: string): Promise<User> {
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
+    const user = users.find(u => u.username === username);
+    // In a real app, you'd check a hashed password. Here, we're doing a simple check.
+    if (user && user.username === password) { 
+        return user;
+    }
+    throw new Error('Username atau password salah.');
+}
+
+// Product Functions
 export async function getProducts(query?: string): Promise<Product[]> {
   await new Promise(resolve => setTimeout(resolve, 100)); // Simulate network delay
   let sortedProducts = [...products].sort((a,b) => a.name.localeCompare(b.name));
@@ -85,7 +106,7 @@ export async function getProductByCode(code: string): Promise<Product | undefine
     return products.find((p) => p.code.toLowerCase() === code.toLowerCase());
 }
 
-export async function addOrUpdateProduct(productData: Omit<Product, 'id' | 'receiptNumber'> & { id?: string }): Promise<Product> {
+export async function addOrUpdateProduct(productData: Omit<Product, 'id'> & { id?: string }): Promise<Product> {
   await new Promise(resolve => setTimeout(resolve, 500));
   
   if (productData.id) {
@@ -123,6 +144,7 @@ export async function deleteProduct(productId: string): Promise<void> {
   }
 }
 
+// Transaction Functions
 export async function getCheckoutHistory(): Promise<Transaction[]> {
   // Sort by most recent
   return [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -185,3 +207,5 @@ export async function deleteShipment(shipmentId: string): Promise<void> {
         throw new Error('Pengiriman tidak ditemukan.');
     }
 }
+
+    

@@ -35,3 +35,10 @@ export interface Shipment {
     totalItems: number;
     createdAt: string; // ISO String
 }
+
+export interface User {
+    id: string;
+    username: string;
+    name: string;
+    role: 'admin' | 'user';
+}
