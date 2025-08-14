@@ -59,6 +59,7 @@ const shipmentProductSchema = z.object({
 const shipmentFormSchema = z.object({
   user: z.string().min(1, 'User harus diisi'),
   transactionId: z.string().min(1, 'No. Transaksi harus diisi'),
+  expedition: z.string().min(1, 'Ekspedisi harus diisi'),
   receipt: z.object({
       fileName: z.string().min(1, 'Nama file resi harus ada'),
       dataUrl: z.string().min(1, 'Data resi harus ada'),

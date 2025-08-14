@@ -117,6 +117,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
         return [
           shipment.user,
           shipment.transactionId,
+          shipment.expedition,
           shipment.receipt.fileName,
           products,
           shipment.totalItems,
@@ -125,7 +126,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
     });
 
     doc.autoTable({
-      head: [['User', 'No. Transaksi', 'Resi', 'Produk', 'Total Item', 'Tanggal Dibuat']],
+      head: [['User', 'No. Transaksi', 'Ekspedisi', 'Resi', 'Produk', 'Total Item', 'Tanggal Dibuat']],
       body: tableData,
       startY: 20,
       styles: {
@@ -180,6 +181,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
               </TableHead>
               <TableHead>User</TableHead>
               <TableHead>No. Transaksi</TableHead>
+              <TableHead>Ekspedisi</TableHead>
               <TableHead>Resi</TableHead>
               <TableHead>Produk</TableHead>
               <TableHead className="text-right">Total Item</TableHead>
@@ -200,6 +202,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
                   </TableCell>
                   <TableCell className="font-medium">{shipment.user}</TableCell>
                   <TableCell>{shipment.transactionId}</TableCell>
+                  <TableCell>{shipment.expedition}</TableCell>
                   <TableCell>
                     <Button variant="link" className="p-0 h-auto" onClick={() => openPdf(shipment.receipt.dataUrl)}>
                         <FileText className="mr-2 h-4 w-4" />
@@ -253,7 +256,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center">
+                <TableCell colSpan={9} className="h-24 text-center">
                   Tidak ada data pengiriman.
                 </TableCell>
               </TableRow>

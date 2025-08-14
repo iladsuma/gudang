@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -23,6 +24,7 @@ const shipmentProductSchema = z.object({
 const shipmentFormSchema = z.object({
   user: z.string().min(1, 'User harus diisi'),
   transactionId: z.string().min(1, 'No. Transaksi harus diisi'),
+  expedition: z.string().min(1, 'Nama ekspedisi harus diisi'),
   receipt: z.object({
       fileName: z.string().min(1, 'Nama file resi harus ada'),
       dataUrl: z.string().min(1, 'Data resi harus ada').refine(val => val.startsWith('data:application/pdf;base64,'), { message: 'File harus berupa PDF.' }),
@@ -46,6 +48,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     defaultValues: {
       user: '',
       transactionId: '',
+      expedition: '',
       products: [{ name: '', quantity: 1 }],
     },
   });
@@ -132,6 +135,20 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
             )}
             />
         </div>
+        
+        <FormField
+            control={form.control}
+            name="expedition"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Nama Ekspedisi</FormLabel>
+                <FormControl>
+                    <Input placeholder="cth. JNE Express" {...field} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+        />
 
         <FormField
             control={form.control}
