@@ -1,4 +1,4 @@
-import type { User, Product, Shipment } from '@/lib/types';
+import type { User, Product, Shipment, Checkout, CheckoutItem } from '@/lib/types';
 
 // Mock user data
 const users: User[] = [
@@ -8,14 +8,14 @@ const users: User[] = [
 
 // Mock product data
 let products: Product[] = [
-  { id: '1', code: 'SKU001', name: 'Mouse Nirkabel', stock: 150 },
-  { id: '2', code: 'SKU002', name: 'Keyboard Mekanikal', stock: 80 },
-  { id: '3', code: 'SKU003', name: 'Monitor 4K 27-inci', stock: 50 },
-  { id: '4', code: 'SKU004', name: 'Hub USB-C', stock: 200 },
-  { id: '5', code: 'SKU005', name: 'Webcam 1080p', stock: 120 },
-  { id: '6', code: 'SKU006', name: 'Stand Laptop', stock: 300 },
-  { id: '7', code: 'SKU007', name: 'Headphone Peredam Bising', stock: 75 },
-  { id: '8', code: 'SKU008', name: 'Kursi Ergonomis', stock: 25 },
+  { id: '1', code: 'SKU001', name: 'Mouse Nirkabel', stock: 150, price: 250000 },
+  { id: '2', code: 'SKU002', name: 'Keyboard Mekanikal', stock: 80, price: 750000 },
+  { id: '3', code: 'SKU003', name: 'Monitor 4K 27-inci', stock: 50, price: 4500000 },
+  { id: '4', code: 'SKU004', name: 'Hub USB-C', stock: 200, price: 350000 },
+  { id: '5', code: 'SKU005', name: 'Webcam 1080p', stock: 120, price: 600000 },
+  { id: '6', code: 'SKU006', name: 'Stand Laptop', stock: 300, price: 150000 },
+  { id: '7', code: 'SKU007', name: 'Headphone Peredam Bising', stock: 75, price: 1200000 },
+  { id: '8', code: 'SKU008', name: 'Kursi Ergonomis', stock: 25, price: 2500000 },
 ];
 
 
@@ -71,6 +71,9 @@ let shipments: Shipment[] = [
     }
 ];
 
+// Mock checkout history data
+let checkoutHistory: Checkout[] = [];
+
 // User Functions
 export function getDummyUsers(): User[] {
     return users;
@@ -104,7 +107,7 @@ export async function getProductByCode(code: string): Promise<Product | undefine
     return products.find((p) => p.code.toLowerCase() === code.toLowerCase());
 }
 
-export async function addOrUpdateProduct(productData: Omit<Product, 'id'> & { id?: string }): Promise<Product> {
+export async function addOrUpdateProduct(productData: Omit<Product, 'id'> & { id?: string; price?: number }): Promise<Product> {
   await new Promise(resolve => setTimeout(resolve, 500));
   
   if (productData.id) {
@@ -124,8 +127,11 @@ export async function addOrUpdateProduct(productData: Omit<Product, 'id'> & { id
         throw new Error('Kode produk harus unik.');
     }
     const newProduct: Product = {
-      ...productData,
       id: `prod_${Date.now()}`,
+      code: productData.code,
+      name: productData.name,
+      stock: productData.stock,
+      price: productData.price || 0,
     };
     products.push(newProduct);
     return newProduct;
@@ -171,4 +177,46 @@ export async function deleteShipment(shipmentId: string): Promise<void> {
     } else {
         throw new Error('Pengiriman tidak ditemukan.');
     }
+}
+
+// Checkout Functions
+export async function handleCheckout(data: { customerName: string; items: CheckoutItem[] }): Promise<Checkout> {
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Validate stock
+    for (const item of data.items) {
+        const product = products.find(p => p.code === item.code);
+        if (!product || product.stock < item.quantity) {
+            throw new Error(`Stok tidak mencukupi untuk produk: ${item.name}. Sisa ${product?.stock || 0}.`);
+        }
+    }
+
+    // Update stock
+    for (const item of data.items) {
+        const productIndex = products.findIndex(p => p.code === item.code);
+        if (productIndex > -1) {
+            products[productIndex].stock -= item.quantity;
+        }
+    }
+    
+    const totalAmount = data.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const totalItems = data.items.reduce((sum, item) => sum + item.quantity, 0);
+
+    const newCheckout: Checkout = {
+        id: `checkout_${Date.now()}`,
+        transactionId: `T-${Date.now()}`,
+        customerName: data.customerName,
+        items: data.items,
+        totalItems,
+        totalAmount,
+        createdAt: new Date().toISOString(),
+    };
+
+    checkoutHistory.unshift(newCheckout);
+    return newCheckout;
+}
+
+export async function getCheckoutHistory(): Promise<Checkout[]> {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    return [...checkoutHistory].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }

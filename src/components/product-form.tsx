@@ -18,6 +18,7 @@ const productFormSchema = z.object({
   code: z.string().min(1, 'Kode produk harus diisi'),
   name: z.string().min(1, 'Nama produk harus diisi'),
   stock: z.coerce.number().int().min(0, 'Stok tidak boleh negatif'),
+  price: z.coerce.number().min(0, 'Harga tidak boleh negatif'),
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
@@ -38,6 +39,7 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
       code: product?.code || '',
       name: product?.name || '',
       stock: product?.stock || 0,
+      price: product?.price || 0,
     },
   });
 
@@ -98,7 +100,7 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
           name="stock"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Stok Awal</FormLabel>
+              <FormLabel>Stok</FormLabel>
               <FormControl>
                 <Input type="number" placeholder="cth. 100" {...field} />
               </FormControl>
@@ -107,6 +109,20 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
           )}
         />
         
+         <FormField
+          control={form.control}
+          name="price"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Harga</FormLabel>
+              <FormControl>
+                <Input type="number" placeholder="cth. 250000" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onCancel}>
             Batal

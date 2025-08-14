@@ -80,6 +80,14 @@ export function ProductsClient({ initialProducts }: { initialProducts: Product[]
     }
     setIsDeleting(null);
   };
+  
+    const formatRupiah = (number: number) => {
+        return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0,
+        }).format(number);
+    };
 
   return (
     <div className="space-y-4">
@@ -114,6 +122,7 @@ export function ProductsClient({ initialProducts }: { initialProducts: Product[]
               <TableHead>Kode Produk</TableHead>
               <TableHead>Nama Produk</TableHead>
               <TableHead className="text-right">Stok</TableHead>
+              <TableHead className="text-right">Harga</TableHead>
               <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
@@ -124,6 +133,7 @@ export function ProductsClient({ initialProducts }: { initialProducts: Product[]
                   <TableCell className="font-medium">{product.code}</TableCell>
                   <TableCell>{product.name}</TableCell>
                   <TableCell className="text-right">{product.stock}</TableCell>
+                  <TableCell className="text-right">{formatRupiah(product.price)}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => openEditDialog(product)}>
                         <Edit className="h-4 w-4" />
@@ -157,7 +167,7 @@ export function ProductsClient({ initialProducts }: { initialProducts: Product[]
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">
+                <TableCell colSpan={5} className="h-24 text-center">
                   Tidak ada data produk.
                 </TableCell>
               </TableRow>

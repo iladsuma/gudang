@@ -3,6 +3,7 @@ export interface Product {
   code: string;
   name: string;
   stock: number;
+  price: number;
 }
 
 export interface ShipmentProduct {
@@ -29,4 +30,22 @@ export interface User {
     username: string;
     name: string;
     role: 'admin' | 'user';
+}
+
+export interface CheckoutItem {
+    code: string;
+    name: string;
+    quantity: number;
+    stock: number;
+    price: number;
+}
+
+export interface Checkout {
+    id: string;
+    transactionId: string;
+    customerName: string;
+    items: CheckoutItem[];
+    totalItems: number;
+    totalAmount: number;
+    createdAt: string; // ISO String
 }
