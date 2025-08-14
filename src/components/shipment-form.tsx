@@ -15,12 +15,14 @@ import { Loader2, PlusCircle, Trash2, Upload } from 'lucide-react';
 import { Card, CardContent, CardFooter } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { addShipment } from '@/lib/data';
+import Image from 'next/image';
 
 const shipmentProductSchema = z.object({
   name: z.string().min(1, 'Nama produk harus diisi'),
   quantity: z.coerce.number().int().min(1, 'Kuantitas min 1'),
   price: z.coerce.number().min(0, 'Harga tidak boleh negatif'),
   discount: z.coerce.number().min(0, 'Diskon min 0').max(100, 'Diskon maks 100'),
+  imageUrl: z.string().url('URL gambar tidak valid').optional().or(z.literal('')),
 });
 
 const shipmentFormSchema = z.object({
@@ -53,7 +55,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
       user: user?.name || '',
       transactionId: '',
       expedition: '',
-      products: [{ name: '', quantity: 1, price: 0, discount: 0 }],
+      products: [{ name: '', quantity: 1, price: 0, discount: 0, imageUrl: 'https://placehold.co/100x100.png' }],
     },
   });
 
@@ -70,7 +72,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
   const totalAmount = React.useMemo(() => {
     return productsWatch.reduce((sum, product) => {
         const { quantity, price, discount } = product;
-        const subtotal = (price * quantity) * (1 - discount / 100);
+        const subtotal = (price * quantity) * (1 - (discount || 0) / 100);
         return sum + (subtotal || 0);
     }, 0);
   }, [productsWatch]);
@@ -107,7 +109,8 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
   const onSubmit = async (data: ShipmentFormValues) => {
     setIsSubmitting(true);
     try {
-        const newShipment = await addShipment(data);
+        const productsWithImage = data.products.map(p => ({...p, imageUrl: p.imageUrl || 'https://placehold.co/100x100.png' }));
+        const newShipment = await addShipment({...data, products: productsWithImage });
         toast({
             title: 'Sukses!',
             description: 'Data pengiriman berhasil ditambahkan.',
@@ -219,6 +222,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Nama Produk</TableHead>
+                            <TableHead>URL Gambar</TableHead>
                             <TableHead className="w-[100px]">Jumlah</TableHead>
                             <TableHead className="w-[150px]">Harga</TableHead>
                             <TableHead className="w-[120px]">Diskon (%)</TableHead>
@@ -230,7 +234,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                         {fields.map((field, index) => {
                             const product = productsWatch[index] || {};
                             const { quantity = 0, price = 0, discount = 0 } = product;
-                            const subtotal = (price * quantity) * (1 - discount / 100);
+                            const subtotal = (price * quantity) * (1 - (discount || 0) / 100);
                             return (
                             <TableRow key={field.id}>
                                 <TableCell>
@@ -238,7 +242,16 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                         control={form.control}
                                         name={`products.${index}.name`}
                                         render={({ field }) => (
-                                            <FormItem><FormControl><Input placeholder="cth. Baju" {...field} /></FormControl></FormItem>
+                                            <FormItem><FormControl><Input placeholder="cth. Baju" {...field} /></FormControl><FormMessage /></FormItem>
+                                        )}
+                                    />
+                                </TableCell>
+                                <TableCell>
+                                    <FormField
+                                        control={form.control}
+                                        name={`products.${index}.imageUrl`}
+                                        render={({ field }) => (
+                                            <FormItem><FormControl><Input placeholder="https://..." {...field} /></FormControl><FormMessage /></FormItem>
                                         )}
                                     />
                                 </TableCell>
@@ -247,7 +260,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                         control={form.control}
                                         name={`products.${index}.quantity`}
                                         render={({ field }) => (
-                                            <FormItem><FormControl><Input type="number" {...field} /></FormControl></FormItem>
+                                            <FormItem><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                                         )}
                                     />
                                 </TableCell>
@@ -256,7 +269,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                         control={form.control}
                                         name={`products.${index}.price`}
                                         render={({ field }) => (
-                                            <FormItem><FormControl><Input type="number" placeholder="Rp" {...field} /></FormControl></FormItem>
+                                            <FormItem><FormControl><Input type="number" placeholder="Rp" {...field} /></FormControl><FormMessage /></FormItem>
                                         )}
                                     />
                                 </TableCell>
@@ -265,7 +278,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                         control={form.control}
                                         name={`products.${index}.discount`}
                                         render={({ field }) => (
-                                            <FormItem><FormControl><Input type="number" placeholder="0-100" {...field} /></FormControl></FormItem>
+                                            <FormItem><FormControl><Input type="number" placeholder="0-100" {...field} /></FormControl><FormMessage /></FormItem>
                                         )}
                                     />
                                 </TableCell>
@@ -287,7 +300,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                     variant="outline"
                     size="sm"
                     className="mt-4"
-                    onClick={() => append({ name: '', quantity: 1, price: 0, discount: 0 })}
+                    onClick={() => append({ name: '', quantity: 1, price: 0, discount: 0, imageUrl: 'https://placehold.co/100x100.png' })}
                     >
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Tambah Produk

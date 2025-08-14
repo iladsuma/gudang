@@ -41,6 +41,7 @@ import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { deleteShipment, processShipments } from '@/lib/data';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 export function ShipmentsClient({ shipments: initialShipments }: { shipments: Shipment[] }) {
   const [shipments, setShipments] = useState(initialShipments);
@@ -266,11 +267,21 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
                     </Button>
                   </TableCell>
                   <TableCell>
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-2">
                       {shipment.products.map((p, index) => (
-                        <Badge key={index} variant="secondary">
-                          {p.name} (x{p.quantity})
-                        </Badge>
+                        <div key={index} className="flex items-center gap-2">
+                          <Image
+                            src={p.imageUrl || 'https://placehold.co/100x100.png'}
+                            alt={p.name}
+                            width={32}
+                            height={32}
+                            className="rounded-md object-cover h-8 w-8"
+                            data-ai-hint="product image"
+                          />
+                          <Badge variant="secondary">
+                            {p.name} (x{p.quantity})
+                          </Badge>
+                        </div>
                       ))}
                     </div>
                   </TableCell>

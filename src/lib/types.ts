@@ -3,6 +3,7 @@ export interface ShipmentProduct {
     quantity: number;
     price: number;
     discount: number; // in percentage (0-100)
+    imageUrl: string;
 }
 
 export interface Shipment {
