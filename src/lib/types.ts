@@ -1,11 +1,3 @@
-export interface Product {
-  id: string;
-  code: string;
-  name: string;
-  stock: number;
-  price: number;
-}
-
 export interface ShipmentProduct {
     name: string;
     quantity: number;
@@ -34,11 +26,8 @@ export interface User {
 
 // This interface is now used for the history log, which is created from processed shipments.
 export interface CheckoutItem {
-    code: string; // Product Code (or name, if code is not available)
     name: string;
     quantity: number;
-    price: number; // May not be available from shipment data
-    stock: number; // May not be available from shipment data
 }
 
 // This interface represents a processed shipment record in the history.

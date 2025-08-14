@@ -1,6 +1,6 @@
 'use client';
 
-import type { User, Product, Shipment, Checkout, CheckoutItem } from '@/lib/types';
+import type { User, Shipment, Checkout, CheckoutItem } from '@/lib/types';
 
 // =================================================================
 // Helper functions to interact with localStorage
@@ -91,17 +91,6 @@ const initialUsers: User[] = [
     { id: 'usr_2', username: 'user', name: 'User Biasa', role: 'user' },
 ];
 
-const initialProducts: Product[] = [
-  { id: '1', code: 'SKU001', name: 'Mouse Nirkabel', stock: 150, price: 250000 },
-  { id: '2', code: 'SKU002', name: 'Keyboard Mekanikal', stock: 80, price: 750000 },
-  { id: '3', code: 'SKU003', name: 'Monitor 4K 27-inci', stock: 50, price: 4500000 },
-  { id: '4', code: 'SKU004', name: 'Hub USB-C', stock: 200, price: 350000 },
-  { id: '5', code: 'SKU005', name: 'Webcam 1080p', stock: 120, price: 600000 },
-  { id: '6', code: 'SKU006', name: 'Stand Laptop', stock: 300, price: 150000 },
-  { id: '7', code: 'SKU007', name: 'Headphone Peredam Bising', stock: 75, price: 1200000 },
-  { id: '8', code: 'SKU008', name: 'Kursi Ergonomis', stock: 25, price: 2500000 },
-];
-
 // =================================================================
 // Data Access Functions (Now using localStorage)
 // =================================================================
@@ -119,27 +108,6 @@ export async function login(username: string, password: string): Promise<User> {
     }
     throw new Error('Username atau password salah.');
 }
-
-// Product Functions
-export async function getProducts(query?: string): Promise<Product[]> {
-  await new Promise(resolve => setTimeout(resolve, 100)); // Simulate network delay
-  const products = getFromStorage('products', initialProducts);
-  let sortedProducts = [...products].sort((a,b) => a.name.localeCompare(b.name));
-  if (!query) {
-    return sortedProducts;
-  }
-  return sortedProducts.filter(
-    (p) =>
-      p.name.toLowerCase().includes(query.toLowerCase()) ||
-      p.code.toLowerCase().includes(query.toLowerCase())
-  );
-}
-
-export async function getProductByCode(code: string): Promise<Product | undefined> {
-    const products = getFromStorage('products', initialProducts);
-    return products.find((p) => p.code.toLowerCase() === code.toLowerCase());
-}
-
 
 // Shipment Functions
 export async function getShipments(): Promise<Shipment[]> {
@@ -201,11 +169,8 @@ export async function processAndMoveToHistory(shipmentIds: string[]): Promise<Ch
             transactionId: shipment.transactionId,
             customerName: shipment.user, 
             items: shipment.products.map(p => ({
-                code: p.name, // Assuming name is unique enough for this context
                 name: p.name,
                 quantity: p.quantity,
-                price: 0, // Price data is not in the shipment
-                stock: 0, // Stock data is not relevant for a history item
             })),
             totalItems: shipment.totalItems,
             totalAmount: 0, // Amount data is not in the shipment
