@@ -1,9 +1,8 @@
 'use server';
 
 import { z } from 'zod';
-import { addOrUpdateProduct, addShipment, deleteShipment, deleteProduct, handleCheckout as performCheckout } from '@/lib/data';
+import { addShipment, deleteShipment, handleCheckout as performCheckout } from '@/lib/data';
 import { revalidatePath } from 'next/cache';
-import type { Product, Checkout } from './types';
 import { ingestTransactionData } from '@/ai/flows/ingest-transaction-data';
 
 const shipmentProductSchema = z.object({
@@ -46,39 +45,6 @@ export async function handleDeleteShipment(shipmentId: string) {
         return { success: true, message: 'Pengiriman berhasil dihapus.' };
     } catch (error) {
         return { success: false, message: 'Gagal menghapus pengiriman.' };
-    }
-}
-
-const productFormSchema = z.object({
-    id: z.string().optional(),
-    code: z.string().min(1, 'Kode produk harus diisi'),
-    name: z.string().min(1, 'Nama produk harus diisi'),
-    stock: z.coerce.number().int().min(0, 'Stok tidak boleh negatif'),
-});
-
-export async function handleAddOrUpdateProduct(formData: unknown): Promise<{success: boolean; message: string; data?: Product}> {
-    const parsed = productFormSchema.safeParse(formData);
-    if (!parsed.success) {
-        const errorMessages = parsed.error.issues.map(issue => issue.message).join(', ');
-        return { success: false, message: `Data formulir tidak valid: ${errorMessages}` };
-    }
-    try {
-        const updatedProduct = await addOrUpdateProduct(parsed.data);
-        revalidatePath('/products');
-        return { success: true, message: `Produk berhasil ${parsed.data.id ? 'diperbarui' : 'ditambahkan'}.`, data: updatedProduct };
-    } catch (error) {
-        const message = error instanceof Error ? error.message : 'Terjadi kesalahan yang tidak diketahui.';
-        return { success: false, message };
-    }
-}
-
-export async function handleDeleteProduct(productId: string) {
-    try {
-        await deleteProduct(productId);
-        revalidatePath('/products');
-        return { success: true, message: 'Produk berhasil dihapus.' };
-    } catch (error) {
-        return { success: false, message: 'Gagal menghapus produk.' };
     }
 }
 

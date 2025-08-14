@@ -107,46 +107,6 @@ export async function getProductByCode(code: string): Promise<Product | undefine
     return products.find((p) => p.code.toLowerCase() === code.toLowerCase());
 }
 
-export async function addOrUpdateProduct(productData: Omit<Product, 'id'> & { id?: string; price?: number }): Promise<Product> {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  if (productData.id) {
-    // Update
-    const index = products.findIndex(p => p.id === productData.id);
-    if (index > -1) {
-      if (products.some(p => p.code.toLowerCase() === productData.code.toLowerCase() && p.id !== productData.id)) {
-        throw new Error('Kode produk harus unik.');
-      }
-      products[index] = { ...products[index], ...productData };
-      return products[index];
-    }
-    throw new Error('Produk tidak ditemukan untuk diperbarui.');
-  } else {
-    // Add
-    if (products.some(p => p.code.toLowerCase() === productData.code.toLowerCase())) {
-        throw new Error('Kode produk harus unik.');
-    }
-    const newProduct: Product = {
-      id: `prod_${Date.now()}`,
-      code: productData.code,
-      name: productData.name,
-      stock: productData.stock,
-      price: productData.price || 0,
-    };
-    products.push(newProduct);
-    return newProduct;
-  }
-}
-
-export async function deleteProduct(productId: string): Promise<void> {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const index = products.findIndex(p => p.id === productId);
-  if (index > -1) {
-    products.splice(index, 1);
-  } else {
-    throw new Error('Produk tidak ditemukan.');
-  }
-}
 
 // Shipment Functions
 export async function getShipments(): Promise<Shipment[]> {
