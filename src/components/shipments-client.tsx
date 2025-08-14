@@ -49,6 +49,8 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
   const [selectedShipments, setSelectedShipments] = useState<string[]>([]);
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
+  const router = useRouter();
+
 
   useEffect(() => {
     setShipments(initialShipments);
@@ -131,7 +133,9 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
 
         for (const [index, shipment] of shipmentsToProcess.entries()) {
             const pdfDataUrl = shipment.receipt.dataUrl;
-            const existingPdfBytes = await fetch(pdfDataUrl).then(res => res.arrayBuffer());
+            // Convert base64 data URI to ArrayBuffer directly
+            const base64 = pdfDataUrl.split(',')[1];
+            const existingPdfBytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
             const pdfDoc = await PDFDocument.load(existingPdfBytes);
             
             const [firstPage] = await mergedPdf.copyPages(pdfDoc, [0]);
