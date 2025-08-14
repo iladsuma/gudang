@@ -83,7 +83,6 @@ export function InvoicesClient({ batches: initialBatches }: { batches: Checkout[
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.text('GudangCheckout', 14, 26);
-    doc.text('Jl. Raya Aplikasi No. 1, Jakarta', 14, 31);
     
     const infoX = pageWidth - 90;
     doc.text(`No. Batch`, infoX, 20);
