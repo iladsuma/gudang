@@ -58,7 +58,7 @@ export default function InvoicesPage() {
                   </CardContent>
               </Card>
           </div>
-      )
+      );
   }
 
   return (
@@ -68,7 +68,7 @@ export default function InvoicesPage() {
           <CardTitle>Manajemen Faktur Batch</CardTitle>
           <CardDescription>
             Buat faktur gabungan berdasarkan batch pemrosesan di riwayat.
-          </Description>
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <InvoicesClient batches={batches} />
