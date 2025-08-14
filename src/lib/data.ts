@@ -35,56 +35,7 @@ const saveToStorage = <T>(key: string, value: T): void => {
 // =================================================================
 // Initial Mock Data (used only if localStorage is empty)
 // =================================================================
-const initialShipments: Shipment[] = [
-    {
-        id: 'ship_1722885934988',
-        user: 'Andi',
-        transactionId: 'TRX-001',
-        expedition: 'JNE Express',
-        receipt: {
-            fileName: 'resi_shopee_1.pdf',
-            dataUrl: 'data:application/pdf;base64,JVBERi0xLjcgCiXi48/TIAoxIDAgb2JqIAo8PCAKL3R5cGUgL0NhdGFsb2cgCi9wYWdlcyAyIDAgUiAKPj4gCmVuZG9iagoyIDAgb2JqIAo8PCAKL3R5cGUgL1BhZ2VzIAovY291bnQgMSAKL2tpZHMgWyAzIDAgUiBdIAo+PiAKZW5kb2JqCjMgMCBvYmogCjw8IAovdHlwZSAvUGFnZSAKL3BhcmVudCAyIDAgUiAKL3Jlc291cmNlcyA8PCAKL2ZvbnQgPDwgCi9GMSA0IDAgUiAKPj4gCj4+IAovbWVkaWFCb3ggWyAwIDAgNTk1IDg0MiBdIAovY29udGVudHMgNSAwIFIgCj4+IAplbmRvYmoKNiAwIG9iagogPDwgCi9MZW5ndGggNTIgCi9GaWx0ZXIgL0ZsYXRlRGVjb2RlIAo+PiAKc3RyZWFtCnicK+ZyYGAEUnBnoiBDAwMDUwMUAxczEwMTAxs/FzE3Eyc3FzI3Oxs6AzYFBgYGBgY/jH6Y4wIAm9iAOKgYmZiZmFlYmlmYeBgYGBgAAAA//8AAnRleHQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqIAo8PCAKL0xlbmd0aCA2MiAKL0ZpbHRlciAvRmxhdGVEZWNvZGUgCj4+IApzdHJlYW0KeJwr5HAAAAAFgADCZW5kc3RyZWFtCmVuZG9iago0IDAgb2JqIAo8PCAKL3R5cGUgL0ZvbnQgCi9zdWJ0eXBlIC9UeXBlMSAKL2Jhc2Vmb250IC9IZWx2ZXRpY2EgCi9lbmNvZGluZyAvV2luQW5zaUVuY29kaW5nIAo+PiAKZW5kb2JqCnhyZWYKMCA3CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAxNyAwMDAwMCBuIAowMDAwMDAwMDY5IDAwMDAwIG4gCjAwMDAwMDAxMjggMDAwMDAgbiAKMDAwMDAwMzk4IDAwMDAwIG4gCjAwMDAwMDAzMjUgMDAwMDAgbiAKMDAwMDAwMTk0IDAwMDAwIG4gCnRyYWlsZXIKICA8PCAKL1Jvb3QgMSAwIFIgCi9TaXplIDcgCj4+IApzdGFydHhyZWYKNDc2CiUlRU9GCg=='
-        },
-        products: [
-            { name: 'Mouse Nirkabel', quantity: 2 },
-            { name: 'Keyboard Mekanikal', quantity: 1 }
-        ],
-        totalItems: 3,
-        createdAt: '2024-08-05T12:25:34.988Z'
-    },
-    {
-        id: 'ship_1722885987123',
-        user: 'Budi',
-        transactionId: 'TRX-002',
-        expedition: 'SiCepat',
-        receipt: {
-            fileName: 'invoice_456.pdf',
-            dataUrl: 'data:application/pdf;base64,JVBERi0xLjcgCiXi48/TIAoxIDAgb2JqIAo8PCAKL3R5cGUgL0NhdGFsb2cgCi9wYWdlcyAyIDAgUiAKPj4gCmVuZG9iagoyIDAgb2JqIAo8PCAKL3R5cGUgL1BhZ2VzIAovY291bnQgMSAKL2tpZHMgWyAzIDAgUiBdIAo+PiAKZW5kb2JqCjMgMCBvYmogCjw8IAovdHlwZSAvUGFnZSAKL3BhcmVudCAyIDAgUiAKL3Jlc291cmNlcyA8PCAKL2ZvbnQgPDwgCi9GMSA0IDAgUiAKPj4gCj4+IAovbWVkaWFCb3ggWyAwIDAgNTk1IDg0MiBdIAovY29udGVudHMgNSAwIFIgCj4+IAplbmRvYmoKNiAwIG9iagogPDwgCi9MZW5ndGggNTIgCi9GaWx0ZXIgL0ZsYXRlRGVjb2RlIAo+PiAKc3RyZWFtCnicK+ZyYGAEUnBnoiBDAwMDUwMUAxczEwMTAxs/FzE3Eyc3FzI3Oxs6AzYFBgYGBgY/jH6Y4wIAm9iAOKgYmZiZmFlYmlmYeBgYGBgAAAA//8AAnRleHQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqIAo8PCAKL0xlbmd0aCA2MiAKL0ZpbHRlciAvRmxhdGVEZWNvZGUgCj4+IApzdHJlYW0KeJwr5HAAAAAFgADCZW5kc3RyZWFtCmVuZG9iago0IDAgb2JqIAo8PCAKL3R5cGUgL0ZvbnQgCi9zdWJ0eXBlIC9UeXBlMSAKL2Jhc2Vmb250IC9IZWx2ZXRpY2EgCi9lbmNvZGluZyAvV2luQW5zaUVuY29kaW5nIAo+PiAKZW5kb2JqCnhyZWYKMCA3CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAxNyAwMDAwMCBuIAowMDAwMDAwMDY5IDAwMDAwIG4gCjAwMDAwMDAxMjggMDAwMDAgbiAKMDAwMDAwMzk4IDAwMDAwIG4gCjAwMDAwMDAzMjUgMDAwMDAgbiAKMDAwMDAwMTk0IDAwMDAwIG4gCnRyYWlsZXIKICA8PCAKL1Jvb3QgMSAwIFIgCi9TaXplIDcgCj4+IApzdGFydHhyZWYKNDc2CiUlRU9GCg=='
-        },
-        products: [
-            { name: 'Monitor 4K 27-inci', quantity: 1 }
-        ],
-        totalItems: 1,
-        createdAt: '2024-08-05T10:10:10.123Z'
-    },
-    {
-        id: 'ship_1722886014567',
-        user: 'Andi',
-        transactionId: 'TRX-003',
-        expedition: 'J&T Express',
-        receipt: {
-            fileName: 'resi_blibli_2.pdf',
-            dataUrl: 'data:application/pdf;base64,JVBERi0xLjcgCiXi48/TIAoxIDAgb2JqIAo8PCAKL3R5cGUgL0NhdGFsb2cgCi9wYWdlcyAyIDAgUiAKPj4gCmVuZG9iagoyIDAgb2JqIAo8PCAKL3R5cGUgL1BhZ2VzIAovY291bnQgMSAKL2tpZHMgWyAzIDAgUiBdIAo+PiAKZW5kb2JqCjMgMCBvYmogCjw8IAovdHlwZSAvUGFnZSAKL3BhcmVudCAyIDAgUiAKL3Jlc291cmNlcyA8PCAKL2ZvbnQgPDwgCi9GMSA0IDAgUiAKPj4gCj4+IAovbWVkaWFCb3ggWyAwIDAgNTk1IDg0MiBdIAovY29udGVudHMgNSAwIFIgCj4+IAplbmRvYmoKNiAwIG9iagogPDwgCi9MZW5ndGggNTIgCi9GaWx0ZXIgL0ZsYXRlRGVjb2RlIAo+PiAKc3RyZWFtCnicK+ZyYGAEUnBnoiBDAwMDUwMUAxczEwMTAxs/FzE3Eyc3FzI3Oxs6AzYFBgYGBgY/jH6Y4wIAm9iAOKgYmZiZmFlYmlmYeBgYGBgAAAA//8AAnRleHQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqIAo8PCAKL0xlbmd0aCA2MiAKL0ZpbHRlciAvRmxhdGVEZWNvZGUgCj4+IApzdHJlYW0KeJwr5HAAAAAFgADCZW5kc3RyZWFtCmVuZG9iago0IDAgb2JqIAo8PCAKL3R5cGUgL0ZvbnQgCi9zdWJ0eXBlIC9UeXBlMSAKL2Jhc2Vmb250IC9IZWx2ZXRpY2EgCi9lbmNvZGluZyAvV2luQW5zaUVuY29kaW5nIAo+PiAKZW5kb2JqCnhyZWYKMCA3CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAxNyAwMDAwMCBuIAowMDAwMDAwMDY5IDAwMDAwIG4gCjAwMDAwMDAxMjggMDAwMDAgbiAKMDAwMDAwMzk4IDAwMDAwIG4gCjAwMDAwMDAzMjUgMDAwMDAgbiAKMDAwMDAwMTk0IDAwMDAwIG4gCnRyYWlsZXIKICA8PCAKL1Jvb3QgMSAwIFIgCi9TaXplIDcgCj4+IApzdGFydHhyZWYKNDc2CiUlRU9GCg=='
-        },
-        products: [
-            { name: 'Hub USB-C', quantity: 5 },
-            { name: 'Stand Laptop', quantity: 3 },
-            { name: 'Webcam 1080p', quantity: 2 }
-        ],
-        totalItems: 10,
-        createdAt: '2024-08-04T08:45:00.567Z'
-    }
-];
+const initialShipments: Shipment[] = [];
 
 const initialUsers: User[] = [
     { id: 'usr_1', username: 'admin', name: 'Admin', role: 'admin' },
@@ -103,6 +54,7 @@ export function getDummyUsers(): User[] {
 export async function login(username: string, password: string): Promise<User> {
     await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
     const user = initialUsers.find(u => u.username === username);
+    // In a real app, you'd hash and compare passwords. Here we use plain text for demo.
     if (user && user.username === password) { 
         return user;
     }
@@ -113,6 +65,10 @@ export async function login(username: string, password: string): Promise<User> {
 export async function getShipments(): Promise<Shipment[]> {
   await new Promise(resolve => setTimeout(resolve, 100));
   const shipments = getFromStorage('shipments', initialShipments);
+  // ensure the initial data is set if storage is empty
+  if (getFromStorage('shipments', null) === null) {
+      saveToStorage('shipments', initialShipments);
+  }
   return [...shipments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
@@ -161,31 +117,35 @@ export async function processAndMoveToHistory(shipmentIds: string[]): Promise<Ch
 
     for (const shipment of shipmentsToProcess) {
         if (checkoutHistory.some(c => c.transactionId === shipment.transactionId)) {
-            continue; // Skip if already in history
+            // This shipment was already processed, perhaps in a previous batch.
+            // We should still remove it from the main shipments list.
+            continue; 
         }
 
         const newCheckout: Checkout = {
             id: `checkout_${Date.now()}_${shipment.id}`,
             transactionId: shipment.transactionId,
-            customerName: shipment.user, 
+            customerName: shipment.user, // Represents the sender/user from the shipment
             items: shipment.products.map(p => ({
                 name: p.name,
                 quantity: p.quantity,
             })),
             totalItems: shipment.totalItems,
-            totalAmount: 0, // Amount data is not in the shipment
-            createdAt: shipment.createdAt,
+            totalAmount: 0, // Amount data is not in the shipment, so default to 0
+            createdAt: shipment.createdAt, // Keep the original creation date
         };
         newHistoryItems.push(newCheckout);
     }
     
+    // Only proceed if there are new items to add to history
     if (newHistoryItems.length > 0) {
         const updatedHistory = [...newHistoryItems, ...checkoutHistory];
-        const updatedShipments = shipments.filter(s => !shipmentIds.includes(s.id));
-        
         saveToStorage('checkoutHistory', updatedHistory);
-        saveToStorage('shipments', updatedShipments);
     }
+    
+    // Always remove the processed shipments from the main list
+    const updatedShipments = shipments.filter(s => !shipmentIds.includes(s.id));
+    saveToStorage('shipments', updatedShipments);
     
     return newHistoryItems;
 }
@@ -194,5 +154,8 @@ export async function processAndMoveToHistory(shipmentIds: string[]): Promise<Ch
 export async function getCheckoutHistory(): Promise<Checkout[]> {
     await new Promise(resolve => setTimeout(resolve, 100));
     const history = getFromStorage<Checkout[]>('checkoutHistory', []);
+     if (getFromStorage('checkoutHistory', null) === null) {
+      saveToStorage('checkoutHistory', []);
+    }
     return [...history].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
