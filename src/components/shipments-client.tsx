@@ -117,39 +117,30 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
         const shipmentsToPrint = selectedShipments
             .map(id => shipments.find(s => s.id === id))
             .filter((s): s is Shipment => !!s);
+        
+        const font = await mergedPdf.embedFont(StandardFonts.HelveticaBold);
 
-        for (const shipment of shipmentsToPrint) {
-            // 1. Create a separator page
-            const separatorPage = mergedPdf.addPage();
-            const { width, height } = separatorPage.getSize();
-            const font = await mergedPdf.embedFont(StandardFonts.HelveticaBold);
-            const fontSize = 24;
-
-            const text = `No. Transaksi: ${shipment.transactionId}\nEkspedisi: ${shipment.expedition}\nUser: ${shipment.user}`;
-            
-            separatorPage.drawText(text, {
-                x: 50,
-                y: height - 4 * fontSize,
-                font: font,
-                size: fontSize,
-                lineHeight: 30,
-                color: rgb(0, 0, 0),
-            });
-            separatorPage.drawRectangle({
-                x: 40,
-                y: height - (4 * fontSize) - 80,
-                width: width - 80,
-                height: 100,
-                borderColor: rgb(0, 0, 0),
-                borderWidth: 2,
-            });
-
-
-            // 2. Add the actual receipt pages
+        for (const [index, shipment] of shipmentsToPrint.entries()) {
+            // Load the existing PDF
             const pdfDataUrl = shipment.receipt.dataUrl;
             const existingPdfBytes = await fetch(pdfDataUrl).then(res => res.arrayBuffer());
             const pdfDoc = await PDFDocument.load(existingPdfBytes);
             const copiedPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+
+            // Add the text to the first page of the copied document
+            if (copiedPages.length > 0) {
+              const firstPage = copiedPages[0];
+              const { height } = firstPage.getSize();
+              firstPage.drawText(`resi-sel-${index + 1}`, {
+                x: 20,
+                y: height - 25,
+                font: font,
+                size: 14,
+                color: rgb(0.9, 0.1, 0.1), // Bright red color
+              });
+            }
+            
+            // Add the (now modified) pages to the merged document
             copiedPages.forEach((page) => {
                 mergedPdf.addPage(page);
             });
@@ -217,7 +208,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
             <TableRow>
               <TableHead className="w-[50px]">
                 <Checkbox
-                    checked={selectedShipments.length === shipments.length && shipments.length > 0}
+                    checked={shipments.length === initialShipments.length && shipments.length > 0}
                     onCheckedChange={handleSelectAll}
                     aria-label="Pilih semua"
                 />
@@ -256,7 +247,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
                     <div className="flex flex-col gap-1">
                       {shipment.products.map((p, index) => (
                         <Badge key={index} variant="secondary">
-                          {p.name} (x${p.quantity})
+                          {p.name} (x{p.quantity})
                         </Badge>
                       ))}
                     </div>
