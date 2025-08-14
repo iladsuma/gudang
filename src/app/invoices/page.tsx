@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/auth-context';
-import { getCheckoutHistory } from '@/lib/data';
-import type { Checkout } from '@/lib/types';
+import { getShipments } from '@/lib/data';
+import type { Shipment } from '@/lib/types';
 import {
   Card,
   CardHeader,
@@ -18,7 +18,7 @@ import { useRouter } from 'next/navigation';
 export default function InvoicesPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const [checkouts, setCheckouts] = useState<Checkout[]>([]);
+  const [shipments, setShipments] = useState<Shipment[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -29,8 +29,8 @@ export default function InvoicesPage() {
   
   useEffect(() => {
     if (user) {
-      getCheckoutHistory().then(data => {
-        setCheckouts(data);
+      getShipments().then(data => {
+        setShipments(data);
         setLoading(false);
       });
     }
@@ -66,11 +66,11 @@ export default function InvoicesPage() {
         <CardHeader>
           <CardTitle>Manajemen Faktur</CardTitle>
           <CardDescription>
-            Buat faktur berdasarkan data pengiriman yang sudah diproses.
+            Buat faktur berdasarkan data pengiriman yang sudah ada.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <InvoicesClient checkouts={checkouts} />
+          <InvoicesClient checkouts={shipments} />
         </CardContent>
       </Card>
     </div>

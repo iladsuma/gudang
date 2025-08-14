@@ -1,6 +1,6 @@
 'use client';
 
-import type { User, Shipment, Checkout } from '@/lib/types';
+import type { User, Shipment, Checkout, ProcessedShipmentSummary } from '@/lib/types';
 
 // =================================================================
 // Helper functions to interact with localStorage
@@ -114,40 +114,42 @@ export async function deleteShipment(shipmentId: string): Promise<void> {
 }
 
 // History/Checkout Functions
-export async function processShipments(shipmentIds: string[]): Promise<Checkout[]> {
+export async function processShipments(shipmentIds: string[]): Promise<Checkout> {
     await new Promise(resolve => setTimeout(resolve, 200));
 
     let shipments = await getShipments();
     let checkoutHistory = await getCheckoutHistory();
+    const storedUser = getFromStorage<User | null>('user', null);
     
     const shipmentsToProcess = shipments.filter(s => shipmentIds.includes(s.id));
-    const newHistoryItems: Checkout[] = [];
+    if (shipmentsToProcess.length === 0) {
+        throw new Error("Tidak ada pengiriman yang valid untuk diproses.");
+    }
 
-    for (const shipment of shipmentsToProcess) {
-        const newCheckout: Checkout = {
-            id: `checkout_${Date.now()}_${shipment.id}`,
-            transactionId: shipment.transactionId,
-            customerName: shipment.user, 
-            items: shipment.products.map(p => ({
-                name: p.name,
-                quantity: p.quantity,
-                price: p.price,
-                discount: p.discount,
-                subtotal: p.price * p.quantity * (1 - p.discount / 100)
-            })),
-            totalItems: shipment.totalItems,
-            totalAmount: shipment.totalAmount,
-            createdAt: new Date().toISOString(),
-        };
-        newHistoryItems.push(newCheckout);
-    }
+    const processedShipments: ProcessedShipmentSummary[] = shipmentsToProcess.map(s => ({
+        transactionId: s.transactionId,
+        totalAmount: s.totalAmount,
+        totalItems: s.totalItems,
+    }));
+
+    const totalBatchAmount = processedShipments.reduce((sum, s) => sum + s.totalAmount, 0);
+    const totalBatchItems = processedShipments.reduce((sum, s) => sum + s.totalItems, 0);
+
+    const newBatchCheckout: Checkout = {
+        id: `batch_${Date.now()}`,
+        processorName: storedUser?.name || 'Unknown User',
+        processedShipments: processedShipments,
+        totalBatchAmount: totalBatchAmount,
+        totalBatchItems: totalBatchItems,
+        createdAt: new Date().toISOString(),
+    };
     
-    if (newHistoryItems.length > 0) {
-        const updatedHistory = [...newHistoryItems, ...checkoutHistory];
-        saveToStorage('checkoutHistory', updatedHistory);
-    }
+    const updatedHistory = [newBatchCheckout, ...checkoutHistory];
+    saveToStorage('checkoutHistory', updatedHistory);
     
-    return newHistoryItems;
+    // Unlike before, we don't remove the shipments from the main list.
+    
+    return newBatchCheckout;
 }
 
 

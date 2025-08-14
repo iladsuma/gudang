@@ -35,13 +35,21 @@ export interface CheckoutItem {
     subtotal: number;
 }
 
-// This interface represents a processed shipment record in the history.
-export interface Checkout {
-    id: string;
+
+export interface ProcessedShipmentSummary {
     transactionId: string;
-    customerName: string; // Represents the sender/user from the shipment
-    items: CheckoutItem[];
+    totalAmount: number;
     totalItems: number;
-    totalAmount: number; // Grand total after discounts
+}
+
+
+// This interface represents a processed shipment record in the history.
+// It can now represent a batch of processed shipments.
+export interface Checkout {
+    id: string; // Unique ID for the batch process
+    processorName: string; // User who processed the batch
+    processedShipments: ProcessedShipmentSummary[]; // Summary of all shipments in this batch
+    totalBatchItems: number; // Sum of all items from all shipments in the batch
+    totalBatchAmount: number; // Sum of all amounts from all shipments in the batch
     createdAt: string; // ISO String for when it was processed
 }
