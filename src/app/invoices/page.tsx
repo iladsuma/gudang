@@ -65,9 +65,9 @@ export default function InvoicesPage() {
     <div className="container mx-auto p-4 md:p-8">
       <Card>
         <CardHeader>
-          <CardTitle>Manajemen Faktur Batch</CardTitle>
+          <CardTitle>Manajemen Faktur</CardTitle>
           <CardDescription>
-            Buat faktur gabungan berdasarkan batch pemrosesan di riwayat.
+            Pilih satu atau beberapa batch untuk membuat faktur gabungan.
           </CardDescription>
         </CardHeader>
         <CardContent>
