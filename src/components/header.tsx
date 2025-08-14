@@ -32,7 +32,7 @@ export function Header() {
                   href="/shipments"
                   className="text-foreground/60 transition-colors hover:text-foreground/80"
                 >
-                  Lacak Pengiriman
+                  Rekap Pengiriman
                 </Link>
                 {user.role === 'admin' && (
                   <>

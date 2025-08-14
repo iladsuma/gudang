@@ -47,7 +47,7 @@ export default function ShipmentsPage() {
     <div className="container mx-auto p-4 md:p-8">
       <Card>
         <CardHeader>
-          <CardTitle>Lacak Pengiriman</CardTitle>
+          <CardTitle>Rekapitulasi Pengiriman</CardTitle>
           <CardDescription>
             Kelola semua data pengiriman barang masuk Anda di sini.
           </CardDescription>
