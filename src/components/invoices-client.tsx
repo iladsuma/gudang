@@ -126,7 +126,7 @@ export function InvoicesClient({ checkouts }: { checkouts: Checkout[] }) {
     doc.text(`: ${totalDiscount.toLocaleString('id-ID')}`, summaryX + 25, footerY + 10);
     
     doc.text(`Biaya Lain`, summaryX, footerY + 15);
-    doctext(`: 0`, summaryX + 25, footerY + 15);
+    doc.text(`: 0`, summaryX + 25, footerY + 15);
     
     doc.setFont('helvetica', 'bold');
     doc.text(`Total Akhir`, summaryX, footerY + 20);
