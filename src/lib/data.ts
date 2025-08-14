@@ -1,26 +1,41 @@
+'use client';
+
 import type { User, Product, Shipment, Checkout, CheckoutItem } from '@/lib/types';
 
-// Mock user data
-const users: User[] = [
-    { id: 'usr_1', username: 'admin', name: 'Admin', role: 'admin' },
-    { id: 'usr_2', username: 'user', name: 'User Biasa', role: 'user' },
-];
+// =================================================================
+// Helper functions to interact with localStorage
+// =================================================================
 
-// Mock product data
-let products: Product[] = [
-  { id: '1', code: 'SKU001', name: 'Mouse Nirkabel', stock: 150, price: 250000 },
-  { id: '2', code: 'SKU002', name: 'Keyboard Mekanikal', stock: 80, price: 750000 },
-  { id: '3', code: 'SKU003', name: 'Monitor 4K 27-inci', stock: 50, price: 4500000 },
-  { id: '4', code: 'SKU004', name: 'Hub USB-C', stock: 200, price: 350000 },
-  { id: '5', code: 'SKU005', name: 'Webcam 1080p', stock: 120, price: 600000 },
-  { id: '6', code: 'SKU006', name: 'Stand Laptop', stock: 300, price: 150000 },
-  { id: '7', code: 'SKU007', name: 'Headphone Peredam Bising', stock: 75, price: 1200000 },
-  { id: '8', code: 'SKU008', name: 'Kursi Ergonomis', stock: 25, price: 2500000 },
-];
+const getFromStorage = <T>(key: string, defaultValue: T): T => {
+  if (typeof window === 'undefined') {
+    return defaultValue;
+  }
+  try {
+    const item = window.localStorage.getItem(key);
+    return item ? JSON.parse(item) : defaultValue;
+  } catch (error) {
+    console.error(`Error reading from localStorage key “${key}”:`, error);
+    return defaultValue;
+  }
+};
+
+const saveToStorage = <T>(key: string, value: T): void => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  try {
+    const item = JSON.stringify(value);
+    window.localStorage.setItem(key, item);
+  } catch (error) {
+    console.error(`Error writing to localStorage key “${key}”:`, error);
+  }
+};
 
 
-// Mock shipment data
-let shipments: Shipment[] = [
+// =================================================================
+// Initial Mock Data (used only if localStorage is empty)
+// =================================================================
+const initialShipments: Shipment[] = [
     {
         id: 'ship_1722885934988',
         user: 'Andi',
@@ -71,18 +86,34 @@ let shipments: Shipment[] = [
     }
 ];
 
-// Mock checkout history data
-let checkoutHistory: Checkout[] = [];
+const initialUsers: User[] = [
+    { id: 'usr_1', username: 'admin', name: 'Admin', role: 'admin' },
+    { id: 'usr_2', username: 'user', name: 'User Biasa', role: 'user' },
+];
+
+const initialProducts: Product[] = [
+  { id: '1', code: 'SKU001', name: 'Mouse Nirkabel', stock: 150, price: 250000 },
+  { id: '2', code: 'SKU002', name: 'Keyboard Mekanikal', stock: 80, price: 750000 },
+  { id: '3', code: 'SKU003', name: 'Monitor 4K 27-inci', stock: 50, price: 4500000 },
+  { id: '4', code: 'SKU004', name: 'Hub USB-C', stock: 200, price: 350000 },
+  { id: '5', code: 'SKU005', name: 'Webcam 1080p', stock: 120, price: 600000 },
+  { id: '6', code: 'SKU006', name: 'Stand Laptop', stock: 300, price: 150000 },
+  { id: '7', code: 'SKU007', name: 'Headphone Peredam Bising', stock: 75, price: 1200000 },
+  { id: '8', code: 'SKU008', name: 'Kursi Ergonomis', stock: 25, price: 2500000 },
+];
+
+// =================================================================
+// Data Access Functions (Now using localStorage)
+// =================================================================
 
 // User Functions
 export function getDummyUsers(): User[] {
-    return users;
+    return initialUsers;
 }
 
 export async function login(username: string, password: string): Promise<User> {
     await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
-    const user = users.find(u => u.username === username);
-    // In a real app, you'd check a hashed password. Here, we're doing a simple check.
+    const user = initialUsers.find(u => u.username === username);
     if (user && user.username === password) { 
         return user;
     }
@@ -92,6 +123,7 @@ export async function login(username: string, password: string): Promise<User> {
 // Product Functions
 export async function getProducts(query?: string): Promise<Product[]> {
   await new Promise(resolve => setTimeout(resolve, 100)); // Simulate network delay
+  const products = getFromStorage('products', initialProducts);
   let sortedProducts = [...products].sort((a,b) => a.name.localeCompare(b.name));
   if (!query) {
     return sortedProducts;
@@ -104,6 +136,7 @@ export async function getProducts(query?: string): Promise<Product[]> {
 }
 
 export async function getProductByCode(code: string): Promise<Product | undefined> {
+    const products = getFromStorage('products', initialProducts);
     return products.find((p) => p.code.toLowerCase() === code.toLowerCase());
 }
 
@@ -111,44 +144,56 @@ export async function getProductByCode(code: string): Promise<Product | undefine
 // Shipment Functions
 export async function getShipments(): Promise<Shipment[]> {
   await new Promise(resolve => setTimeout(resolve, 100));
+  const shipments = getFromStorage('shipments', initialShipments);
   return [...shipments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
 export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'totalItems'>): Promise<Shipment> {
   await new Promise(resolve => setTimeout(resolve, 500));
+  const shipments = getFromStorage('shipments', initialShipments);
+
   if (shipments.some(s => s.transactionId.toLowerCase() === data.transactionId.toLowerCase())) {
     throw new Error('ID Transaksi harus unik.');
   }
+
   const newShipment: Shipment = {
     ...data,
     id: `ship_${Date.now()}`,
     createdAt: new Date().toISOString(),
     totalItems: data.products.reduce((sum, p) => sum + p.quantity, 0),
   };
-  shipments.unshift(newShipment);
+  
+  const updatedShipments = [newShipment, ...shipments];
+  saveToStorage('shipments', updatedShipments);
+
   return newShipment;
 }
 
 export async function deleteShipment(shipmentId: string): Promise<void> {
     await new Promise(resolve => setTimeout(resolve, 500));
-    const index = shipments.findIndex(s => s.id === shipmentId);
-    if (index > -1) {
-        shipments.splice(index, 1);
-    } else {
+    let shipments = getFromStorage('shipments', initialShipments);
+    const updatedShipments = shipments.filter(s => s.id !== shipmentId);
+    
+    if (shipments.length === updatedShipments.length) {
         throw new Error('Pengiriman tidak ditemukan.');
     }
+    
+    saveToStorage('shipments', updatedShipments);
 }
 
 // History/Checkout Functions
-export async function processAndAddToHistory(shipmentIds: string[]): Promise<Checkout[]> {
+export async function processAndMoveToHistory(shipmentIds: string[]): Promise<Checkout[]> {
     await new Promise(resolve => setTimeout(resolve, 200));
 
+    let shipments = getFromStorage('shipments', initialShipments);
+    let checkoutHistory = getFromStorage<Checkout[]>('checkoutHistory', []);
+    
     const shipmentsToProcess = shipments.filter(s => shipmentIds.includes(s.id));
     const newHistoryItems: Checkout[] = [];
 
     for (const shipment of shipmentsToProcess) {
         if (checkoutHistory.some(c => c.transactionId === shipment.transactionId)) {
-            continue;
+            continue; // Skip if already in history
         }
 
         const newCheckout: Checkout = {
@@ -156,28 +201,33 @@ export async function processAndAddToHistory(shipmentIds: string[]): Promise<Che
             transactionId: shipment.transactionId,
             customerName: shipment.user, 
             items: shipment.products.map(p => ({
-                code: p.name, 
+                code: p.name, // Assuming name is unique enough for this context
                 name: p.name,
                 quantity: p.quantity,
-                price: 0, 
-                stock: 0,
+                price: 0, // Price data is not in the shipment
+                stock: 0, // Stock data is not relevant for a history item
             })),
             totalItems: shipment.totalItems,
-            totalAmount: 0, 
+            totalAmount: 0, // Amount data is not in the shipment
             createdAt: shipment.createdAt,
         };
         newHistoryItems.push(newCheckout);
     }
     
-    checkoutHistory.unshift(...newHistoryItems);
-    shipments = shipments.filter(s => !shipmentIds.includes(s.id));
+    if (newHistoryItems.length > 0) {
+        const updatedHistory = [...newHistoryItems, ...checkoutHistory];
+        const updatedShipments = shipments.filter(s => !shipmentIds.includes(s.id));
+        
+        saveToStorage('checkoutHistory', updatedHistory);
+        saveToStorage('shipments', updatedShipments);
+    }
     
     return newHistoryItems;
 }
 
+
 export async function getCheckoutHistory(): Promise<Checkout[]> {
     await new Promise(resolve => setTimeout(resolve, 100));
-    return [...checkoutHistory].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const history = getFromStorage<Checkout[]>('checkoutHistory', []);
+    return [...history].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
-
-    
