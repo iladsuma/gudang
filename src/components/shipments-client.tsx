@@ -121,7 +121,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
           shipment.receipt.fileName,
           products,
           shipment.totalItems,
-          format(new Date(shipment.createdAt), 'PPpp', { locale: id })
+          isClient ? format(new Date(shipment.createdAt), 'PPpp', { locale: id }) : ''
         ];
     });
 
@@ -144,13 +144,13 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
     <div className="space-y-4">
       <div className="flex justify-end gap-2">
         <Button onClick={handleExportPdf} disabled={selectedShipments.length === 0}>
-            <Download className="mr-2" />
+            <Download className="mr-2 h-4 w-4" />
             Ekspor ke PDF ({selectedShipments.length})
         </Button>
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
           <DialogTrigger asChild>
             <Button onClick={() => setIsFormOpen(true)}>
-              <PlusCircle className="mr-2" />
+              <PlusCircle className="mr-2 h-4 w-4" />
               Tambah Pengiriman
             </Button>
           </DialogTrigger>
@@ -159,10 +159,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
               <DialogTitle>Tambah Data Pengiriman Baru</DialogTitle>
             </DialogHeader>
             <ShipmentForm
-              onSuccess={(newShipments) => {
-                setShipments(newShipments)
-                setIsFormOpen(false)
-              }}
+              onSuccess={handleFormSuccess}
               onCancel={() => setIsFormOpen(false)}
             />
           </DialogContent>
@@ -192,7 +189,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
           <TableBody>
             {shipments.length > 0 ? (
               shipments.map((shipment) => (
-                <TableRow key={shipment.id} data-state={selectedShipments.includes(shipment.id) && "selected"}>
+                <TableRow key={shipment.id} data-state={selectedShipments.includes(shipment.id) ? "selected" : undefined}>
                   <TableCell>
                       <Checkbox
                         checked={selectedShipments.includes(shipment.id)}
