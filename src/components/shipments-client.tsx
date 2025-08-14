@@ -270,14 +270,28 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
                     <div className="flex flex-col gap-2">
                       {shipment.products.map((p, index) => (
                         <div key={index} className="flex items-center gap-2">
-                          <Image
-                            src={p.imageUrl || 'https://placehold.co/100x100.png'}
-                            alt={p.name}
-                            width={32}
-                            height={32}
-                            className="rounded-md object-cover h-8 w-8"
-                            data-ai-hint="product image"
-                          />
+                           <Dialog>
+                            <DialogTrigger asChild>
+                               <Image
+                                src={p.imageUrl || 'https://placehold.co/100x100.png'}
+                                alt={p.name}
+                                width={32}
+                                height={32}
+                                className="rounded-md object-cover h-8 w-8 cursor-pointer"
+                                data-ai-hint="product image"
+                               />
+                            </DialogTrigger>
+                            <DialogContent className="max-w-md">
+                                <Image
+                                src={p.imageUrl || 'https://placehold.co/600x400.png'}
+                                alt={p.name}
+                                width={600}
+                                height={400}
+                                className="rounded-md object-contain"
+                                data-ai-hint="product image preview"
+                                />
+                            </DialogContent>
+                           </Dialog>
                           <Badge variant="secondary">
                             {p.name} (x{p.quantity})
                           </Badge>
