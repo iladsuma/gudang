@@ -8,14 +8,14 @@ const users: User[] = [
 
 // Mock product data
 let products: Product[] = [
-  { id: '1', code: 'SKU001', name: 'Mouse Nirkabel', stock: 150, receiptNumber: 'R-001' },
-  { id: '2', code: 'SKU002', name: 'Keyboard Mekanikal', stock: 80, receiptNumber: 'R-001' },
-  { id: '3', code: 'SKU003', name: 'Monitor 4K 27-inci', stock: 50, receiptNumber: 'R-002' },
-  { id: '4', code: 'SKU004', name: 'Hub USB-C', stock: 200, receiptNumber: 'R-003' },
-  { id: '5', code: 'SKU005', name: 'Webcam 1080p', stock: 120, receiptNumber: 'R-004' },
-  { id: '6', code: 'SKU006', name: 'Stand Laptop', stock: 300, receiptNumber: 'R-004' },
-  { id: '7', code: 'SKU007', name: 'Headphone Peredam Bising', stock: 75, receiptNumber: 'R-005' },
-  { id: '8', code: 'SKU008', name: 'Kursi Ergonomis', stock: 25, receiptNumber: 'R-005' },
+  { id: '1', code: 'SKU001', name: 'Mouse Nirkabel', stock: 150 },
+  { id: '2', code: 'SKU002', name: 'Keyboard Mekanikal', stock: 80 },
+  { id: '3', code: 'SKU003', name: 'Monitor 4K 27-inci', stock: 50 },
+  { id: '4', code: 'SKU004', name: 'Hub USB-C', stock: 200 },
+  { id: '5', code: 'SKU005', name: 'Webcam 1080p', stock: 120 },
+  { id: '6', code: 'SKU006', name: 'Stand Laptop', stock: 300 },
+  { id: '7', code: 'SKU007', name: 'Headphone Peredam Bising', stock: 75 },
+  { id: '8', code: 'SKU008', name: 'Kursi Ergonomis', stock: 25 },
 ];
 
 // Mock transaction history data
@@ -207,5 +207,3 @@ export async function deleteShipment(shipmentId: string): Promise<void> {
         throw new Error('Pengiriman tidak ditemukan.');
     }
 }
-
-    

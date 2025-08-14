@@ -25,7 +25,6 @@ const checkoutItemSchema = z.object({
   name: z.string(),
   stock: z.number(),
   quantity: z.coerce.number().min(1, 'Min 1').int(),
-  receiptNumber: z.string(),
 });
 
 const checkoutFormSchema = z.object({

@@ -2,8 +2,9 @@
 
 import { z } from 'zod';
 import { ingestTransactionData } from '@/ai/flows/ingest-transaction-data';
-import { addCheckout, getProducts, addShipment, deleteShipment } from '@/lib/data';
+import { addCheckout, addOrUpdateProduct, getProducts, addShipment, deleteShipment, deleteProduct, getShipments } from '@/lib/data';
 import { revalidatePath } from 'next/cache';
+import type { Product } from './types';
 
 const checkoutItemSchema = z.object({
   id: z.string(),
@@ -27,10 +28,11 @@ export async function handleCheckout(formData: unknown) {
   }
   
   try {
-    await addCheckout(parsed.data);
+    const newTransaction = await addCheckout(parsed.data);
     revalidatePath('/history');
     revalidatePath('/');
-    return { success: true, message: 'Checkout berhasil!' };
+    revalidatePath('/products');
+    return { success: true, message: 'Checkout berhasil!', data: newTransaction };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Gagal memproses checkout.';
     return { success: false, message };
@@ -75,9 +77,9 @@ export async function handleAddShipment(formData: unknown) {
         return { success: false, message: `Data formulir tidak valid: ${errorMessages}` };
     }
     try {
-        await addShipment(parsed.data);
+        const newShipment = await addShipment(parsed.data);
         revalidatePath('/shipments');
-        return { success: true, message: 'Data pengiriman berhasil ditambahkan.' };
+        return { success: true, message: 'Data pengiriman berhasil ditambahkan.', data: newShipment };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Terjadi kesalahan yang tidak diketahui.';
         return { success: false, message };
@@ -91,5 +93,40 @@ export async function handleDeleteShipment(shipmentId: string) {
         return { success: true, message: 'Pengiriman berhasil dihapus.' };
     } catch (error) {
         return { success: false, message: 'Gagal menghapus pengiriman.' };
+    }
+}
+
+const productFormSchema = z.object({
+    id: z.string().optional(),
+    code: z.string().min(1, 'Kode produk harus diisi'),
+    name: z.string().min(1, 'Nama produk harus diisi'),
+    stock: z.coerce.number().int().min(0, 'Stok tidak boleh negatif'),
+});
+
+export async function handleAddOrUpdateProduct(formData: unknown): Promise<{success: boolean; message: string; data?: Product}> {
+    const parsed = productFormSchema.safeParse(formData);
+    if (!parsed.success) {
+        const errorMessages = parsed.error.issues.map(issue => issue.message).join(', ');
+        return { success: false, message: `Data formulir tidak valid: ${errorMessages}` };
+    }
+    try {
+        const updatedProduct = await addOrUpdateProduct(parsed.data);
+        revalidatePath('/products');
+        revalidatePath('/'); // Revalidate checkout page as products might have changed
+        return { success: true, message: `Produk berhasil ${parsed.data.id ? 'diperbarui' : 'ditambahkan'}.`, data: updatedProduct };
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Terjadi kesalahan yang tidak diketahui.';
+        return { success: false, message };
+    }
+}
+
+export async function handleDeleteProduct(productId: string) {
+    try {
+        await deleteProduct(productId);
+        revalidatePath('/products');
+        revalidatePath('/');
+        return { success: true, message: 'Produk berhasil dihapus.' };
+    } catch (error) {
+        return { success: false, message: 'Gagal menghapus produk.' };
     }
 }

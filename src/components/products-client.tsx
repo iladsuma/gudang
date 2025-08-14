@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import type { Shipment } from '@/lib/types';
+import type { Product } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2, Loader2, FileText } from 'lucide-react';
+import { PlusCircle, Trash2, Loader2, Edit } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -20,8 +20,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { ShipmentForm } from './shipment-form';
-import { handleDeleteShipment } from '@/lib/actions';
+import { ProductForm } from './product-form';
+import { handleDeleteProduct } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -34,29 +34,42 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Badge } from './ui/badge';
-import { format } from 'date-fns';
-import { id } from 'date-fns/locale';
 
-export function ShipmentsClient({ shipments: initialShipments }: { shipments: Shipment[] }) {
-  const [shipments, setShipments] = useState(initialShipments);
+export function ProductsClient({ initialProducts }: { initialProducts: Product[] }) {
+  const [products, setProducts] = useState(initialProducts);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const handleFormSuccess = (newShipment: Shipment) => {
-    setShipments((prev) => [newShipment, ...prev]);
+  const handleFormSuccess = (updatedProduct: Product) => {
+    if (editingProduct) {
+        setProducts(products.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+    } else {
+        setProducts([updatedProduct, ...products]);
+    }
     setIsFormOpen(false);
+    setEditingProduct(null);
   };
+  
+  const openEditDialog = (product: Product) => {
+    setEditingProduct(product);
+    setIsFormOpen(true);
+  }
 
-  const onDelete = async (shipmentId: string) => {
-    setIsDeleting(shipmentId);
-    const result = await handleDeleteShipment(shipmentId);
+  const openNewDialog = () => {
+    setEditingProduct(null);
+    setIsFormOpen(true);
+  }
+
+  const onDelete = async (productId: string) => {
+    setIsDeleting(productId);
+    const result = await handleDeleteProduct(productId);
     if (result.success) {
-      setShipments((prev) => prev.filter((s) => s.id !== shipmentId));
+      setProducts((prev) => prev.filter((p) => p.id !== productId));
       toast({
         title: 'Sukses!',
-        description: 'Data pengiriman berhasil dihapus.',
+        description: 'Produk berhasil dihapus.',
       });
     } else {
       toast({
@@ -68,26 +81,29 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
     setIsDeleting(null);
   };
 
-  const openPdf = (dataUrl: string) => {
-    const pdfWindow = window.open("");
-    pdfWindow?.document.write(`<iframe width='100%' height='100%' src='${dataUrl}'></iframe>`);
-  };
-
   return (
     <div className="space-y-4">
       <div className="flex justify-end gap-2">
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <Dialog open={isFormOpen} onOpenChange={(open) => {
+            setIsFormOpen(open);
+            if (!open) setEditingProduct(null);
+        }}>
           <DialogTrigger asChild>
-            <Button>
+            <Button onClick={openNewDialog}>
               <PlusCircle className="mr-2" />
-              Tambah Pengiriman
+              Tambah Produk
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-2xl">
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Tambah Data Pengiriman Baru</DialogTitle>
+              <DialogTitle>{editingProduct ? 'Edit Produk' : 'Tambah Produk Baru'}</DialogTitle>
             </DialogHeader>
-            <ShipmentForm onSuccess={handleFormSuccess} onCancel={() => setIsFormOpen(false)} />
+            <ProductForm 
+                key={editingProduct?.id || 'new'}
+                product={editingProduct} 
+                onSuccess={handleFormSuccess} 
+                onCancel={() => setIsFormOpen(false)} 
+            />
           </DialogContent>
         </Dialog>
       </div>
@@ -95,58 +111,40 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>User</TableHead>
-              <TableHead>No. Transaksi</TableHead>
-              <TableHead>Resi</TableHead>
-              <TableHead>Produk</TableHead>
-              <TableHead className="text-right">Total Item</TableHead>
-              <TableHead>Tanggal Dibuat</TableHead>
+              <TableHead>Kode Produk</TableHead>
+              <TableHead>Nama Produk</TableHead>
+              <TableHead className="text-right">Stok</TableHead>
               <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {shipments.length > 0 ? (
-              shipments.map((shipment) => (
-                <TableRow key={shipment.id}>
-                  <TableCell className="font-medium">{shipment.user}</TableCell>
-                  <TableCell>{shipment.transactionId}</TableCell>
-                  <TableCell>
-                    <Button variant="link" className="p-0 h-auto" onClick={() => openPdf(shipment.receipt.dataUrl)}>
-                        <FileText className="mr-2 h-4 w-4" />
-                        {shipment.receipt.fileName}
-                    </Button>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col gap-1">
-                      {shipment.products.map((p, index) => (
-                        <Badge key={index} variant="secondary">
-                          {p.name} (x{p.quantity})
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">{shipment.totalItems}</TableCell>
-                   <TableCell>
-                    {format(new Date(shipment.createdAt), 'PPpp', { locale: id })}
-                  </TableCell>
+            {products.length > 0 ? (
+              products.map((product) => (
+                <TableRow key={product.id}>
+                  <TableCell className="font-medium">{product.code}</TableCell>
+                  <TableCell>{product.name}</TableCell>
+                  <TableCell className="text-right">{product.stock}</TableCell>
                   <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(product)}>
+                        <Edit className="h-4 w-4" />
+                    </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="ghost" size="icon" disabled={!!isDeleting}>
-                            {isDeleting === shipment.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                            {isDeleting === product.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle>Apakah Anda yakin?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Tindakan ini tidak dapat dibatalkan. Ini akan menghapus data pengiriman secara permanen.
+                            Tindakan ini tidak dapat dibatalkan. Ini akan menghapus data produk secara permanen.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Batal</AlertDialogCancel>
                           <AlertDialogAction
-                            onClick={() => onDelete(shipment.id)}
+                            onClick={() => onDelete(product.id)}
                             disabled={!!isDeleting}
                           >
                             Lanjutkan
@@ -159,14 +157,14 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
-                  Tidak ada data pengiriman.
+                <TableCell colSpan={4} className="h-24 text-center">
+                  Tidak ada data produk.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
-          {shipments.length > 0 && (
-            <TableCaption>Daftar pengiriman barang masuk.</TableCaption>
+          {products.length > 0 && (
+            <TableCaption>Daftar semua produk di inventaris Anda.</TableCaption>
           )}
         </Table>
       </div>
