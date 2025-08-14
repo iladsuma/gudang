@@ -2,10 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import type { Shipment } from '@/lib/types';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2, Loader2, FileText, Download } from 'lucide-react';
+import { PlusCircle, Trash2, Loader2, FileText, Printer } from 'lucide-react';
+import { PDFDocument } from 'pdf-lib';
 import {
   Table,
   TableBody,
@@ -42,14 +41,11 @@ import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 
-interface jsPDFWithAutoTable extends jsPDF {
-  autoTable: (options: any) => jsPDF;
-}
-
 export function ShipmentsClient({ shipments: initialShipments }: { shipments: Shipment[] }) {
   const [shipments, setShipments] = useState(initialShipments);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isPrinting, setIsPrinting] = useState(false);
   const [selectedShipments, setSelectedShipments] = useState<string[]>([]);
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
@@ -104,52 +100,74 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
     }
   };
 
-  const handleExportPdf = () => {
-    const doc = new jsPDF() as jsPDFWithAutoTable;
-    
-    doc.text('Laporan Data Pengiriman', 14, 16);
-    
-    const tableData = selectedShipments
-      .map(id => shipments.find(s => s.id === id))
-      .filter((shipment): shipment is Shipment => !!shipment)
-      .map(shipment => {
-        const products = shipment.products.map(p => `${p.name} (x${p.quantity})`).join('\n');
-        return [
-          shipment.user,
-          shipment.transactionId,
-          shipment.expedition,
-          shipment.receipt.fileName,
-          products,
-          shipment.totalItems,
-          isClient ? format(new Date(shipment.createdAt), 'PPpp', { locale: id }) : ''
-        ];
-    });
+  const handlePrintReceipts = async () => {
+    if (selectedShipments.length === 0) {
+        toast({
+            variant: 'destructive',
+            title: 'Tidak Ada Resi Terpilih',
+            description: 'Pilih setidaknya satu resi untuk dicetak.'
+        });
+        return;
+    }
 
-    doc.autoTable({
-      head: [['User', 'No. Transaksi', 'Ekspedisi', 'Resi', 'Produk', 'Total Item', 'Tanggal Dibuat']],
-      body: tableData,
-      startY: 20,
-      styles: {
-        fontSize: 8
-      },
-      headStyles: {
-        fillColor: [36, 128, 75]
-      }
-    });
+    setIsPrinting(true);
 
-    doc.save(`laporan-pengiriman-${new Date().toISOString().split('T')[0]}.pdf`);
+    try {
+        const mergedPdf = await PDFDocument.create();
+        const selectedPdfs = selectedShipments
+            .map(id => shipments.find(s => s.id === id)?.receipt.dataUrl)
+            .filter((url): url is string => !!url);
+
+        for (const pdfDataUrl of selectedPdfs) {
+            const existingPdfBytes = await fetch(pdfDataUrl).then(res => res.arrayBuffer());
+            const pdfDoc = await PDFDocument.load(existingPdfBytes);
+            const copiedPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+            copiedPages.forEach((page) => {
+                mergedPdf.addPage(page);
+            });
+        }
+        
+        const mergedPdfBytes = await mergedPdf.save();
+
+        const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `resi-terpilih-${new Date().toISOString().split('T')[0]}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        toast({
+            title: 'Sukses!',
+            description: 'File resi gabungan berhasil diunduh.'
+        });
+
+    } catch (error) {
+        console.error("Failed to merge PDFs", error);
+        toast({
+            variant: 'destructive',
+            title: 'Gagal Menggabungkan PDF',
+            description: 'Terjadi kesalahan saat mencoba menggabungkan resi.'
+        });
+    } finally {
+        setIsPrinting(false);
+    }
   };
+
 
   return (
     <div className="space-y-4">
       <div className="flex justify-end gap-2">
-        <Button onClick={handleExportPdf} disabled={selectedShipments.length === 0}>
-            <Download className="mr-2 h-4 w-4" />
-            Ekspor ke PDF ({selectedShipments.length})
+        <Button onClick={handlePrintReceipts} disabled={selectedShipments.length === 0 || isPrinting}>
+            {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
+            Cetak Resi Terpilih ({selectedShipments.length})
         </Button>
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => setIsFormOpen(true)}>
+            <Button>
               <PlusCircle className="mr-2 h-4 w-4" />
               Tambah Pengiriman
             </Button>
