@@ -282,6 +282,9 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
                                />
                             </DialogTrigger>
                             <DialogContent className="max-w-md">
+                                <DialogHeader>
+                                    <DialogTitle>{p.name || 'Pratinjau Gambar'}</DialogTitle>
+                                </DialogHeader>
                                 <Image
                                 src={p.imageUrl || 'https://placehold.co/600x400.png'}
                                 alt={p.name}
