@@ -40,6 +40,7 @@ import { Checkbox } from './ui/checkbox';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { useRouter } from 'next/navigation';
 
 export function ShipmentsClient({ shipments: initialShipments }: { shipments: Shipment[] }) {
   const [shipments, setShipments] = useState(initialShipments);
@@ -49,6 +50,11 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
   const [selectedShipments, setSelectedShipments] = useState<string[]>([]);
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    setShipments(initialShipments);
+  }, [initialShipments]);
 
   useEffect(() => {
     setIsClient(true);
@@ -118,7 +124,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
             .filter((s): s is Shipment => !!s);
         
         // 1. Process shipments and add them to history
-        const processResult = await handleProcessShipments(shipmentsToProcess);
+        const processResult = await handleProcessShipments(selectedShipments);
         if (!processResult.success) {
             throw new Error(processResult.message);
         }
@@ -169,6 +175,8 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
         // 3. Update UI
         setShipments(prev => prev.filter(s => !selectedShipments.includes(s.id)));
         setSelectedShipments([]);
+        // Force re-fetch on the client-side for this page.
+        router.refresh();
 
     } catch (error) {
         console.error("Failed to process or merge PDFs", error);

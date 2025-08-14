@@ -1,7 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import { addShipment, deleteShipment, addCheckoutToHistory } from '@/lib/data';
+import { addShipment, deleteShipment, processAndAddToHistory } from '@/lib/data';
 import { revalidatePath } from 'next/cache';
 import type { Shipment } from '@/lib/types';
 
@@ -30,7 +30,7 @@ export async function handleAddShipment(formData: unknown) {
     }
     try {
         const newShipment = await addShipment(parsed.data);
-        revalidatePath('/shipments'); // Keep for potential future use with real DB
+        revalidatePath('/shipments');
         return { success: true, message: 'Data pengiriman berhasil ditambahkan.', data: newShipment };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Terjadi kesalahan yang tidak diketahui.';
@@ -48,9 +48,10 @@ export async function handleDeleteShipment(shipmentId: string) {
     }
 }
 
-export async function handleProcessShipments(shipments: Shipment[]) {
+export async function handleProcessShipments(shipmentIds: string[]) {
     try {
-        await addCheckoutToHistory(shipments);
+        await processAndAddToHistory(shipmentIds);
+        revalidatePath('/shipments');
         revalidatePath('/history');
         revalidatePath('/invoices');
         return { success: true, message: 'Pengiriman berhasil diproses dan ditambahkan ke riwayat.' };
