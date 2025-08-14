@@ -39,7 +39,8 @@ import { Checkbox } from './ui/checkbox';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { deleteShipment, processAndMoveToHistory, getShipments } from '@/lib/data';
+import { deleteShipment, processShipments } from '@/lib/data';
+import { useRouter } from 'next/navigation';
 
 export function ShipmentsClient({ shipments: initialShipments }: { shipments: Shipment[] }) {
   const [shipments, setShipments] = useState(initialShipments);
@@ -49,6 +50,8 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
   const [selectedShipments, setSelectedShipments] = useState<string[]>([]);
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
+  const router = useRouter();
+
 
   useEffect(() => {
     setShipments(initialShipments);
@@ -57,11 +60,6 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
   useEffect(() => {
     setIsClient(true);
   }, []);
-
-  const refreshShipments = async () => {
-    const freshShipments = await getShipments();
-    setShipments(freshShipments);
-  };
 
   const handleFormSuccess = (newShipment: Shipment) => {
     setShipments((prev) => [newShipment, ...prev]);
@@ -128,17 +126,18 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
             .map(id => shipments.find(s => s.id === id))
             .filter((s): s is Shipment => !!s);
         
-        await processAndMoveToHistory(selectedShipments);
+        await processShipments(selectedShipments);
        
         const mergedPdf = await PDFDocument.create();
         const font = await mergedPdf.embedFont(StandardFonts.HelveticaBold);
 
         for (const [index, shipment] of shipmentsToProcess.entries()) {
             const pdfDataUrl = shipment.receipt.dataUrl;
+            // Convert base64 to ArrayBuffer without fetch
             const base64 = pdfDataUrl.split(',')[1];
             if (!base64) {
                 console.error('Invalid Data URL for PDF:', pdfDataUrl);
-                continue; // Skip if data URL is malformed
+                continue; 
             }
             const existingPdfBytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
             const pdfDoc = await PDFDocument.load(existingPdfBytes);
@@ -166,18 +165,19 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
         a.href = url;
         a.download = `resi-terpilih-${new Date().toISOString().split('T')[0]}.pdf`;
         document.body.appendChild(a);
-        a.click();
+a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         
         toast({
             title: 'Sukses!',
-            description: 'Resi berhasil diproses dan file gabungan diunduh.'
+            description: 'Resi berhasil diproses dan dicatat di Riwayat.'
         });
 
-        // Update UI locally
-        await refreshShipments();
+        // Clear selection, but do not remove items from the table
         setSelectedShipments([]);
+        // Force a router refresh to ensure other pages (like history) get updated data
+        router.refresh();
 
     } catch (error) {
         console.error("Failed to process or merge PDFs", error);
@@ -313,7 +313,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
             )}
           </TableBody>
           {shipments.length > 0 && (
-            <TableCaption>Daftar pengiriman barang masuk yang belum diproses.</TableCaption>
+            <TableCaption>Daftar semua pengiriman barang masuk.</TableCaption>
           )}
         </Table>
       </div>

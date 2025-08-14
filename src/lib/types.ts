@@ -14,7 +14,7 @@ export interface Shipment {
     };
     products: ShipmentProduct[];
     totalItems: number;
-    createdAt: string; // ISO String
+    createdAt: string; // ISO String for when it was added
 }
 
 export interface User {
@@ -24,7 +24,6 @@ export interface User {
     role: 'admin' | 'user';
 }
 
-// This interface is now used for the history log, which is created from processed shipments.
 export interface CheckoutItem {
     name: string;
     quantity: number;
@@ -38,5 +37,5 @@ export interface Checkout {
     items: CheckoutItem[];
     totalItems: number;
     totalAmount: number; // May not be available from shipment data
-    createdAt: string; // ISO String from the original shipment
+    createdAt: string; // ISO String for when it was processed
 }

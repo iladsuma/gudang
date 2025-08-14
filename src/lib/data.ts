@@ -1,6 +1,6 @@
 'use client';
 
-import type { User, Shipment, Checkout, CheckoutItem } from '@/lib/types';
+import type { User, Shipment, Checkout } from '@/lib/types';
 
 // =================================================================
 // Helper functions to interact with localStorage
@@ -64,8 +64,8 @@ export async function login(username: string, password: string): Promise<User> {
 // Shipment Functions
 export async function getShipments(): Promise<Shipment[]> {
   await new Promise(resolve => setTimeout(resolve, 100));
+  // Set empty array as default if nothing is in storage
   const shipments = getFromStorage('shipments', initialShipments);
-  // ensure the initial data is set if storage is empty
   if (getFromStorage('shipments', null) === null) {
       saveToStorage('shipments', initialShipments);
   }
@@ -106,7 +106,7 @@ export async function deleteShipment(shipmentId: string): Promise<void> {
 }
 
 // History/Checkout Functions
-export async function processAndMoveToHistory(shipmentIds: string[]): Promise<Checkout[]> {
+export async function processShipments(shipmentIds: string[]): Promise<Checkout[]> {
     await new Promise(resolve => setTimeout(resolve, 200));
 
     let shipments = await getShipments();
@@ -116,36 +116,32 @@ export async function processAndMoveToHistory(shipmentIds: string[]): Promise<Ch
     const newHistoryItems: Checkout[] = [];
 
     for (const shipment of shipmentsToProcess) {
+        // Prevent adding duplicates to history
         if (checkoutHistory.some(c => c.transactionId === shipment.transactionId)) {
-            // This shipment was already processed, perhaps in a previous batch.
-            // We should still remove it from the main shipments list.
             continue; 
         }
 
         const newCheckout: Checkout = {
             id: `checkout_${Date.now()}_${shipment.id}`,
             transactionId: shipment.transactionId,
-            customerName: shipment.user, // Represents the sender/user from the shipment
+            customerName: shipment.user, 
             items: shipment.products.map(p => ({
                 name: p.name,
                 quantity: p.quantity,
             })),
             totalItems: shipment.totalItems,
-            totalAmount: 0, // Amount data is not in the shipment, so default to 0
-            createdAt: shipment.createdAt, // Keep the original creation date
+            totalAmount: 0, 
+            createdAt: new Date().toISOString(), // Use current date for processing date
         };
         newHistoryItems.push(newCheckout);
     }
     
-    // Only proceed if there are new items to add to history
     if (newHistoryItems.length > 0) {
         const updatedHistory = [...newHistoryItems, ...checkoutHistory];
         saveToStorage('checkoutHistory', updatedHistory);
     }
     
-    // Always remove the processed shipments from the main list
-    const updatedShipments = shipments.filter(s => !shipmentIds.includes(s.id));
-    saveToStorage('shipments', updatedShipments);
+    // We no longer remove shipments from the main list. It's a master list.
     
     return newHistoryItems;
 }

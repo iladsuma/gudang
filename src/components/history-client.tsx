@@ -38,7 +38,7 @@ export function HistoryClient({ initialHistory }: { initialHistory: Checkout[] }
                 <TableHeader>
                     <TableRow>
                         <TableHead>No. Transaksi</TableHead>
-                        <TableHead>Asal/User</TableHead>
+                        <TableHead>User Pemroses</TableHead>
                         <TableHead>Produk</TableHead>
                         <TableHead className="text-right">Total</TableHead>
                         <TableHead>Tanggal Diproses</TableHead>
