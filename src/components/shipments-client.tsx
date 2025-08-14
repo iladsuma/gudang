@@ -40,7 +40,6 @@ import { Checkbox } from './ui/checkbox';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { useRouter } from 'next/navigation';
 
 export function ShipmentsClient({ shipments: initialShipments }: { shipments: Shipment[] }) {
   const [shipments, setShipments] = useState(initialShipments);
@@ -50,7 +49,6 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
   const [selectedShipments, setSelectedShipments] = useState<string[]>([]);
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
-  const router = useRouter();
 
   useEffect(() => {
     setShipments(initialShipments);
@@ -123,13 +121,11 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
             .map(id => shipments.find(s => s.id === id))
             .filter((s): s is Shipment => !!s);
         
-        // 1. Process shipments and add them to history
         const processResult = await handleProcessShipments(selectedShipments);
         if (!processResult.success) {
             throw new Error(processResult.message);
         }
 
-        // 2. Merge PDFs for printing
         const mergedPdf = await PDFDocument.create();
         const font = await mergedPdf.embedFont(StandardFonts.HelveticaBold);
 
@@ -172,8 +168,9 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
             description: 'Resi berhasil diproses dan file gabungan diunduh.'
         });
 
-        // 3. Update UI - Force a hard refresh of the page to get fresh data
-        router.refresh();
+        // Update UI locally
+        setShipments(prev => prev.filter(s => !selectedShipments.includes(s.id)));
+        setSelectedShipments([]);
 
     } catch (error) {
         console.error("Failed to process or merge PDFs", error);
@@ -185,7 +182,6 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
         });
     } finally {
         setIsProcessing(false);
-        setSelectedShipments([]);
     }
   };
 
@@ -317,3 +313,5 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
     </div>
   );
 }
+
+    

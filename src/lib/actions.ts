@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { addShipment, deleteShipment, processAndAddToHistory } from '@/lib/data';
 import { revalidatePath } from 'next/cache';
-import type { Shipment } from '@/lib/types';
+import type { Checkout, Shipment } from '@/lib/types';
 
 const shipmentProductSchema = z.object({
   name: z.string().min(1, 'Nama produk harus diisi'),
@@ -50,7 +50,10 @@ export async function handleDeleteShipment(shipmentId: string) {
 
 export async function handleProcessShipments(shipmentIds: string[]) {
     try {
-        await processAndAddToHistory(shipmentIds);
+        const newHistoryItems = await processAndAddToHistory(shipmentIds);
+        if (newHistoryItems.length === 0 && shipmentIds.length > 0) {
+           return { success: true, message: 'Pengiriman sudah pernah diproses sebelumnya.' };
+        }
         revalidatePath('/shipments');
         revalidatePath('/history');
         revalidatePath('/invoices');
@@ -60,3 +63,5 @@ export async function handleProcessShipments(shipmentIds: string[]) {
         return { success: false, message };
     }
 }
+
+    

@@ -140,13 +140,13 @@ export async function deleteShipment(shipmentId: string): Promise<void> {
 }
 
 // History/Checkout Functions
-export async function processAndAddToHistory(shipmentIds: string[]): Promise<void> {
+export async function processAndAddToHistory(shipmentIds: string[]): Promise<Checkout[]> {
     await new Promise(resolve => setTimeout(resolve, 200));
 
     const shipmentsToProcess = shipments.filter(s => shipmentIds.includes(s.id));
+    const newHistoryItems: Checkout[] = [];
 
     for (const shipment of shipmentsToProcess) {
-        // Prevent adding duplicates to history
         if (checkoutHistory.some(c => c.transactionId === shipment.transactionId)) {
             continue;
         }
@@ -156,24 +156,28 @@ export async function processAndAddToHistory(shipmentIds: string[]): Promise<voi
             transactionId: shipment.transactionId,
             customerName: shipment.user, 
             items: shipment.products.map(p => ({
-                code: p.name, // Using name as code as we don't have product codes in shipments
+                code: p.name, 
                 name: p.name,
                 quantity: p.quantity,
                 price: 0, 
                 stock: 0,
             })),
             totalItems: shipment.totalItems,
-            totalAmount: 0, // Price is not available in shipment, so total is 0
+            totalAmount: 0, 
             createdAt: shipment.createdAt,
         };
-        checkoutHistory.unshift(newCheckout);
+        newHistoryItems.push(newCheckout);
     }
     
-    // Remove processed shipments from the main list
+    checkoutHistory.unshift(...newHistoryItems);
     shipments = shipments.filter(s => !shipmentIds.includes(s.id));
+    
+    return newHistoryItems;
 }
 
 export async function getCheckoutHistory(): Promise<Checkout[]> {
     await new Promise(resolve => setTimeout(resolve, 100));
     return [...checkoutHistory].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
+
+    
