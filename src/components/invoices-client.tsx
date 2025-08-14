@@ -24,12 +24,13 @@ interface jsPDFWithAutoTable extends jsPDF {
   autoTable: (options: any) => jsPDF;
 }
 
-export function InvoicesClient({ checkouts: initialCheckouts }: { checkouts: Shipment[] }) {
+// Mengubah nama prop kembali menjadi shipments untuk konsistensi
+export function InvoicesClient({ shipments: initialShipments }: { shipments: Shipment[] }) {
   const { user } = useAuth();
-  const [shipments, setShipments] = React.useState(initialCheckouts);
+  const [shipments, setShipments] = React.useState(initialShipments);
 
   React.useEffect(() => {
-     // Fetch fresh data on client mount to ensure it's up to date
+    // Fetch fresh data on client mount to ensure it's up to date
     getShipments().then(setShipments);
   }, []);
   
