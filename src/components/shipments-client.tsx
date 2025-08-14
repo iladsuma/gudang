@@ -60,6 +60,14 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
   useEffect(() => {
     setIsClient(true);
   }, []);
+  
+  const formatRupiah = (number: number) => {
+    return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+    }).format(number);
+  };
 
   const handleFormSuccess = (newShipment: Shipment) => {
     setShipments((prev) => [newShipment, ...prev]);
@@ -165,7 +173,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
         a.href = url;
         a.download = `resi-terpilih-${new Date().toISOString().split('T')[0]}.pdf`;
         document.body.appendChild(a);
-a.click();
+        a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         
@@ -174,9 +182,7 @@ a.click();
             description: 'Resi berhasil diproses dan dicatat di Riwayat.'
         });
 
-        // Clear selection, but do not remove items from the table
         setSelectedShipments([]);
-        // Force a router refresh to ensure other pages (like history) get updated data
         router.refresh();
 
     } catch (error) {
@@ -207,7 +213,7 @@ a.click();
               Tambah Pengiriman
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-2xl">
+          <DialogContent className="sm:max-w-4xl">
             <DialogHeader>
               <DialogTitle>Tambah Data Pengiriman Baru</DialogTitle>
             </DialogHeader>
@@ -234,7 +240,7 @@ a.click();
               <TableHead>Ekspedisi</TableHead>
               <TableHead>Resi</TableHead>
               <TableHead>Produk</TableHead>
-              <TableHead className="text-right">Total Item</TableHead>
+              <TableHead className="text-right">Total Nilai</TableHead>
               <TableHead>Tanggal Dibuat</TableHead>
               <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
@@ -268,7 +274,7 @@ a.click();
                       ))}
                     </div>
                   </TableCell>
-                  <TableCell className="text-right">{shipment.totalItems}</TableCell>
+                  <TableCell className="text-right font-medium">{formatRupiah(shipment.totalAmount)}</TableCell>
                    <TableCell>
                     {isClient ? (
                         format(new Date(shipment.createdAt), 'PPpp', { locale: id })

@@ -25,6 +25,14 @@ interface jsPDFWithAutoTable extends jsPDF {
 
 export function InvoicesClient({ checkouts }: { checkouts: Checkout[] }) {
   const { user } = useAuth();
+  
+  const formatRupiah = (number: number) => {
+    return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+    }).format(number);
+  };
 
   const handleCreateInvoice = (checkout: Checkout) => {
     const doc = new jsPDF() as jsPDFWithAutoTable;
@@ -45,24 +53,24 @@ export function InvoicesClient({ checkouts }: { checkouts: Checkout[] }) {
     doc.text('Jl. Raya Aplikasi No. 1, Jakarta', 14, 31);
 
     // Info Section
-    const infoX = pageWidth - 80;
+    const infoX = pageWidth - 90;
     doc.text(`No Transaksi`, infoX, 20);
-    doc.text(`: ${checkout.transactionId}`, infoX + 20, 20);
+    doc.text(`: ${checkout.transactionId}`, infoX + 25, 20);
     
     doc.text(`Pelanggan`, infoX, 25);
-    doc.text(`: ${checkout.customerName}`, infoX + 20, 25);
+    doc.text(`: ${checkout.customerName}`, infoX + 25, 25);
 
     doc.text(`Alamat`, infoX, 30);
-    doc.text(`: -`, infoX + 20, 30);
+    doc.text(`: -`, infoX + 25, 30);
     
-    doc.text(`Tgl`, infoX, 35);
-    doc.text(`: ${format(new Date(checkout.createdAt), 'dd/MM/yyyy HH:mm')}`, infoX + 20, 35);
+    doc.text(`Tanggal`, infoX, 35);
+    doc.text(`: ${format(new Date(checkout.createdAt), 'dd/MM/yyyy HH:mm')}`, infoX + 25, 35);
     
     doc.text(`Kasir`, infoX, 40);
-    doc.text(`: ${user?.name || '-'}`, infoX + 20, 40);
+    doc.text(`: ${user?.name || '-'}`, infoX + 25, 40);
     
-    doc.text(`Tgl. Jt`, infoX, 45);
-    doc.text(`: ${format(new Date(), 'dd/MM/yyyy')}`, infoX + 20, 45);
+    doc.text(`Tgl. Jatuh Tempo`, infoX, 45);
+    doc.text(`: ${format(new Date(), 'dd/MM/yyyy')}`, infoX + 25, 45);
 
 
     // Table
@@ -71,9 +79,9 @@ export function InvoicesClient({ checkouts }: { checkouts: Checkout[] }) {
       item.name,
       `${item.quantity}`,
       'PCS',
-      '0', // Harga - tidak ada data
-      '0', // Diskon - tidak ada data
-      '0', // Total - tidak ada data
+      item.price.toLocaleString('id-ID'),
+      `${item.discount}%`,
+      item.subtotal.toLocaleString('id-ID'),
     ]);
 
     doc.autoTable({
@@ -81,7 +89,7 @@ export function InvoicesClient({ checkouts }: { checkouts: Checkout[] }) {
       body: tableData,
       startY: 55,
       headStyles: {
-        fillColor: [22, 163, 74],
+        fillColor: [34, 197, 94], // green-500
         textColor: 255,
         fontStyle: 'bold',
       },
@@ -104,29 +112,34 @@ export function InvoicesClient({ checkouts }: { checkouts: Checkout[] }) {
 
     // Summary section
     const summaryX = pageWidth - 80;
+    const subTotal = checkout.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const totalDiscount = checkout.items.reduce((sum, item) => sum + (item.price * item.quantity * (item.discount/100)), 0);
+
+
     doc.text(`Jml Item`, summaryX, footerY);
-    doc.text(`: ${checkout.totalItems}`, summaryX + 20, footerY);
+    doc.text(`: ${checkout.totalItems}`, summaryX + 25, footerY);
 
     doc.text(`Sub Total`, summaryX, footerY + 5);
-    doc.text(`: 0`, summaryX + 20, footerY + 5);
+    doc.text(`: ${subTotal.toLocaleString('id-ID')}`, summaryX + 25, footerY + 5);
     
     doc.text(`Potongan`, summaryX, footerY + 10);
-    doc.text(`: 0`, summaryX + 20, footerY + 10);
+    doc.text(`: ${totalDiscount.toLocaleString('id-ID')}`, summaryX + 25, footerY + 10);
     
     doc.text(`Biaya Lain`, summaryX, footerY + 15);
-    doc.text(`: 0`, summaryX + 20, footerY + 15);
+    doctext(`: 0`, summaryX + 25, footerY + 15);
     
     doc.setFont('helvetica', 'bold');
     doc.text(`Total Akhir`, summaryX, footerY + 20);
-    doc.text(`: 0`, summaryX + 20, footerY + 20);
+    doc.text(`: ${checkout.totalAmount.toLocaleString('id-ID')}`, summaryX + 25, footerY + 20);
     doc.setFont('helvetica', 'normal');
 
 
     // Signature Section
-    doc.text('Hormat Kami', 20, footerY + 5);
-    doc.text('Penerima', 80, footerY + 5);
-    doc.text('(..................)', 14, footerY + 25);
-    doc.text('(..................)', 74, footerY + 25);
+    const signatureY = pageHeight - 40;
+    doc.text('Hormat Kami', 20, signatureY);
+    doc.text('Penerima', 150, signatureY);
+    doc.text('(..................)', 14, signatureY + 20);
+    doc.text('(..................)', 144, signatureY + 20);
 
 
     doc.save(`faktur-${checkout.transactionId}.pdf`);
@@ -140,7 +153,7 @@ export function InvoicesClient({ checkouts }: { checkouts: Checkout[] }) {
             <TableHead>No. Transaksi</TableHead>
             <TableHead>Asal/User</TableHead>
             <TableHead>Tanggal Diproses</TableHead>
-            <TableHead className="text-right">Total Item</TableHead>
+            <TableHead className="text-right">Total Nilai</TableHead>
             <TableHead className="text-right">Aksi</TableHead>
           </TableRow>
         </TableHeader>
@@ -151,7 +164,7 @@ export function InvoicesClient({ checkouts }: { checkouts: Checkout[] }) {
                 <TableCell className="font-medium">{checkout.transactionId}</TableCell>
                 <TableCell>{checkout.customerName}</TableCell>
                 <TableCell>{format(new Date(checkout.createdAt), 'PP', { locale: id })}</TableCell>
-                <TableCell className="text-right">{checkout.totalItems}</TableCell>
+                <TableCell className="text-right font-medium">{formatRupiah(checkout.totalAmount)}</TableCell>
                 <TableCell className="text-right">
                   <Button variant="outline" size="sm" onClick={() => handleCreateInvoice(checkout)}>
                     <Download className="mr-2 h-4 w-4" />

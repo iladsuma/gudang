@@ -64,15 +64,15 @@ export async function login(username: string, password: string): Promise<User> {
 // Shipment Functions
 export async function getShipments(): Promise<Shipment[]> {
   await new Promise(resolve => setTimeout(resolve, 100));
-  // Set empty array as default if nothing is in storage
-  const shipments = getFromStorage('shipments', initialShipments);
-  if (getFromStorage('shipments', null) === null) {
+  const shipments = getFromStorage('shipments', null);
+  if (shipments === null) {
       saveToStorage('shipments', initialShipments);
+      return [...initialShipments];
   }
   return [...shipments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
-export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'totalItems'>): Promise<Shipment> {
+export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'totalItems' | 'totalAmount'>): Promise<Shipment> {
   await new Promise(resolve => setTimeout(resolve, 500));
   const shipments = await getShipments();
 
@@ -80,11 +80,18 @@ export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'tot
     throw new Error('ID Transaksi harus unik.');
   }
 
+  const totalItems = data.products.reduce((sum, p) => sum + p.quantity, 0);
+  const totalAmount = data.products.reduce((sum, p) => {
+    const discountedPrice = p.price * (1 - p.discount / 100);
+    return sum + (discountedPrice * p.quantity);
+  }, 0);
+
   const newShipment: Shipment = {
     ...data,
     id: `ship_${Date.now()}`,
     createdAt: new Date().toISOString(),
-    totalItems: data.products.reduce((sum, p) => sum + p.quantity, 0),
+    totalItems,
+    totalAmount,
   };
   
   const updatedShipments = [newShipment, ...shipments];
@@ -128,10 +135,13 @@ export async function processShipments(shipmentIds: string[]): Promise<Checkout[
             items: shipment.products.map(p => ({
                 name: p.name,
                 quantity: p.quantity,
+                price: p.price,
+                discount: p.discount,
+                subtotal: p.price * p.quantity * (1 - p.discount / 100)
             })),
             totalItems: shipment.totalItems,
-            totalAmount: 0, 
-            createdAt: new Date().toISOString(), // Use current date for processing date
+            totalAmount: shipment.totalAmount,
+            createdAt: new Date().toISOString(),
         };
         newHistoryItems.push(newCheckout);
     }
@@ -140,8 +150,6 @@ export async function processShipments(shipmentIds: string[]): Promise<Checkout[
         const updatedHistory = [...newHistoryItems, ...checkoutHistory];
         saveToStorage('checkoutHistory', updatedHistory);
     }
-    
-    // We no longer remove shipments from the main list. It's a master list.
     
     return newHistoryItems;
 }

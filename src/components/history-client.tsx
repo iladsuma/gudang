@@ -24,7 +24,7 @@ export function HistoryClient({ initialHistory }: { initialHistory: Checkout[] }
     }, []);
 
     const formatRupiah = (number: number) => {
-        if (number === 0) return '-';
+        if (!number || number === 0) return 'Rp 0';
         return new Intl.NumberFormat('id-ID', {
             style: 'currency',
             currency: 'IDR',
@@ -40,7 +40,7 @@ export function HistoryClient({ initialHistory }: { initialHistory: Checkout[] }
                         <TableHead>No. Transaksi</TableHead>
                         <TableHead>User Pemroses</TableHead>
                         <TableHead>Produk</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
+                        <TableHead className="text-right">Total Nilai</TableHead>
                         <TableHead>Tanggal Diproses</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -59,7 +59,7 @@ export function HistoryClient({ initialHistory }: { initialHistory: Checkout[] }
                                     ))}
                                     </div>
                                 </TableCell>
-                                <TableCell className="text-right">{formatRupiah(checkout.totalAmount)}</TableCell>
+                                <TableCell className="text-right font-medium">{formatRupiah(checkout.totalAmount)}</TableCell>
                                 <TableCell>
                                     {isClient ? (
                                         format(new Date(checkout.createdAt), 'PPpp', { locale: id })
