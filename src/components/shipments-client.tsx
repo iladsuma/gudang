@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import type { Shipment } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Trash2, Loader2, FileText, Printer } from 'lucide-react';
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import {
   Table,
   TableBody,
@@ -114,11 +114,39 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
 
     try {
         const mergedPdf = await PDFDocument.create();
-        const selectedPdfs = selectedShipments
-            .map(id => shipments.find(s => s.id === id)?.receipt.dataUrl)
-            .filter((url): url is string => !!url);
+        const shipmentsToPrint = selectedShipments
+            .map(id => shipments.find(s => s.id === id))
+            .filter((s): s is Shipment => !!s);
 
-        for (const pdfDataUrl of selectedPdfs) {
+        for (const shipment of shipmentsToPrint) {
+            // 1. Create a separator page
+            const separatorPage = mergedPdf.addPage();
+            const { width, height } = separatorPage.getSize();
+            const font = await mergedPdf.embedFont(StandardFonts.HelveticaBold);
+            const fontSize = 24;
+
+            const text = `No. Transaksi: ${shipment.transactionId}\nEkspedisi: ${shipment.expedition}\nUser: ${shipment.user}`;
+            
+            separatorPage.drawText(text, {
+                x: 50,
+                y: height - 4 * fontSize,
+                font: font,
+                size: fontSize,
+                lineHeight: 30,
+                color: rgb(0, 0, 0),
+            });
+            separatorPage.drawRectangle({
+                x: 40,
+                y: height - (4 * fontSize) - 80,
+                width: width - 80,
+                height: 100,
+                borderColor: rgb(0, 0, 0),
+                borderWidth: 2,
+            });
+
+
+            // 2. Add the actual receipt pages
+            const pdfDataUrl = shipment.receipt.dataUrl;
             const existingPdfBytes = await fetch(pdfDataUrl).then(res => res.arrayBuffer());
             const pdfDoc = await PDFDocument.load(existingPdfBytes);
             const copiedPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
