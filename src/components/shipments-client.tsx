@@ -45,7 +45,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
   const [shipments, setShipments] = useState(initialShipments);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
-  const [isPrinting, setIsPrinting] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [selectedShipments, setSelectedShipments] = useState<string[]>([]);
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
@@ -110,7 +110,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
         return;
     }
 
-    setIsPrinting(true);
+    setIsProcessing(true);
 
     try {
         const shipmentsToProcess = selectedShipments
@@ -131,23 +131,22 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
             const pdfDataUrl = shipment.receipt.dataUrl;
             const existingPdfBytes = await fetch(pdfDataUrl).then(res => res.arrayBuffer());
             const pdfDoc = await PDFDocument.load(existingPdfBytes);
-            const copiedPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
-
-            if (copiedPages.length > 0) {
-              const firstPage = copiedPages[0];
-              const { height } = firstPage.getSize();
-              firstPage.drawText(`resi-sel-${index + 1}`, {
+            
+            const [firstPage] = await mergedPdf.copyPages(pdfDoc, [0]);
+            const { height } = firstPage.getSize();
+            firstPage.drawText(`resi-sel-${index + 1}`, {
                 x: 20,
                 y: height - 25,
                 font: font,
                 size: 14,
                 color: rgb(0.9, 0.1, 0.1),
-              });
-            }
-            
-            copiedPages.forEach((page) => {
-                mergedPdf.addPage(page);
             });
+            mergedPdf.addPage(firstPage);
+            
+            if (pdfDoc.getPageCount() > 1) {
+                const otherPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices().slice(1));
+                otherPages.forEach((page) => mergedPdf.addPage(page));
+            }
         }
         
         const mergedPdfBytes = await mergedPdf.save();
@@ -167,6 +166,10 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
             description: 'Resi berhasil diproses dan file gabungan diunduh.'
         });
 
+        // 3. Update UI
+        setShipments(prev => prev.filter(s => !selectedShipments.includes(s.id)));
+        setSelectedShipments([]);
+
     } catch (error) {
         console.error("Failed to process or merge PDFs", error);
         const message = error instanceof Error ? error.message : 'Terjadi kesalahan saat memproses resi.';
@@ -176,7 +179,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
             description: message
         });
     } finally {
-        setIsPrinting(false);
+        setIsProcessing(false);
     }
   };
 
@@ -184,8 +187,8 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
   return (
     <div className="space-y-4">
       <div className="flex justify-end gap-2">
-        <Button onClick={handleProcessAndPrintReceipts} disabled={selectedShipments.length === 0 || isPrinting}>
-            {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
+        <Button onClick={handleProcessAndPrintReceipts} disabled={selectedShipments.length === 0 || isProcessing}>
+            {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
             Proses & Cetak Resi ({selectedShipments.length})
         </Button>
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
@@ -212,7 +215,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
             <TableRow>
               <TableHead className="w-[50px]">
                 <Checkbox
-                    checked={shipments.length === initialShipments.length && shipments.length > 0}
+                    checked={shipments.length > 0 && selectedShipments.length === shipments.length}
                     onCheckedChange={handleSelectAll}
                     aria-label="Pilih semua"
                 />
@@ -301,10 +304,12 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
             )}
           </TableBody>
           {shipments.length > 0 && (
-            <TableCaption>Daftar pengiriman barang masuk.</TableCaption>
+            <TableCaption>Daftar pengiriman barang masuk yang belum diproses.</TableCaption>
           )}
         </Table>
       </div>
     </div>
   );
 }
+
+    
