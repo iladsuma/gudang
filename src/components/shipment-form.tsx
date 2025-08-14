@@ -165,7 +165,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                 <FormItem>
                     <FormLabel>Resi (PDF)</FormLabel>
                     <FormControl>
-                        <>
+                        <div>
                             <input
                                 type="file"
                                 accept="application/pdf"
@@ -177,7 +177,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                 <Upload className="mr-2 h-4 w-4" />
                                 {receiptValue?.fileName ? 'Ganti File' : 'Unggah PDF'}
                             </Button>
-                        </>
+                        </div>
                     </FormControl>
                     {receiptValue?.fileName && <p className="text-sm text-muted-foreground">File: {receiptValue.fileName}</p>}
                     <FormMessage />
