@@ -26,7 +26,8 @@ const saveToStorage = <T>(key: string, value: T): void => {
   try {
     const item = JSON.stringify(value);
     window.localStorage.setItem(key, item);
-  } catch (error) {
+  } catch (error)
+    {
     console.error(`Error writing to localStorage key “${key}”:`, error);
   }
 };
@@ -66,11 +67,12 @@ export async function getShipments(): Promise<Shipment[]> {
   await new Promise(resolve => setTimeout(resolve, 100));
   const shipments = getFromStorage('shipments', null);
   if (shipments === null) {
-      saveToStorage('shipments', initialShipments);
-      return [...initialShipments];
+      saveToStorage('shipments', []); // Start with empty array
+      return [];
   }
   return [...shipments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
+
 
 export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'totalItems' | 'totalAmount'>): Promise<Shipment> {
   await new Promise(resolve => setTimeout(resolve, 500));
@@ -88,7 +90,7 @@ export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'tot
 
   const newShipment: Shipment = {
     ...data,
-    id: `ship_${Date.now()}`,
+    id: `ship_${Date.now()}_${Math.random()}`,
     createdAt: new Date().toISOString(),
     totalItems,
     totalAmount,
@@ -127,6 +129,7 @@ export async function processShipments(shipmentIds: string[]): Promise<Checkout>
     }
 
     const processedShipments: ProcessedShipmentSummary[] = shipmentsToProcess.map(s => ({
+        shipmentId: s.id, // Keep the original ID
         transactionId: s.transactionId,
         totalAmount: s.totalAmount,
         totalItems: s.totalItems,
@@ -147,7 +150,7 @@ export async function processShipments(shipmentIds: string[]): Promise<Checkout>
     const updatedHistory = [newBatchCheckout, ...checkoutHistory];
     saveToStorage('checkoutHistory', updatedHistory);
     
-    // Unlike before, we don't remove the shipments from the main list.
+    // Data in 'shipments' is NOT removed, as per user request.
     
     return newBatchCheckout;
 }
@@ -160,4 +163,33 @@ export async function getCheckoutHistory(): Promise<Checkout[]> {
       saveToStorage('checkoutHistory', []);
     }
     return [...history].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+
+/**
+ * Gets all shipments that have been processed and are part of the checkout history.
+ * @returns A promise that resolves to an array of unique Shipments ready for invoicing.
+ */
+export async function getProcessedShipmentsForInvoicing(): Promise<Shipment[]> {
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    const allShipments = await getShipments();
+    const history = await getCheckoutHistory();
+
+    // 1. Get all unique shipment IDs from the entire history
+    const processedShipmentIds = new Set<string>();
+    history.forEach(batch => {
+        if (batch.processedShipments && Array.isArray(batch.processedShipments)) {
+            batch.processedShipments.forEach(summary => {
+                processedShipmentIds.add(summary.shipmentId);
+            });
+        }
+    });
+
+    // 2. Filter the main shipments list to get only those that have been processed
+    const shipmentsForInvoicing = allShipments.filter(shipment => 
+        processedShipmentIds.has(shipment.id)
+    );
+
+    return shipmentsForInvoicing;
 }

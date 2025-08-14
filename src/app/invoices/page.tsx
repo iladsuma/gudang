@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/auth-context';
-import { getShipments } from '@/lib/data'; // Mengembalikan ke getShipments
+import { getProcessedShipmentsForInvoicing } from '@/lib/data';
 import type { Shipment } from '@/lib/types';
 import {
   Card,
@@ -18,7 +18,7 @@ import { useRouter } from 'next/navigation';
 export default function InvoicesPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const [shipments, setShipments] = useState<Shipment[]>([]); // Menggunakan tipe Shipment[]
+  const [shipments, setShipments] = useState<Shipment[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -29,8 +29,8 @@ export default function InvoicesPage() {
   
   useEffect(() => {
     if (user) {
-      // Mengambil data dari getShipments, bukan getCheckoutHistory
-      getShipments().then(data => {
+      // Mengambil data dari pengiriman yang sudah diproses
+      getProcessedShipmentsForInvoicing().then(data => {
         setShipments(data);
         setLoading(false);
       });
@@ -67,11 +67,10 @@ export default function InvoicesPage() {
         <CardHeader>
           <CardTitle>Manajemen Faktur</CardTitle>
           <CardDescription>
-            Buat faktur berdasarkan data pengiriman yang sudah ada.
+            Buat faktur berdasarkan data pengiriman yang telah diproses.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Mengirim prop dengan nama yang benar dan tipe data yang sesuai */}
           <InvoicesClient shipments={shipments} />
         </CardContent>
       </Card>

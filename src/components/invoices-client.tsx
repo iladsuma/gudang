@@ -18,21 +18,24 @@ import {
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { useAuth } from '@/context/auth-context';
-import { getShipments } from '@/lib/data';
+import { getProcessedShipmentsForInvoicing } from '@/lib/data'; // Get specific data
 
 interface jsPDFWithAutoTable extends jsPDF {
   autoTable: (options: any) => jsPDF;
 }
 
-// Mengubah nama prop kembali menjadi shipments untuk konsistensi
 export function InvoicesClient({ shipments: initialShipments }: { shipments: Shipment[] }) {
   const { user } = useAuth();
   const [shipments, setShipments] = React.useState(initialShipments);
 
   React.useEffect(() => {
     // Fetch fresh data on client mount to ensure it's up to date
-    getShipments().then(setShipments);
+    getProcessedShipmentsForInvoicing().then(setShipments);
   }, []);
+  
+  React.useEffect(() => {
+    setShipments(initialShipments);
+  }, [initialShipments]);
   
   const formatRupiah = (number: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -187,12 +190,12 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
           ) : (
             <TableRow>
               <TableCell colSpan={5} className="h-24 text-center">
-                Tidak ada data untuk dibuatkan faktur. Tambah data di Lacak Pengiriman.
+                Tidak ada data untuk dibuatkan faktur. Proses data di Lacak Pengiriman.
               </TableCell>
             </TableRow>
           )}
         </TableBody>
-        {shipments.length > 0 && <TableCaption>Daftar pengiriman yang siap dibuatkan faktur.</TableCaption>}
+        {shipments.length > 0 && <TableCaption>Daftar pengiriman yang telah diproses dan siap dibuatkan faktur.</TableCaption>}
       </Table>
     </div>
   );

@@ -37,6 +37,7 @@ export interface CheckoutItem {
 
 
 export interface ProcessedShipmentSummary {
+    shipmentId: string; // Add the original shipment ID
     transactionId: string;
     totalAmount: number;
     totalItems: number;
