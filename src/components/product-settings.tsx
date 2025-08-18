@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { getProducts, addProduct, deleteProduct } from '@/lib/data';
+import { getProducts, addProduct, deleteProduct, updateProduct } from '@/lib/data';
 import type { Product } from '@/lib/types';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -18,7 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from './ui/form';
-import { Loader2, PlusCircle, Trash2 } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Pencil, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -44,6 +44,7 @@ export function ProductSettings() {
   const [products, setProducts] = React.useState<Product[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [isDeleting, setIsDeleting] = React.useState<string | null>(null);
+  const [editingId, setEditingId] = React.useState<string | null>(null);
   const { toast } = useToast();
 
   const form = useForm<ProductFormValues>({
@@ -64,12 +65,17 @@ export function ProductSettings() {
 
   const onSubmit = async (data: ProductFormValues) => {
     try {
-      await addProduct(data);
-      toast({ title: 'Sukses', description: 'Produk berhasil ditambahkan.' });
-      form.reset();
+      if (editingId) {
+        await updateProduct(editingId, data);
+        toast({ title: 'Sukses', description: 'Produk berhasil diperbarui.' });
+      } else {
+        await addProduct(data);
+        toast({ title: 'Sukses', description: 'Produk berhasil ditambahkan.' });
+      }
+      resetForm();
       fetchProducts();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Gagal menambahkan produk.';
+      const message = error instanceof Error ? error.message : 'Gagal menyimpan data.';
       toast({ variant: 'destructive', title: 'Kesalahan', description: message });
     }
   };
@@ -87,6 +93,21 @@ export function ProductSettings() {
       setIsDeleting(null);
     }
   };
+  
+  const handleEdit = (product: Product) => {
+    setEditingId(product.id);
+    form.reset({
+      name: product.name,
+      price: product.price,
+      packingFee: product.packingFee,
+    });
+  };
+  
+  const resetForm = () => {
+    setEditingId(null);
+    form.reset({ name: '', price: 0, packingFee: 0 });
+  };
+
 
   const formatRupiah = (number: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -99,7 +120,7 @@ export function ProductSettings() {
   return (
     <div className="space-y-6">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-4 items-end gap-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] items-end gap-4">
           <FormField
             control={form.control}
             name="name"
@@ -139,14 +160,24 @@ export function ProductSettings() {
               </FormItem>
             )}
           />
-          <Button type="submit" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <PlusCircle className="mr-2 h-4 w-4" />
+          <div className="flex gap-2">
+            {editingId && (
+              <Button type="button" variant="outline" onClick={resetForm}>
+                <X className="mr-2 h-4 w-4" />
+                Batal
+              </Button>
             )}
-            Tambah
-          </Button>
+            <Button type="submit" disabled={form.formState.isSubmitting}>
+              {form.formState.isSubmitting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : editingId ? (
+                'Simpan'
+              ) : (
+                <PlusCircle className="mr-2 h-4 w-4" />
+              )}
+              {editingId ? 'Perubahan' : 'Tambah'}
+            </Button>
+          </div>
         </form>
       </Form>
 
@@ -157,7 +188,7 @@ export function ProductSettings() {
               <TableHead>Nama Produk</TableHead>
               <TableHead>Harga Standar</TableHead>
               <TableHead>Biaya Pengemasan</TableHead>
-              <TableHead className="w-[100px] text-right">Aksi</TableHead>
+              <TableHead className="w-[120px] text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -174,9 +205,12 @@ export function ProductSettings() {
                   <TableCell>{formatRupiah(product.price)}</TableCell>
                   <TableCell>{formatRupiah(product.packingFee)}</TableCell>
                   <TableCell className="text-right">
+                     <Button variant="ghost" size="icon" onClick={() => handleEdit(product)} disabled={!!isDeleting || !!editingId}>
+                        <Pencil className="h-4 w-4" />
+                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" disabled={!!isDeleting}>
+                        <Button variant="ghost" size="icon" disabled={!!isDeleting || !!editingId}>
                           {isDeleting === product.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                         </Button>
                       </AlertDialogTrigger>

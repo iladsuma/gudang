@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { getExpeditions, addExpedition, deleteExpedition } from '@/lib/data';
+import { getExpeditions, addExpedition, deleteExpedition, updateExpedition } from '@/lib/data';
 import type { Expedition } from '@/lib/types';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -18,7 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from './ui/form';
-import { Loader2, PlusCircle, Trash2 } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Pencil, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -42,6 +42,7 @@ export function ExpeditionSettings() {
   const [expeditions, setExpeditions] = React.useState<Expedition[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [isDeleting, setIsDeleting] = React.useState<string | null>(null);
+  const [editingId, setEditingId] = React.useState<string | null>(null);
   const { toast } = useToast();
 
   const form = useForm<ExpeditionFormValues>({
@@ -62,12 +63,17 @@ export function ExpeditionSettings() {
 
   const onSubmit = async (data: ExpeditionFormValues) => {
     try {
-      await addExpedition(data.name);
-      toast({ title: 'Sukses', description: 'Ekspedisi berhasil ditambahkan.' });
-      form.reset();
+      if (editingId) {
+        await updateExpedition(editingId, data.name);
+        toast({ title: 'Sukses', description: 'Ekspedisi berhasil diperbarui.' });
+      } else {
+        await addExpedition(data.name);
+        toast({ title: 'Sukses', description: 'Ekspedisi berhasil ditambahkan.' });
+      }
+      resetForm();
       fetchExpeditions();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Gagal menambahkan ekspedisi.';
+      const message = error instanceof Error ? error.message : 'Gagal menyimpan data.';
       toast({ variant: 'destructive', title: 'Kesalahan', description: message });
     }
   };
@@ -86,6 +92,16 @@ export function ExpeditionSettings() {
     }
   };
 
+  const handleEdit = (expedition: Expedition) => {
+    setEditingId(expedition.id);
+    form.reset({ name: expedition.name });
+  };
+
+  const resetForm = () => {
+    setEditingId(null);
+    form.reset({ name: '' });
+  };
+
   return (
     <div className="space-y-6">
       <Form {...form}>
@@ -95,7 +111,7 @@ export function ExpeditionSettings() {
             name="name"
             render={({ field }) => (
               <FormItem className="flex-1">
-                <FormLabel>Nama Ekspedisi Baru</FormLabel>
+                <FormLabel>{editingId ? 'Edit Nama Ekspedisi' : 'Nama Ekspedisi Baru'}</FormLabel>
                 <FormControl>
                   <Input placeholder="cth. TIKI" {...field} />
                 </FormControl>
@@ -103,14 +119,24 @@ export function ExpeditionSettings() {
               </FormItem>
             )}
           />
-          <Button type="submit" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <PlusCircle className="mr-2 h-4 w-4" />
+          <div className="flex gap-2">
+            {editingId && (
+              <Button type="button" variant="outline" onClick={resetForm}>
+                <X className="mr-2 h-4 w-4" />
+                Batal
+              </Button>
             )}
-            Tambah
-          </Button>
+            <Button type="submit" disabled={form.formState.isSubmitting}>
+              {form.formState.isSubmitting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : editingId ? (
+                'Simpan'
+              ) : (
+                <PlusCircle className="mr-2 h-4 w-4" />
+              )}
+              {editingId ? 'Perubahan' : 'Tambah'}
+            </Button>
+          </div>
         </form>
       </Form>
 
@@ -119,7 +145,7 @@ export function ExpeditionSettings() {
           <TableHeader>
             <TableRow>
               <TableHead>Nama Ekspedisi</TableHead>
-              <TableHead className="w-[100px] text-right">Aksi</TableHead>
+              <TableHead className="w-[120px] text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -134,9 +160,12 @@ export function ExpeditionSettings() {
                 <TableRow key={expedition.id}>
                   <TableCell className="font-medium">{expedition.name}</TableCell>
                   <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" onClick={() => handleEdit(expedition)} disabled={!!isDeleting || !!editingId}>
+                        <Pencil className="h-4 w-4" />
+                    </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" disabled={!!isDeleting}>
+                        <Button variant="ghost" size="icon" disabled={!!isDeleting || !!editingId}>
                           {isDeleting === expedition.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                         </Button>
                       </AlertDialogTrigger>

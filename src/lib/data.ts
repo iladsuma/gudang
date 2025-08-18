@@ -241,6 +241,28 @@ export async function addExpedition(name: string): Promise<Expedition> {
     return newExpedition;
 }
 
+export async function updateExpedition(id: string, name: string): Promise<Expedition> {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const expeditions = await getExpeditions();
+    const expeditionIndex = expeditions.findIndex(e => e.id === id);
+
+    if (expeditionIndex === -1) {
+        throw new Error('Ekspedisi tidak ditemukan.');
+    }
+
+    // Check if another expedition already has the new name (case-insensitive), excluding the current one
+    if (expeditions.some(e => e.id !== id && e.name.toLowerCase() === name.toLowerCase())) {
+        throw new Error('Nama ekspedisi lain dengan nama ini sudah ada.');
+    }
+
+    const updatedExpedition = { ...expeditions[expeditionIndex], name };
+    expeditions[expeditionIndex] = updatedExpedition;
+    
+    saveToStorage('expeditions', expeditions);
+    return updatedExpedition;
+}
+
+
 export async function deleteExpedition(id: string): Promise<void> {
     await new Promise(resolve => setTimeout(resolve, 100));
     let expeditions = await getExpeditions();
@@ -277,6 +299,29 @@ export async function addProduct(product: Omit<Product, 'id'>): Promise<Product>
     saveToStorage('products', updatedProducts);
     return newProduct;
 }
+
+
+export async function updateProduct(id: string, productUpdate: Omit<Product, 'id'>): Promise<Product> {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const products = await getProducts();
+    const productIndex = products.findIndex(p => p.id === id);
+
+    if (productIndex === -1) {
+        throw new Error('Produk tidak ditemukan.');
+    }
+
+    // Check if another product already has the new name (case-insensitive), excluding the current one
+    if (products.some(p => p.id !== id && p.name.toLowerCase() === productUpdate.name.toLowerCase())) {
+        throw new Error('Nama produk lain dengan nama ini sudah ada.');
+    }
+
+    const updatedProduct = { ...products[productIndex], ...productUpdate };
+    products[productIndex] = updatedProduct;
+
+    saveToStorage('products', products);
+    return updatedProduct;
+}
+
 
 export async function deleteProduct(id: string): Promise<void> {
     await new Promise(resolve => setTimeout(resolve, 100));
