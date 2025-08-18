@@ -37,12 +37,6 @@ export function Header() {
                 </Link>
                 {user.role === 'admin' && (
                   <>
-                     <Link
-                      href="/master-data"
-                      className="text-foreground/60 transition-colors hover:text-foreground/80"
-                    >
-                      Master Data
-                    </Link>
                     <Link
                       href="/history"
                       className="text-foreground/60 transition-colors hover:text-foreground/80"

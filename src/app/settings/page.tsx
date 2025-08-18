@@ -77,6 +77,18 @@ export default function SettingsPage() {
             
             <Card>
                 <CardHeader>
+                    <CardTitle>Manajemen Produk</CardTitle>
+                    <CardDescription>
+                        Kelola semua data item yang ada di gudang. Tambah, hapus, atau edit produk.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <ProductSettings />
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
                     <CardTitle>Manajemen Ekspedisi</CardTitle>
                     <CardDescription>
                         Tambah, hapus, atau edit daftar ekspedisi yang tersedia untuk dipilih saat menambah data pengiriman.
