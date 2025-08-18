@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -35,11 +36,16 @@ export default function HistoryPage() {
         setHistory(data);
         setDataLoading(false);
       });
+    } else {
+        // If user is not admin and not loading, no need to fetch data.
+        if (!authLoading) {
+            setDataLoading(false);
+        }
     }
-  }, [user]);
+  }, [user, authLoading]);
 
   // Show a loading skeleton while the auth state or data is being determined
-  if (authLoading || dataLoading && user?.role === 'admin') {
+  if (authLoading || (dataLoading && user?.role === 'admin')) {
       return (
           <div className="container mx-auto p-4 md:p-8">
               <Card>

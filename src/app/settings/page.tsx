@@ -1,5 +1,6 @@
 
 'use client';
+
 import { useEffect } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
@@ -26,7 +27,7 @@ export default function SettingsPage() {
     }, [user, loading, router]);
     
     // Show a loading skeleton while the auth state is being determined
-    if (loading) {
+    if (loading || !user) {
         return (
             <div className="container mx-auto p-4 md:p-8 space-y-6">
                  <div>
@@ -57,7 +58,7 @@ export default function SettingsPage() {
     
     // If loading is done and the user is still not an admin, show a message.
     // The useEffect above will handle the redirect.
-    if (!user || user.role !== 'admin') {
+    if (user.role !== 'admin') {
         return (
             <div className="flex h-screen w-full items-center justify-center">
                 <p>Anda tidak memiliki akses ke halaman ini. Mengalihkan...</p>
