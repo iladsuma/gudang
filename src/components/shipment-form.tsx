@@ -29,7 +29,7 @@ const shipmentProductSchema = z.object({
   price: z.coerce.number().min(0, 'Harga harus diisi'),
   discount: z.coerce.number().min(0, 'Diskon tidak boleh negatif').default(0),
   packingFee: z.coerce.number().min(0, 'Biaya pengemasan tidak boleh negatif').default(0),
-  imageUrl: z.string().optional().nullable().default(null),
+  imageUrl: z.string().nullable().default(null),
 });
 
 const shipmentFormSchema = z.object({
@@ -406,7 +406,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                         control={form.control}
                                         name={`products.${index}.imageUrl`}
                                         render={({ field }) => (
-                                            <FormItem><FormControl><Input type="hidden" {...field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                                            <FormItem><FormControl><Input type="hidden" value={field.value || ''} /></FormControl><FormMessage /></FormItem>
                                         )}
                                     />
                                 </TableCell>
@@ -566,5 +566,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     </Form>
   );
 }
+
+    
 
     
