@@ -18,9 +18,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { addShipment, getExpeditions, getProducts } from '@/lib/data';
 import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Combobox } from './ui/combobox';
 
 const shipmentProductSchema = z.object({
-  productId: z.string().min(1, 'Produk harus dipilih'),
+  productId: z.string().optional(),
   name: z.string().min(1, 'Nama produk harus diisi'),
   quantity: z.coerce.number().int().min(1, 'Kuantitas min 1'),
   price: z.coerce.number().min(0, 'Harga tidak boleh negatif'),
@@ -178,7 +179,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     }
   };
   
-  const handleProductSelection = (productId: string, index: number) => {
+  const handleProductSelection = (productId: string | undefined, index: number) => {
     const selectedProduct = masterProducts.find(p => p.id === productId);
     if(selectedProduct){
       update(index, {
@@ -191,6 +192,23 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     }
   }
 
+  const handleManualProductInput = (value: string, index: number) => {
+    // When user types manually, we clear the productId and other fields
+    // that are linked to a master product.
+    const existingProduct = masterProducts.find(p => p.name.toLowerCase() === value.toLowerCase());
+    if (existingProduct) {
+        handleProductSelection(existingProduct.id, index);
+    } else {
+        update(index, {
+            ...fields[index],
+            productId: undefined,
+            name: value,
+            price: 0,
+            packingFee: 0,
+        });
+    }
+  };
+
   const receiptValue = form.watch('receipt');
   const formatRupiah = (number: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -199,6 +217,10 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
         minimumFractionDigits: 0,
     }).format(number);
   };
+  
+  const productOptions = React.useMemo(() => {
+    return masterProducts.map(p => ({ value: p.id, label: p.name }));
+  }, [masterProducts]);
 
   return (
     <Form {...form}>
@@ -347,26 +369,29 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                 <TableCell>
                                     <FormField
                                         control={form.control}
-                                        name={`products.${index}.productId`}
+                                        name={`products.${index}.name`}
                                         render={({ field }) => (
-                                            <FormItem>
-                                              <FormControl>
-                                                <Select onValueChange={(value) => {
-                                                  field.onChange(value)
-                                                  handleProductSelection(value, index);
-                                                }} defaultValue={field.value}>
-                                                  <SelectTrigger>
-                                                    <SelectValue placeholder="Pilih produk" />
-                                                  </SelectTrigger>
-                                                  <SelectContent>
-                                                    {masterProducts.map(p => (
-                                                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                                                    ))}
-                                                  </SelectContent>
-                                                </Select>
-                                              </FormControl>
-                                              <FormMessage />
-                                            </FormItem>
+                                        <FormItem>
+                                            <FormControl>
+                                            <Combobox
+                                                options={productOptions}
+                                                value={field.value}
+                                                onChange={(value) => {
+                                                    const selectedProduct = masterProducts.find(p => p.id === value);
+                                                    if (selectedProduct) {
+                                                        handleProductSelection(selectedProduct.id, index);
+                                                    } else {
+                                                        handleManualProductInput(value, index);
+                                                    }
+                                                    field.onChange(value); // Keep RHF updated
+                                                }}
+                                                placeholder="Cari atau ketik produk..."
+                                                searchPlaceholder='Cari produk...'
+                                                notFoundMessage='Produk tidak ditemukan.'
+                                            />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
                                         )}
                                     />
                                 </TableCell>
@@ -468,5 +493,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     </Form>
   );
 }
+
+    
 
     
