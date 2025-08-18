@@ -18,6 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { addShipment, getExpeditions, getProducts, getPackagingOptions } from '@/lib/data';
 import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Label } from './ui/label';
 
 const shipmentProductSchema = z.object({
   productId: z.string().min(1, 'Produk harus valid.'),
@@ -232,12 +233,11 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
   const receiptValue = form.watch('receipt');
   
   return (
-    <>
+    <Form {...form}>
       <DialogDescription>
         Isi detail untuk data pengiriman baru.
       </DialogDescription>
-      <Form {...form}>
-        <form id="shipment-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <form id="shipment-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
               control={form.control}
@@ -487,7 +487,6 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
               <Summary control={form.control} />
           </Card>
         </form>
-      </Form>
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onCancel}>
           Batal
@@ -497,6 +496,6 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
           Simpan Pengiriman
         </Button>
       </DialogFooter>
-    </>
+    </Form>
   );
 }
