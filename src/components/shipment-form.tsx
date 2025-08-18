@@ -22,8 +22,8 @@ const shipmentProductSchema = z.object({
   name: z.string().min(1, 'Nama produk harus diisi'),
   quantity: z.coerce.number().int().min(1, 'Kuantitas min 1'),
   price: z.coerce.number().min(0, 'Harga tidak boleh negatif'),
-  discount: z.coerce.number().min(0, 'Diskon tidak boleh negatif'),
-  packingFee: z.coerce.number().min(0, 'Biaya pengemasan tidak boleh negatif'),
+  discount: z.coerce.number().min(0, 'Diskon tidak boleh negatif').default(0),
+  packingFee: z.coerce.number().min(0, 'Biaya pengemasan tidak boleh negatif').default(0),
   imageUrl: z.string().optional().or(z.literal('')),
 });
 
@@ -272,14 +272,14 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                     <TableBody>
                         {fields.map((field, index) => {
                             const product = productsWatch[index] || {};
-                            const { quantity = 0, price = 0, discount = 0, packingFee = 0, imageUrl } = product;
+                            const { quantity = 0, price = 0, discount = 0 } = product;
                             const subtotal = (price * quantity) - discount;
                             return (
                             <TableRow key={field.id}>
                                 <TableCell>
                                     <div className='flex flex-col items-center gap-2'>
                                         <Image 
-                                            src={imageUrl || 'https://placehold.co/100x100.png'}
+                                            src={product.imageUrl || 'https://placehold.co/100x100.png'}
                                             alt={product.name || 'Pratinjau Gambar'}
                                             width={64}
                                             height={64}
