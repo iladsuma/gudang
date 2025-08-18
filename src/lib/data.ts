@@ -53,9 +53,9 @@ const initialExpeditions: Expedition[] = [
 ];
 
 const initialProducts: Product[] = [
-    { id: 'prod_1', name: 'Baju Anak', price: 50000, packingFee: 1000 },
-    { id: 'prod_2', name: 'Celana Panjang', price: 120000, packingFee: 1500 },
-    { id: 'prod_3', name: 'Topi', price: 35000, packingFee: 500 },
+    { id: 'prod_1', code: 'BA-001', name: 'Baju Anak', price: 50000, stock: 100, imageUrl: 'https://placehold.co/100x100.png' },
+    { id: 'prod_2', code: 'CP-001', name: 'Celana Panjang', price: 120000, stock: 50, imageUrl: 'https://placehold.co/100x100.png' },
+    { id: 'prod_3', code: 'TP-001', name: 'Topi', price: 35000, stock: 75, imageUrl: 'https://placehold.co/100x100.png' },
 ]
 
 
@@ -96,6 +96,18 @@ export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'tot
 
   if (shipments.some(s => s.transactionId.toLowerCase() === data.transactionId.toLowerCase())) {
     throw new Error('ID Transaksi harus unik.');
+  }
+
+  const allProducts = await getProducts();
+  for (const p of data.products) {
+    if (!p.productId) continue;
+    const productInDb = allProducts.find(dbP => dbP.id === p.productId);
+    if (productInDb && productInDb.stock < p.quantity) {
+        throw new Error(`Stok tidak mencukupi untuk produk "${p.name}". Sisa stok: ${productInDb.stock}.`);
+    }
+    if (productInDb) {
+        await updateProductStock(p.productId, productInDb.stock - p.quantity);
+    }
   }
 
   const totalItems = data.products.reduce((sum, p) => sum + p.quantity, 0);
@@ -293,6 +305,9 @@ export async function addProduct(product: Omit<Product, 'id'>): Promise<Product>
     if(products.some(p => p.name.toLowerCase() === product.name.toLowerCase())) {
         throw new Error('Nama produk sudah ada.');
     }
+    if(products.some(p => p.code.toLowerCase() === product.code.toLowerCase())) {
+        throw new Error('Kode produk sudah ada.');
+    }
     const newProduct: Product = {
         ...product,
         id: `prod_${Date.now()}`,
@@ -312,9 +327,12 @@ export async function updateProduct(id: string, productUpdate: Omit<Product, 'id
         throw new Error('Produk tidak ditemukan.');
     }
 
-    // Check if another product already has the new name (case-insensitive), excluding the current one
     if (products.some(p => p.id !== id && p.name.toLowerCase() === productUpdate.name.toLowerCase())) {
         throw new Error('Nama produk lain dengan nama ini sudah ada.');
+    }
+
+    if (products.some(p => p.id !== id && p.code.toLowerCase() === productUpdate.code.toLowerCase())) {
+        throw new Error('Kode produk lain dengan nama ini sudah ada.');
     }
 
     const updatedProduct = { ...products[productIndex], ...productUpdate };
@@ -333,4 +351,20 @@ export async function deleteProduct(id: string): Promise<void> {
         throw new Error('Produk tidak ditemukan.');
     }
     saveToStorage('products', updatedProducts);
+}
+
+export async function updateProductStock(id: string, newStock: number): Promise<Product> {
+    await new Promise(resolve => setTimeout(resolve, 50));
+    const products = await getProducts();
+    const productIndex = products.findIndex(p => p.id === id);
+
+    if (productIndex === -1) {
+        throw new Error('Produk tidak ditemukan.');
+    }
+
+    const updatedProduct = { ...products[productIndex], stock: newStock };
+    products[productIndex] = updatedProduct;
+
+    saveToStorage('products', products);
+    return updatedProduct;
 }

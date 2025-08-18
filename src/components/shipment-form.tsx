@@ -62,7 +62,7 @@ const formatRupiah = (number: number) => {
 const Summary = ({ form }: { form: any }) => {
     const productsValue = form.watch('products');
     
-    const calculateSummary = (products: any[]) => {
+    const calculateSummary = React.useCallback((products: any[]) => {
       if (!products) return { totalItems: 0, totalShopping: 0, totalPacking: 0, grandTotal: 0 };
       
       const totalItems = products.reduce((sum, product) => sum + (product?.quantity || 0), 0);
@@ -84,7 +84,7 @@ const Summary = ({ form }: { form: any }) => {
       const grandTotal = totalShopping + totalPacking;
       
       return { totalItems, totalShopping, totalPacking, grandTotal };
-    };
+    }, []);
 
     const summary = calculateSummary(productsValue);
   
@@ -158,11 +158,11 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
         quantity: 1,
         price: firstProduct.price,
         discount: 0,
-        packingFee: firstProduct.packingFee,
-        imageUrl: 'https://placehold.co/100x100.png'
+        packingFee: 0, // default packing fee to 0
+        imageUrl: firstProduct.imageUrl
       });
     }
-  }, [fields.length, masterProducts.length, masterProducts, append]);
+  }, [fields.length, masterProducts, append]);
 
 
   const handlePdfFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -229,33 +229,49 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     }
   };
   
-  const handleProductSelectionChange = (productId: string, index: number) => {
-    const selectedProduct = masterProducts.find(p => p.id === productId);
-    if (selectedProduct) {
+  const handleProductSelectionChange = (value: string, index: number) => {
+    const isManual = !masterProducts.some(p => p.id === value);
+    
+    if (isManual) {
+        // This case is for manual input, handled by onBlur or Enter.
+        // We just update the name for now.
         update(index, {
             ...fields[index],
-            productId: selectedProduct.id,
-            name: selectedProduct.name,
-            price: selectedProduct.price,
-            packingFee: selectedProduct.packingFee,
+            name: value,
+            productId: undefined,
         });
+    } else {
+        const selectedProduct = masterProducts.find(p => p.id === value);
+        if (selectedProduct) {
+            update(index, {
+                ...fields[index],
+                productId: selectedProduct.id,
+                name: selectedProduct.name,
+                price: selectedProduct.price,
+                imageUrl: selectedProduct.imageUrl,
+                isManual: false,
+            });
+        }
     }
   };
 
   const handleManualToggle = (isManual: boolean, index: number) => {
     const currentProduct = fields[index];
     if (isManual) {
-        update(index, { ...currentProduct, isManual: true, productId: '', name: '' });
+        update(index, { ...currentProduct, isManual: true, productId: '', name: '', price: 0, packingFee: 0, imageUrl: 'https://placehold.co/100x100.png' });
     } else {
         const firstProduct = masterProducts[0];
-        update(index, {
-            ...currentProduct,
-            isManual: false,
-            productId: firstProduct?.id || '',
-            name: firstProduct?.name || '',
-            price: firstProduct?.price || 0,
-            packingFee: firstProduct?.packingFee || 0,
-        });
+        if (firstProduct) {
+            update(index, {
+                ...currentProduct,
+                isManual: false,
+                productId: firstProduct.id,
+                name: firstProduct.name,
+                price: firstProduct.price,
+                imageUrl: firstProduct.imageUrl,
+                packingFee: 0,
+            });
+        }
     }
   };
   
@@ -373,6 +389,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                             const discount = form.watch(`products.${index}.discount`) || 0;
                             const subtotal = (price * quantity) - discount;
                             const isManual = form.watch(`products.${index}.isManual`);
+                            const currentStock = masterProducts.find(p => p.id === productValues.productId)?.stock;
 
                             return (
                             <TableRow key={field.id}>
@@ -392,12 +409,14 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                             ref={(el) => (imageInputRefs.current[index] = el)}
                                             onChange={(e) => handleProductImageChange(e, index)}
                                             className="hidden"
+                                            disabled={!isManual}
                                         />
                                         <Button
                                             type="button"
                                             variant="outline"
                                             size="sm"
                                             onClick={() => imageInputRefs.current[index]?.click()}
+                                            disabled={!isManual}
                                         >
                                            <Upload className='mr-2 h-3 w-3'/> Unggah
                                         </Button>
@@ -431,17 +450,19 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                                     ) : (
                                                       <Select
                                                         onValueChange={(value) => {
-                                                            field.onChange(value);
+                                                            field.onChange(value); // Important to keep this to update the form's internal state for the field
                                                             handleProductSelectionChange(value, index);
                                                         }}
-                                                        value={field.value}
+                                                        value={productValues.productId} // Use productId for value
                                                       >
                                                         <SelectTrigger>
                                                             <SelectValue placeholder="Pilih produk" />
                                                         </SelectTrigger>
                                                         <SelectContent>
                                                             {masterProducts.map(p => (
-                                                                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                                                <SelectItem key={p.id} value={p.id}>
+                                                                    {p.name} (Stok: {p.stock})
+                                                                </SelectItem>
                                                             ))}
                                                         </SelectContent>
                                                       </Select>
@@ -451,6 +472,9 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                             </FormItem>
                                             )}
                                         />
+                                        {!isManual && typeof currentStock !== 'undefined' && (
+                                            <p className='text-xs text-muted-foreground'>Stok tersedia: {currentStock}</p>
+                                        )}
                                     </div>
                                 </TableCell>
                                 <TableCell>
@@ -485,7 +509,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                         control={form.control}
                                         name={`products.${index}.packingFee`}
                                         render={({ field }) => (
-                                            <FormItem><FormControl><Input type="number" placeholder="Rp" {...field} disabled={!isManual} /></FormControl><FormMessage /></FormItem>
+                                            <FormItem><FormControl><Input type="number" placeholder="Rp" {...field} /></FormControl><FormMessage /></FormItem>
                                         )}
                                     />
                                 </TableCell>
@@ -508,17 +532,30 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                     size="sm"
                     className="mt-4"
                     onClick={() => {
-                        const firstProduct = masterProducts[0] || { id: '', name: '', price: 0, packingFee: 0 };
-                        append({ 
-                            productId: firstProduct.id, 
-                            name: firstProduct.name, 
-                            quantity: 1,
-                            price: firstProduct.price,
-                            discount: 0,
-                            packingFee: firstProduct.packingFee,
-                            isManual: false,
-                            imageUrl: 'https://placehold.co/100x100.png'
-                        })
+                        const firstProduct = masterProducts[0];
+                        if (firstProduct) {
+                            append({ 
+                                productId: firstProduct.id, 
+                                name: firstProduct.name, 
+                                quantity: 1,
+                                price: firstProduct.price,
+                                discount: 0,
+                                packingFee: 0,
+                                isManual: false,
+                                imageUrl: firstProduct.imageUrl
+                            });
+                        } else {
+                            // Fallback if no master products exist
+                            append({
+                                isManual: true,
+                                name: '',
+                                quantity: 1,
+                                price: 0,
+                                discount: 0,
+                                packingFee: 0,
+                                imageUrl: 'https://placehold.co/100x100.png'
+                            })
+                        }
                     }}
                     >
                     <PlusCircle className="mr-2 h-4 w-4" />
@@ -542,5 +579,3 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     </Form>
   );
 }
-
-    

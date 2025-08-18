@@ -1,9 +1,11 @@
 
 export interface Product {
     id: string;
+    code: string; // Kode Item
     name: string;
     price: number;
-    packingFee: number;
+    stock: number;
+    imageUrl: string;
 }
 
 export interface ShipmentProduct {
@@ -12,7 +14,7 @@ export interface ShipmentProduct {
     quantity: number;
     price: number; // Can be overridden from master product's price
     discount: number; // in nominal value (e.g. Rp 1000)
-    packingFee: number; // Can be overridden from master product's packingFee
+    packingFee: number; 
     imageUrl: string;
 }
 
