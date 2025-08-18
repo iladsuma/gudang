@@ -241,7 +241,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
               Tambah Pengiriman
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-4xl">
+          <DialogContent className="sm:max-w-4xl max-h-[90dvh]">
             <DialogHeader>
               <DialogTitle>Tambah Data Pengiriman Baru</DialogTitle>
             </DialogHeader>

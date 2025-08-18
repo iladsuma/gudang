@@ -220,247 +220,246 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
   const receiptValue = form.watch('receipt');
   
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <DialogDescription>
-          Isi detail untuk data pengiriman baru.
-        </DialogDescription>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-            control={form.control}
-            name="user"
-            render={({ field }) => (
-                <FormItem>
-                <FormLabel>User</FormLabel>
-                <FormControl>
-                    <Input placeholder="cth. User A" {...field} readOnly />
-                </FormControl>
-                <FormMessage />
-                </FormItem>
-            )}
-            />
-            <FormField
-            control={form.control}
-            name="transactionId"
-            render={({ field }) => (
-                <FormItem>
-                <FormLabel>No. Transaksi</FormLabel>
-                <FormControl>
-                    <Input placeholder="cth. A-1" {...field} />
-                </FormControl>
-                <FormMessage />
-                </FormItem>
-            )}
-            />
-        </div>
-        
-        <FormField
-            control={form.control}
-            name="expedition"
-            render={({ field }) => (
-                <FormItem>
-                <FormLabel>Nama Ekspedisi</FormLabel>
-                 <FormControl>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Pilih ekspedisi" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {expeditions.map(exp => (
-                                <SelectItem key={exp.id} value={exp.name}>{exp.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </FormControl>
-                <FormMessage />
-                </FormItem>
-            )}
-        />
+    <>
+      <Form {...form}>
+        <form id="shipment-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <DialogDescription>
+            Isi detail untuk data pengiriman baru.
+          </DialogDescription>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+              control={form.control}
+              name="user"
+              render={({ field }) => (
+                  <FormItem>
+                  <FormLabel>User</FormLabel>
+                  <FormControl>
+                      <Input placeholder="cth. User A" {...field} readOnly />
+                  </FormControl>
+                  <FormMessage />
+                  </FormItem>
+              )}
+              />
+              <FormField
+              control={form.control}
+              name="transactionId"
+              render={({ field }) => (
+                  <FormItem>
+                  <FormLabel>No. Transaksi</FormLabel>
+                  <FormControl>
+                      <Input placeholder="cth. A-1" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                  </FormItem>
+              )}
+              />
+          </div>
+          
+          <FormField
+              control={form.control}
+              name="expedition"
+              render={({ field }) => (
+                  <FormItem>
+                  <FormLabel>Nama Ekspedisi</FormLabel>
+                  <FormControl>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <SelectTrigger>
+                              <SelectValue placeholder="Pilih ekspedisi" />
+                          </SelectTrigger>
+                          <SelectContent>
+                              {expeditions.map(exp => (
+                                  <SelectItem key={exp.id} value={exp.name}>{exp.name}</SelectItem>
+                              ))}
+                          </SelectContent>
+                      </Select>
+                  </FormControl>
+                  <FormMessage />
+                  </FormItem>
+              )}
+          />
 
-        <FormField
-            control={form.control}
-            name="receipt"
-            render={() => (
-                <FormItem>
-                    <FormLabel>Resi (PDF) (Opsional)</FormLabel>
-                    <FormControl>
-                        <div>
-                            <input
-                                type="file"
-                                accept="application/pdf"
-                                ref={pdfFileInputRef}
-                                onChange={handlePdfFileChange}
-                                className="hidden"
-                            />
-                            <Button type="button" variant="outline" onClick={() => pdfFileInputRef.current?.click()}>
-                                <Upload className="mr-2 h-4 w-4" />
-                                {receiptValue?.fileName ? 'Ganti File' : 'Unggah PDF'}
-                            </Button>
-                        </div>
-                    </FormControl>
-                    {receiptValue?.fileName && <p className="text-sm text-muted-foreground">File: {receiptValue.fileName}</p>}
-                    <FormMessage />
-                </FormItem>
-            )}
-        />
-        
-        <Card>
-            <CardContent className="pt-6">
-                <FormLabel>Produk</FormLabel>
-                <div className="overflow-x-auto">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead className="w-[80px]">Gambar</TableHead>
-                            <TableHead className="w-[180px]">Kode Item</TableHead>
-                            <TableHead>Nama Produk</TableHead>
-                            <TableHead className="w-[100px]">Jumlah</TableHead>
-                            <TableHead className="w-[150px]">Harga (Rp)</TableHead>
-                            <TableHead className="w-[170px]">Diskon (Rp)</TableHead>
-                            <TableHead className="w-[170px]">Pengemasan/pcs (Rp)</TableHead>
-                            <TableHead className="w-[150px] text-right">Subtotal</TableHead>
-                            <TableHead className="w-[50px]"></TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {fields.map((field, index) => {
-                            const productValues = form.getValues(`products.${index}`);
-                            const quantity = form.watch(`products.${index}.quantity`) || 0;
-                            const price = form.watch(`products.${index}.price`) || 0;
-                            const discount = form.watch(`products.${index}.discount`) || 0;
-                            const subtotal = (price * quantity) - discount;
-                            const productInfo = masterProducts.find(p => p.id === productValues.productId);
+          <FormField
+              control={form.control}
+              name="receipt"
+              render={() => (
+                  <FormItem>
+                      <FormLabel>Resi (PDF) (Opsional)</FormLabel>
+                      <FormControl>
+                          <div>
+                              <input
+                                  type="file"
+                                  accept="application/pdf"
+                                  ref={pdfFileInputRef}
+                                  onChange={handlePdfFileChange}
+                                  className="hidden"
+                              />
+                              <Button type="button" variant="outline" onClick={() => pdfFileInputRef.current?.click()}>
+                                  <Upload className="mr-2 h-4 w-4" />
+                                  {receiptValue?.fileName ? 'Ganti File' : 'Unggah PDF'}
+                              </Button>
+                          </div>
+                      </FormControl>
+                      {receiptValue?.fileName && <p className="text-sm text-muted-foreground">File: {receiptValue.fileName}</p>}
+                      <FormMessage />
+                  </FormItem>
+              )}
+          />
+          
+          <Card>
+              <CardContent className="pt-6">
+                  <FormLabel>Produk</FormLabel>
+                  <div className="overflow-x-auto">
+                  <Table>
+                      <TableHeader>
+                          <TableRow>
+                              <TableHead className="w-[80px]">Gambar</TableHead>
+                              <TableHead className="w-[180px]">Kode Item</TableHead>
+                              <TableHead>Nama Produk</TableHead>
+                              <TableHead className="w-[100px]">Jumlah</TableHead>
+                              <TableHead className="w-[150px]">Harga (Rp)</TableHead>
+                              <TableHead className="w-[170px]">Diskon (Rp)</TableHead>
+                              <TableHead className="w-[170px]">Pengemasan/pcs (Rp)</TableHead>
+                              <TableHead className="w-[150px] text-right">Subtotal</TableHead>
+                              <TableHead className="w-[50px]"></TableHead>
+                          </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                          {fields.map((field, index) => {
+                              const productValues = form.getValues(`products.${index}`);
+                              const quantity = form.watch(`products.${index}.quantity`) || 0;
+                              const price = form.watch(`products.${index}.price`) || 0;
+                              const discount = form.watch(`products.${index}.discount`) || 0;
+                              const subtotal = (price * quantity) - discount;
+                              const productInfo = masterProducts.find(p => p.id === productValues.productId);
 
-                            return (
-                            <TableRow key={field.id}>
-                                <TableCell>
-                                    <Image 
-                                        src={productValues.imageUrl || 'https://placehold.co/100x100.png'}
-                                        alt={productValues.name || 'Pratinjau Gambar'}
-                                        width={64}
-                                        height={64}
-                                        className='rounded-md object-cover h-16 w-16'
-                                        data-ai-hint="product image preview"
-                                    />
-                                </TableCell>
-                                <TableCell>
-                                     <FormField
-                                        control={form.control}
-                                        name={`products.${index}.code`}
-                                        render={({ field: codeField }) => (
-                                            <FormItem>
-                                                <FormControl>
-                                                    <Input 
-                                                        {...codeField} 
-                                                        onBlur={(e) => {
-                                                            codeField.onBlur();
-                                                            handleProductCodeBlur(e.target.value, index);
-                                                        }}
-                                                        placeholder="Ketik kode item..."
-                                                    />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </TableCell>
-                                <TableCell>
-                                    <div className='space-y-1'>
-                                        <p className="font-medium">{form.watch(`products.${index}.name`)}</p>
-                                        {productInfo && (
-                                            <p className='text-xs text-muted-foreground'>Stok: {productInfo.stock}</p>
-                                        )}
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                     <FormField
-                                        control={form.control}
-                                        name={`products.${index}.quantity`}
-                                        render={({ field: qtyField }) => (
-                                            <FormItem><FormControl><Input type="number" min="1" {...qtyField} /></FormControl><FormMessage /></FormItem>
-                                        )}
-                                    />
-                                </TableCell>
-                                 <TableCell>
-                                     <FormField
-                                        control={form.control}
-                                        name={`products.${index}.price`}
-                                        render={({ field: priceField }) => (
-                                            <FormItem><FormControl><Input type="number" placeholder="Rp" {...priceField} readOnly /></FormControl><FormMessage /></FormItem>
-                                        )}
-                                    />
-                                </TableCell>
-                                 <TableCell>
-                                     <FormField
-                                        control={form.control}
-                                        name={`products.${index}.discount`}
-                                        render={({ field: discountField }) => (
-                                            <FormItem><FormControl><Input type="number" min="0" placeholder="Rp" {...discountField} /></FormControl><FormMessage /></FormItem>
-                                        )}
-                                    />
-                                </TableCell>
-                                <TableCell>
-                                     <FormField
-                                        control={form.control}
-                                        name={`products.${index}.packingFee`}
-                                        render={({ field: packingField }) => (
-                                            <FormItem><FormControl><Input type="number" placeholder="Rp" {...packingField} /></FormControl><FormMessage /></FormItem>
-                                        )}
-                                    />
-                                </TableCell>
-                                <TableCell className="text-right font-medium">
-                                    {formatRupiah(subtotal > 0 ? subtotal : 0)}
-                                </TableCell>
-                                <TableCell>
-                                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </TableCell>
-                            </TableRow>
-                        )})}
-                    </TableBody>
-                </Table>
-                </div>
-                 <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="mt-4"
-                    onClick={() => {
-                        append({ 
-                            productId: '',
-                            code: '',
-                            name: 'N/A', 
-                            quantity: 1,
-                            price: 0,
-                            discount: 0,
-                            packingFee: 0,
-                            imageUrl: null
-                        });
-                    }}
-                    >
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Tambah Produk
-                </Button>
-                <FormMessage>{form.formState.errors.products?.root?.message}</FormMessage>
-                <FormMessage>{form.formState.errors.products?.[0]?.productId?.message}</FormMessage>
-            </CardContent>
-            <Summary control={form.control} />
-        </Card>
-        
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Batal
-          </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Simpan Pengiriman
-          </Button>
-        </DialogFooter>
-      </form>
-    </Form>
+                              return (
+                              <TableRow key={field.id}>
+                                  <TableCell>
+                                      <Image 
+                                          src={productValues.imageUrl || 'https://placehold.co/100x100.png'}
+                                          alt={productValues.name || 'Pratinjau Gambar'}
+                                          width={64}
+                                          height={64}
+                                          className='rounded-md object-cover h-16 w-16'
+                                          data-ai-hint="product image preview"
+                                      />
+                                  </TableCell>
+                                  <TableCell>
+                                      <FormField
+                                          control={form.control}
+                                          name={`products.${index}.code`}
+                                          render={({ field: codeField }) => (
+                                              <FormItem>
+                                                  <FormControl>
+                                                      <Input 
+                                                          {...codeField} 
+                                                          onBlur={(e) => {
+                                                              codeField.onBlur();
+                                                              handleProductCodeBlur(e.target.value, index);
+                                                          }}
+                                                          placeholder="Ketik kode item..."
+                                                      />
+                                                  </FormControl>
+                                                  <FormMessage />
+                                              </FormItem>
+                                          )}
+                                      />
+                                  </TableCell>
+                                  <TableCell>
+                                      <div className='space-y-1'>
+                                          <p className="font-medium">{form.watch(`products.${index}.name`)}</p>
+                                          {productInfo && (
+                                              <p className='text-xs text-muted-foreground'>Stok: {productInfo.stock}</p>
+                                          )}
+                                      </div>
+                                  </TableCell>
+                                  <TableCell>
+                                      <FormField
+                                          control={form.control}
+                                          name={`products.${index}.quantity`}
+                                          render={({ field: qtyField }) => (
+                                              <FormItem><FormControl><Input type="number" min="1" {...qtyField} /></FormControl><FormMessage /></FormItem>
+                                          )}
+                                      />
+                                  </TableCell>
+                                  <TableCell>
+                                      <FormField
+                                          control={form.control}
+                                          name={`products.${index}.price`}
+                                          render={({ field: priceField }) => (
+                                              <FormItem><FormControl><Input type="number" placeholder="Rp" {...priceField} readOnly /></FormControl><FormMessage /></FormItem>
+                                          )}
+                                      />
+                                  </TableCell>
+                                  <TableCell>
+                                      <FormField
+                                          control={form.control}
+                                          name={`products.${index}.discount`}
+                                          render={({ field: discountField }) => (
+                                              <FormItem><FormControl><Input type="number" min="0" placeholder="Rp" {...discountField} /></FormControl><FormMessage /></FormItem>
+                                          )}
+                                      />
+                                  </TableCell>
+                                  <TableCell>
+                                      <FormField
+                                          control={form.control}
+                                          name={`products.${index}.packingFee`}
+                                          render={({ field: packingField }) => (
+                                              <FormItem><FormControl><Input type="number" placeholder="Rp" {...packingField} /></FormControl><FormMessage /></FormItem>
+                                          )}
+                                      />
+                                  </TableCell>
+                                  <TableCell className="text-right font-medium">
+                                      {formatRupiah(subtotal > 0 ? subtotal : 0)}
+                                  </TableCell>
+                                  <TableCell>
+                                      <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
+                                          <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                  </TableCell>
+                              </TableRow>
+                          )})}
+                      </TableBody>
+                  </Table>
+                  </div>
+                  <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-4"
+                      onClick={() => {
+                          append({ 
+                              productId: '',
+                              code: '',
+                              name: 'N/A', 
+                              quantity: 1,
+                              price: 0,
+                              discount: 0,
+                              packingFee: 0,
+                              imageUrl: null
+                          });
+                      }}
+                      >
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Tambah Produk
+                  </Button>
+                  <FormMessage>{form.formState.errors.products?.root?.message}</FormMessage>
+                  <FormMessage>{form.formState.errors.products?.[0]?.productId?.message}</FormMessage>
+              </CardContent>
+              <Summary control={form.control} />
+          </Card>
+        </form>
+      </Form>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Batal
+        </Button>
+        <Button type="submit" form="shipment-form" disabled={isSubmitting}>
+          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Simpan Pengiriman
+        </Button>
+      </DialogFooter>
+    </>
   );
 }
-
-    
