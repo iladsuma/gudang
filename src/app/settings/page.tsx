@@ -12,25 +12,59 @@ import {
 } from '@/components/ui/card';
 import { ExpeditionSettings } from '@/components/expedition-settings';
 import { ProductSettings } from '@/components/product-settings';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function SettingsPage() {
-    const { user } = useAuth();
+    const { user, loading } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
-        if (user?.role !== 'admin') {
+        // Hanya alihkan jika loading sudah selesai dan user bukan admin
+        if (!loading && user?.role !== 'admin') {
             router.push('/');
         }
-    }, [user, router]);
+    }, [user, loading, router]);
     
-    if (user?.role !== 'admin') {
+    // Tampilkan loading skeleton selama status auth diperiksa
+    if (loading) {
+        return (
+            <div className="container mx-auto p-4 md:p-8 space-y-6">
+                 <div>
+                    <Skeleton className="h-9 w-1/3" />
+                    <Skeleton className="h-5 w-2/3 mt-2" />
+                </div>
+                <Card>
+                    <CardHeader>
+                        <Skeleton className="h-7 w-1/4" />
+                        <Skeleton className="h-4 w-1/2" />
+                    </CardHeader>
+                    <CardContent>
+                       <Skeleton className="h-48 w-full" />
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                        <Skeleton className="h-7 w-1/4" />
+                        <Skeleton className="h-4 w-1/2" />
+                    </CardHeader>
+                    <CardContent>
+                       <Skeleton className="h-48 w-full" />
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+    
+    // Jika loading selesai dan user tetap bukan admin, tampilkan pesan
+    if (!user || user.role !== 'admin') {
         return (
             <div className="flex h-screen w-full items-center justify-center">
                 <p>Anda tidak memiliki akses ke halaman ini. Mengalihkan...</p>
             </div>
         );
     }
-
+    
+    // Tampilkan halaman jika user adalah admin
     return (
         <div className="container mx-auto p-4 md:p-8 space-y-6">
             <div>
@@ -42,7 +76,7 @@ export default function SettingsPage() {
                 <CardHeader>
                     <CardTitle>Manajemen Produk</CardTitle>
                     <CardDescription>
-                        Tambah, hapus, atau lihat daftar produk yang tersedia untuk dipilih saat menambah data pengiriman.
+                        Tambah, hapus, atau edit daftar produk yang tersedia untuk dipilih saat menambah data pengiriman.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -54,7 +88,7 @@ export default function SettingsPage() {
                 <CardHeader>
                     <CardTitle>Manajemen Ekspedisi</CardTitle>
                     <CardDescription>
-                        Tambah, hapus, atau lihat daftar ekspedisi yang tersedia untuk dipilih saat menambah data pengiriman.
+                        Tambah, hapus, atau edit daftar ekspedisi yang tersedia untuk dipilih saat menambah data pengiriman.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
