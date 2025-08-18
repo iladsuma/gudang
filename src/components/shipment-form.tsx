@@ -233,11 +233,11 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
   
   return (
     <>
-      <form id="shipment-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <DialogDescription>
-            Isi detail untuk data pengiriman baru.
-          </DialogDescription>
-          
+      <DialogDescription>
+        Isi detail untuk data pengiriman baru.
+      </DialogDescription>
+      <Form {...form}>
+        <form id="shipment-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
               control={form.control}
@@ -319,7 +319,9 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
           
           <Card>
               <CardContent className="pt-6">
-                  <FormLabel>Produk</FormLabel>
+                  <div className="mb-2">
+                    <Label>Produk</Label>
+                  </div>
                   <div className="overflow-x-auto">
                   <Table>
                       <TableHeader>
@@ -484,7 +486,8 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
               </CardContent>
               <Summary control={form.control} />
           </Card>
-      </form>
+        </form>
+      </Form>
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onCancel}>
           Batal
