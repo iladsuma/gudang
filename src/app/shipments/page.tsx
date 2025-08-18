@@ -14,7 +14,7 @@ import type { Shipment } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ShipmentsPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -24,10 +24,14 @@ export default function ShipmentsPage() {
             setShipments(data);
             setLoading(false);
         });
+    } else if (!authLoading) {
+        // If auth is done and there's no user, stop data loading.
+        setLoading(false);
     }
-  }, [user]);
+  }, [user, authLoading]);
 
-  if (loading) {
+  // Show skeleton while either auth or data is loading.
+  if (authLoading || loading) {
       return (
           <div className="container mx-auto p-4 md:p-8">
               <Card>
@@ -42,6 +46,17 @@ export default function ShipmentsPage() {
           </div>
       )
   }
+  
+  // If not loading and no user, the redirect from AuthProvider will handle it.
+  // We can show a message in the meantime.
+  if (!user) {
+      return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <p>Mengalihkan ke halaman login...</p>
+        </div>
+      );
+  }
+
 
   return (
     <div className="container mx-auto p-4 md:p-8">

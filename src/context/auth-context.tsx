@@ -22,6 +22,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
+    // This effect runs only on the client side.
     try {
       const storedUser = localStorage.getItem('user');
       if (storedUser) {
@@ -42,8 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // This effect runs only on the client, after the initial render and hydration.
-    if (loading) return;
+    if (loading) return; // Don't run router logic until auth state is determined
 
     const publicPaths = ['/login'];
     const pathIsPublic = publicPaths.includes(pathname);
@@ -70,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
-    // No need to push here, the useEffect will handle it
+    router.push('/login');
   };
 
   const value = { user, login, logout, loading };
