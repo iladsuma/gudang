@@ -315,9 +315,9 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                             <TableHead className="w-[80px]">Gambar</TableHead>
                             <TableHead className="w-[180px]">Kode Item</TableHead>
                             <TableHead>Nama Produk</TableHead>
-                            <TableHead className="w-[120px]">Jumlah</TableHead>
+                            <TableHead className="w-[100px]">Jumlah</TableHead>
                             <TableHead className="w-[150px]">Harga (Rp)</TableHead>
-                            <TableHead className="w-[150px]">Diskon (Rp)</TableHead>
+                            <TableHead className="w-[170px]">Diskon (Rp)</TableHead>
                             <TableHead className="w-[170px]">Pengemasan/pcs (Rp)</TableHead>
                             <TableHead className="w-[150px] text-right">Subtotal</TableHead>
                             <TableHead className="w-[50px]"></TableHead>
@@ -462,3 +462,5 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     </Form>
   );
 }
+
+    
