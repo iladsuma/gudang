@@ -35,25 +35,19 @@ export function Combobox({
     onChange, 
     placeholder = "Select option...",
     searchPlaceholder = "Search...",
-    notFoundMessage = "Produk baru:"
+    notFoundMessage = "Tambah produk baru:"
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
-  const [inputValue, setInputValue] = React.useState("");
+  const [inputValue, setInputValue] = React.useState("")
 
-  // When the popover opens, reset the search input value
   React.useEffect(() => {
-    if (open) {
-      setInputValue("");
+    if (!open) {
+      setInputValue("")
     }
-  }, [open]);
+  }, [open])
 
-  // Find the label for the current value to display on the button
-  const currentLabel = options.find((option) => option.value === value)?.label;
-  
-  const handleSelect = (selectedValue: string) => {
-    onChange(selectedValue);
-    setOpen(false);
-  }
+  const currentOption = options.find((option) => option.value === value)
+  const displayLabel = currentOption ? currentOption.label : value;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -65,7 +59,7 @@ export function Combobox({
           className="w-full justify-between font-normal"
         >
           <span className="truncate">
-            {currentLabel || value || placeholder}
+            {displayLabel || placeholder}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -79,14 +73,15 @@ export function Combobox({
           />
           <CommandList>
             <CommandEmpty>
-                 {inputValue.length > 0 && (
+                 {inputValue && (
                     <CommandItem
-                        key="new-product-item" // Use a static key for the new item
                         value={inputValue}
-                        onSelect={() => handleSelect(inputValue)}
-                        className="flex items-center gap-2"
+                        onSelect={() => {
+                            onChange(inputValue)
+                            setOpen(false)
+                        }}
                     >
-                       <PlusCircle className="h-4 w-4" />
+                       <PlusCircle className="mr-2 h-4 w-4" />
                        <span>{notFoundMessage} <span className="font-medium">{inputValue}</span></span>
                     </CommandItem>
                 )}
@@ -94,9 +89,12 @@ export function Combobox({
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem
-                  key={option.value} // Use the stable and unique product ID as the key
-                  value={option.label} // Match against the label for searching
-                  onSelect={() => handleSelect(option.value)}
+                  key={option.value}
+                  value={option.label}
+                  onSelect={() => {
+                    onChange(option.value)
+                    setOpen(false)
+                  }}
                 >
                   <Check
                     className={cn(
