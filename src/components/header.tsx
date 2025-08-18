@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -34,7 +35,6 @@ export function Header() {
                 >
                   Rekap Pengiriman
                 </Link>
-                {user.role === 'admin' && (
                   <>
                     <Link
                       href="/history"
@@ -55,7 +55,6 @@ export function Header() {
                       Pengaturan
                     </Link>
                   </>
-                )}
               </nav>
             )}
           </div>

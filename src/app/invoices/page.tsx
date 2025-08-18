@@ -18,34 +18,24 @@ import { useRouter } from 'next/navigation';
 
 export default function InvoicesPage() {
   const { user, loading: authLoading } = useAuth();
-  const router = useRouter();
   const [batches, setBatches] = useState<Checkout[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
-    // Redirect if loading is finished and user is not an admin
-    if (!authLoading && user?.role !== 'admin') {
-      router.push('/');
-    }
-  }, [user, authLoading, router]);
-  
-  useEffect(() => {
-    // Fetch data only if the user is an admin
-    if (user?.role === 'admin') {
+    // Fetch data only if the user is authenticated
+    if (user) {
       getCheckoutHistory().then(data => {
         setBatches(data);
         setDataLoading(false);
       });
-    } else {
-        // If user is not admin and not loading, no need to fetch data.
-        if (!authLoading) {
-            setDataLoading(false);
-        }
+    } else if (!authLoading) {
+      // If auth is done and there's no user, stop data loading.
+      setDataLoading(false);
     }
   }, [user, authLoading]);
   
   // Show a loading skeleton while the auth state or data is being determined
-  if (authLoading || (dataLoading && user?.role === 'admin')) {
+  if (authLoading || (dataLoading && user)) {
       return (
           <div className="container mx-auto p-4 md:p-8">
               <Card>
@@ -61,12 +51,11 @@ export default function InvoicesPage() {
       );
   }
   
-  // If loading is done and the user is still not an admin, show a message.
-  // The useEffect above will handle the redirect.
-  if (user?.role !== 'admin') {
-      return (
+  // AuthProvider will handle redirecting unauthenticated users
+  if (!user) {
+       return (
            <div className="flex h-screen w-full items-center justify-center">
-                <p>Anda tidak memiliki akses ke halaman ini. Mengalihkan...</p>
+                <p>Mengalihkan ke halaman login...</p>
            </div>
       );
   }

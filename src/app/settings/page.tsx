@@ -19,13 +19,6 @@ export default function SettingsPage() {
     const { user, loading } = useAuth();
     const router = useRouter();
 
-    useEffect(() => {
-        // Redirect if loading is finished and user is not an admin
-        if (!loading && user?.role !== 'admin') {
-            router.push('/');
-        }
-    }, [user, loading, router]);
-    
     // Show a loading skeleton while the auth state is being determined
     if (loading || !user) {
         return (
@@ -56,17 +49,7 @@ export default function SettingsPage() {
         );
     }
     
-    // If loading is done and the user is still not an admin, show a message.
-    // The useEffect above will handle the redirect.
-    if (user.role !== 'admin') {
-        return (
-            <div className="flex h-screen w-full items-center justify-center">
-                <p>Anda tidak memiliki akses ke halaman ini. Mengalihkan...</p>
-            </div>
-        );
-    }
-    
-    // Render the page if the user is an admin
+    // Render the page if the user is authenticated
     return (
         <div className="container mx-auto p-4 md:p-8 space-y-6">
             <div>
