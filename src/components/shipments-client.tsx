@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { Shipment } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Trash2, Loader2, FileText, Printer } from 'lucide-react';
@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
   TableCaption,
+  TableFooter,
 } from '@/components/ui/table';
 import {
   Dialog,
@@ -200,6 +201,18 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
     }
   };
 
+  const tableTotals = useMemo(() => {
+    return shipments.reduce(
+        (acc, shipment) => {
+            acc.totalItems += shipment.totalItems;
+            acc.totalPackingCost += shipment.totalPackingCost;
+            acc.totalAmount += shipment.totalAmount;
+            return acc;
+        },
+        { totalItems: 0, totalPackingCost: 0, totalAmount: 0 }
+    );
+  }, [shipments]);
+
 
   return (
     <div className="space-y-4">
@@ -355,6 +368,18 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
               </TableRow>
             )}
           </TableBody>
+           {shipments.length > 0 && (
+            <TableFooter>
+                <TableRow>
+                    <TableCell colSpan={7} className="font-bold text-right">Total</TableCell>
+                    <TableCell className="text-right font-bold">{tableTotals.totalItems}</TableCell>
+                    <TableCell className="text-right font-bold">{formatRupiah(tableTotals.totalPackingCost)}</TableCell>
+                    <TableCell colSpan={1}></TableCell>
+                    <TableCell className="text-right font-bold">{formatRupiah(tableTotals.totalAmount)}</TableCell>
+                    <TableCell colSpan={2}></TableCell>
+                </TableRow>
+            </TableFooter>
+           )}
           {shipments.length > 0 && (
             <TableCaption>Daftar semua pengiriman barang masuk.</TableCaption>
           )}
@@ -363,3 +388,4 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
     </div>
   );
 }
+
