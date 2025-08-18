@@ -23,7 +23,7 @@ const shipmentProductSchema = z.object({
   productId: z.string().min(1, 'Produk harus valid.'),
   code: z.string().min(1, 'Kode harus diisi.'),
   name: z.string(), // Will be populated automatically
-  quantity: z.coerce.number().int().min(1, 'Kuantitas min 1'),
+  quantity: z.coerce.number().int().min(1, 'Jumlah minimal 1'),
   price: z.coerce.number().min(0, 'Harga harus diisi'),
   discount: z.coerce.number().min(0, 'Diskon tidak boleh negatif').default(0),
   packingFee: z.coerce.number().min(0, 'Biaya pengemasan tidak boleh negatif').default(0),
@@ -378,7 +378,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                         control={form.control}
                                         name={`products.${index}.quantity`}
                                         render={({ field: qtyField }) => (
-                                            <FormItem><FormControl><Input type="number" {...qtyField} /></FormControl><FormMessage /></FormItem>
+                                            <FormItem><FormControl><Input type="number" min="1" {...qtyField} /></FormControl><FormMessage /></FormItem>
                                         )}
                                     />
                                 </TableCell>
@@ -396,7 +396,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                         control={form.control}
                                         name={`products.${index}.discount`}
                                         render={({ field: discountField }) => (
-                                            <FormItem><FormControl><Input type="number" placeholder="Rp" {...discountField} /></FormControl><FormMessage /></FormItem>
+                                            <FormItem><FormControl><Input type="number" min="0" placeholder="Rp" {...discountField} /></FormControl><FormMessage /></FormItem>
                                         )}
                                     />
                                 </TableCell>
