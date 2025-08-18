@@ -20,22 +20,24 @@ export default function InvoicesPage() {
   const { user, loading: authLoading } = useAuth();
   const [batches, setBatches] = useState<Checkout[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
+  const router = useRouter();
+
 
   useEffect(() => {
-    // Fetch data only if the user is authenticated
-    if (user) {
+    // Redirect if not admin after loading is complete
+    if (!authLoading && user?.role !== 'admin') {
+      router.push('/shipments');
+    }
+    
+    if (user?.role === 'admin') {
       getCheckoutHistory().then(data => {
         setBatches(data);
         setDataLoading(false);
       });
-    } else if (!authLoading) {
-      // If auth is done and there's no user, stop data loading.
-      setDataLoading(false);
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, router]);
   
-  // Show a loading skeleton while the auth state or data is being determined
-  if (authLoading || (dataLoading && user)) {
+  if (authLoading || (dataLoading && user?.role === 'admin')) {
       return (
           <div className="container mx-auto p-4 md:p-8">
               <Card>
@@ -51,11 +53,10 @@ export default function InvoicesPage() {
       );
   }
   
-  // AuthProvider will handle redirecting unauthenticated users
-  if (!user) {
+  if (!user || user.role !== 'admin') {
        return (
            <div className="flex h-screen w-full items-center justify-center">
-                <p>Mengalihkan ke halaman login...</p>
+                <p>Anda tidak memiliki akses. Mengalihkan...</p>
            </div>
       );
   }
