@@ -5,7 +5,6 @@ export interface Product {
     name: string;
     price: number;
     stock: number;
-    packingFee: number; // Biaya pengemasan standar untuk produk ini
     imageUrl: string;
 }
 
@@ -16,7 +15,8 @@ export interface ShipmentProduct {
     quantity: number;
     price: number; // Can be overridden from master product's price
     discount: number; // in nominal value (e.g. Rp 1000)
-    packingFee: number; 
+    packagingId: string;
+    packagingCost: number;
     imageUrl: string | null;
 }
 
@@ -77,4 +77,8 @@ export interface Expedition {
     name: string;
 }
 
-    
+export interface Packaging {
+    id: string;
+    name: string;
+    cost: number;
+}

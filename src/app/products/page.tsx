@@ -51,7 +51,6 @@ const productFormSchema = z.object({
   name: z.string().min(1, 'Nama produk harus diisi.'),
   price: z.coerce.number().min(0, 'Harga harus diisi.'),
   stock: z.coerce.number().int().min(0, 'Stok harus bilangan bulat non-negatif.'),
-  packingFee: z.coerce.number().min(0, 'Biaya pengemasan tidak boleh negatif.'),
   imageUrl: z.string().nullable().optional(),
 });
 
@@ -78,7 +77,7 @@ function ProductsClient() {
 
     const form = useForm<ProductFormValues>({
         resolver: zodResolver(productFormSchema),
-        defaultValues: { code: '', name: '', price: 0, stock: 0, packingFee: 0, imageUrl: '' },
+        defaultValues: { code: '', name: '', price: 0, stock: 0, imageUrl: '' },
     });
 
     const stockForm = useForm<StockFormValues>({
@@ -105,12 +104,11 @@ function ProductsClient() {
                 name: product.name,
                 price: product.price,
                 stock: product.stock,
-                packingFee: product.packingFee,
                 imageUrl: product.imageUrl || '',
             });
             setPreviewImage(product.imageUrl);
         } else {
-            form.reset({ code: '', name: '', price: 0, stock: 0, packingFee: 0, imageUrl: '' });
+            form.reset({ code: '', name: '', price: 0, stock: 0, imageUrl: '' });
             setPreviewImage(null);
         }
         setIsFormOpen(true);
@@ -258,9 +256,6 @@ function ProductsClient() {
                                     <FormField control={form.control} name="price" render={({ field }) => (
                                         <FormItem><FormLabel>Harga Jual (Rp)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                                     )} />
-                                    <FormField control={form.control} name="packingFee" render={({ field }) => (
-                                        <FormItem><FormLabel>Biaya Pengemasan (Rp)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                                    )} />
                                     <FormField control={form.control} name="stock" render={({ field }) => (
                                         <FormItem><FormLabel>Stok Awal</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                                     )} />
@@ -285,14 +280,13 @@ function ProductsClient() {
                             <TableHead>Kode Item</TableHead>
                             <TableHead>Nama Item</TableHead>
                             <TableHead>Harga Jual</TableHead>
-                            <TableHead>Biaya Pengemasan</TableHead>
                             <TableHead>Stok</TableHead>
                             <TableHead className="text-right">Aksi</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loading ? (
-                            <TableRow><TableCell colSpan={7} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
+                            <TableRow><TableCell colSpan={6} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
                         ) : products.length > 0 ? (
                             products.map((product) => (
                                 <TableRow key={product.id}>
@@ -302,7 +296,6 @@ function ProductsClient() {
                                     <TableCell className="font-mono">{product.code}</TableCell>
                                     <TableCell className="font-medium">{product.name}</TableCell>
                                     <TableCell>{formatRupiah(product.price)}</TableCell>
-                                    <TableCell>{formatRupiah(product.packingFee)}</TableCell>
                                     <TableCell>{product.stock}</TableCell>
                                     <TableCell className="text-right">
                                        <Dialog open={stockEditProduct?.id === product.id} onOpenChange={(open) => !open && setStockEditProduct(null)}>
@@ -352,7 +345,7 @@ function ProductsClient() {
                                 </TableRow>
                             ))
                         ) : (
-                            <TableRow><TableCell colSpan={7} className="h-24 text-center">Belum ada data produk.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={6} className="h-24 text-center">Belum ada data produk.</TableCell></TableRow>
                         )}
                     </TableBody>
                 </Table>
@@ -418,7 +411,3 @@ export default function ProductsPage() {
         </div>
     );
 }
-
-    
-
-    

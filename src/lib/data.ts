@@ -1,7 +1,7 @@
 
 'use client';
 
-import type { User, Shipment, Checkout, ProcessedShipmentSummary, Expedition, Product } from '@/lib/types';
+import type { User, Shipment, Checkout, ProcessedShipmentSummary, Expedition, Product, Packaging } from '@/lib/types';
 
 // =================================================================
 // Helper functions to interact with localStorage
@@ -53,10 +53,16 @@ const initialExpeditions: Expedition[] = [
 ];
 
 const initialProducts: Product[] = [
-    { id: 'prod_1', code: 'BA-001', name: 'Baju Anak', price: 50000, stock: 100, packingFee: 1000, imageUrl: 'https://placehold.co/100x100.png' },
-    { id: 'prod_2', code: 'CP-001', name: 'Celana Panjang', price: 120000, stock: 50, packingFee: 2500, imageUrl: 'https://placehold.co/100x100.png' },
-    { id: 'prod_3', code: 'TP-001', name: 'Topi', price: 35000, stock: 75, packingFee: 1500, imageUrl: 'https://placehold.co/100x100.png' },
+    { id: 'prod_1', code: 'BA-001', name: 'Baju Anak', price: 50000, stock: 100, imageUrl: 'https://placehold.co/100x100.png' },
+    { id: 'prod_2', code: 'CP-001', name: 'Celana Panjang', price: 120000, stock: 50, imageUrl: 'https://placehold.co/100x100.png' },
+    { id: 'prod_3', code: 'TP-001', name: 'Topi', price: 35000, stock: 75, imageUrl: 'https://placehold.co/100x100.png' },
 ]
+
+const initialPackaging: Packaging[] = [
+    { id: 'pkg_1', name: 'Plastik', cost: 500 },
+    { id: 'pkg_2', name: 'Kardus Kecil', cost: 1500 },
+    { id: 'pkg_3', name: 'Kardus + Bubble Wrap', cost: 3000 },
+];
 
 
 // =================================================================
@@ -117,7 +123,7 @@ export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'tot
     return sum + subtotal;
   }, 0);
   
-  const totalPackingCost = data.products.reduce((sum, p) => sum + (p.packingFee * p.quantity), 0);
+  const totalPackingCost = data.products.reduce((sum, p) => sum + (p.packagingCost * p.quantity), 0);
 
   const grandTotal = totalProductCost + totalPackingCost;
 
@@ -367,4 +373,59 @@ export async function updateProductStock(id: string, newStock: number): Promise<
 
     saveToStorage('products', products);
     return updatedProduct;
+}
+
+// Packaging Functions
+export async function getPackagingOptions(): Promise<Packaging[]> {
+    await new Promise(resolve => setTimeout(resolve, 50));
+    let options = getFromStorage<Packaging[]>('packagingOptions', null);
+    if (options === null) {
+        saveToStorage('packagingOptions', initialPackaging);
+        options = initialPackaging;
+    }
+    return [...options].sort((a,b) => a.name.localeCompare(b.name));
+}
+
+export async function addPackagingOption(data: Omit<Packaging, 'id'>): Promise<Packaging> {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const options = await getPackagingOptions();
+    if(options.some(o => o.name.toLowerCase() === data.name.toLowerCase())) {
+        throw new Error('Nama kemasan sudah ada.');
+    }
+    const newOption: Packaging = {
+        ...data,
+        id: `pkg_${Date.now()}`,
+    };
+    const updatedOptions = [...options, newOption];
+    saveToStorage('packagingOptions', updatedOptions);
+    return newOption;
+}
+
+export async function updatePackagingOption(id: string, data: Omit<Packaging, 'id'>): Promise<Packaging> {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const options = await getPackagingOptions();
+    const optionIndex = options.findIndex(o => o.id === id);
+
+    if (optionIndex === -1) {
+        throw new Error('Tipe kemasan tidak ditemukan.');
+    }
+    if (options.some(o => o.id !== id && o.name.toLowerCase() === data.name.toLowerCase())) {
+        throw new Error('Tipe kemasan lain dengan nama ini sudah ada.');
+    }
+
+    const updatedOption = { ...options[optionIndex], ...data };
+    options[optionIndex] = updatedOption;
+    
+    saveToStorage('packagingOptions', options);
+    return updatedOption;
+}
+
+export async function deletePackagingOption(id: string): Promise<void> {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    let options = await getPackagingOptions();
+    const updatedOptions = options.filter(o => o.id !== id);
+    if(options.length === updatedOptions.length) {
+        throw new Error('Tipe kemasan tidak ditemukan.');
+    }
+    saveToStorage('packagingOptions', updatedOptions);
 }

@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { Shipment, Expedition, Product } from '@/lib/types';
+import type { Shipment, Expedition, Product, Packaging } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,7 @@ import { DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Loader2, PlusCircle, Trash2, Upload } from 'lucide-react';
 import { Card, CardContent, CardFooter } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import { addShipment, getExpeditions, getProducts } from '@/lib/data';
+import { addShipment, getExpeditions, getProducts, getPackagingOptions } from '@/lib/data';
 import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
@@ -26,7 +26,8 @@ const shipmentProductSchema = z.object({
   quantity: z.coerce.number().int().min(1, 'Jumlah minimal 1'),
   price: z.coerce.number().min(0, 'Harga harus diisi'),
   discount: z.coerce.number().min(0, 'Diskon tidak boleh negatif').default(0),
-  packingFee: z.coerce.number().min(0, 'Biaya pengemasan tidak boleh negatif').default(0),
+  packagingId: z.string().min(1, "Pilih kemasan"),
+  packagingCost: z.coerce.number().min(0),
   imageUrl: z.string().nullable().default(null),
 });
 
@@ -74,9 +75,9 @@ const Summary = ({ control }: { control: any }) => {
         }, 0);
 
         const totalPacking = productsValue.reduce((sum: number, product: any) => {
-            const packingFee = product?.packingFee || 0;
+            const packingCost = product?.packagingCost || 0;
             const quantity = product?.quantity || 0;
-            return sum + (packingFee * quantity);
+            return sum + (packingCost * quantity);
         }, 0);
 
         const grandTotal = totalShopping + totalPacking;
@@ -118,6 +119,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [expeditions, setExpeditions] = React.useState<Expedition[]>([]);
   const [masterProducts, setMasterProducts] = React.useState<Product[]>([]);
+  const [packagingOptions, setPackagingOptions] = React.useState<Packaging[]>([]);
 
   const form = useForm<ShipmentFormValues>({
     resolver: zodResolver(shipmentFormSchema),
@@ -133,7 +135,8 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
             quantity: 1,
             price: 0,
             discount: 0,
-            packingFee: 0,
+            packagingId: '',
+            packagingCost: 0,
             imageUrl: null,
         }
       ],
@@ -151,6 +154,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     }
     getExpeditions().then(setExpeditions);
     getProducts().then(setMasterProducts);
+    getPackagingOptions().then(setPackagingOptions);
   }, [user, form]);
 
 
@@ -207,17 +211,23 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
         form.setValue(`products.${index}.productId`, product.id, { shouldValidate: true });
         form.setValue(`products.${index}.name`, product.name);
         form.setValue(`products.${index}.price`, product.price);
-        form.setValue(`products.${index}.packingFee`, product.packingFee);
         form.setValue(`products.${index}.imageUrl`, product.imageUrl);
       } else if (code) { // only show error if there is some input
         form.setError(`products.${index}.code`, { type: 'manual', message: 'Kode tidak ditemukan' });
         form.setValue(`products.${index}.productId`, '');
         form.setValue(`products.${index}.name`, 'N/A');
         form.setValue(`products.${index}.price`, 0);
-        form.setValue(`products.${index}.packingFee`, 0);
+        form.setValue(`products.${index}.packagingCost`, 0);
         form.setValue(`products.${index}.imageUrl`, null);
       }
   };
+  
+  const handlePackagingChange = (packagingId: string, index: number) => {
+    const packaging = packagingOptions.find(p => p.id === packagingId);
+    if (packaging) {
+        form.setValue(`products.${index}.packagingCost`, packaging.cost, { shouldValidate: true });
+    }
+  }
 
   const receiptValue = form.watch('receipt');
   
@@ -320,7 +330,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                               <TableHead className="w-[100px]">Jumlah</TableHead>
                               <TableHead className="w-[150px]">Harga (Rp)</TableHead>
                               <TableHead className="w-[170px]">Diskon (Rp)</TableHead>
-                              <TableHead className="w-[170px]">Pengemasan/pcs (Rp)</TableHead>
+                              <TableHead className="w-[170px]">Kemasan</TableHead>
                               <TableHead className="w-[150px] text-right">Subtotal</TableHead>
                               <TableHead className="w-[50px]"></TableHead>
                           </TableRow>
@@ -331,6 +341,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                               const quantity = form.watch(`products.${index}.quantity`) || 0;
                               const price = form.watch(`products.${index}.price`) || 0;
                               const discount = form.watch(`products.${index}.discount`) || 0;
+                              const packagingCost = form.watch(`products.${index}.packagingCost`) || 0;
                               const subtotal = (price * quantity) - discount;
                               const productInfo = masterProducts.find(p => p.id === productValues.productId);
 
@@ -403,13 +414,35 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                       />
                                   </TableCell>
                                   <TableCell>
-                                      <FormField
-                                          control={form.control}
-                                          name={`products.${index}.packingFee`}
-                                          render={({ field: packingField }) => (
-                                              <FormItem><FormControl><Input type="number" placeholder="Rp" {...packingField} readOnly /></FormControl><FormMessage /></FormItem>
-                                          )}
-                                      />
+                                        <FormField
+                                            control={form.control}
+                                            name={`products.${index}.packagingId`}
+                                            render={({ field: packagingField }) => (
+                                                <FormItem>
+                                                    <FormControl>
+                                                        <Select
+                                                            onValueChange={(value) => {
+                                                                packagingField.onChange(value);
+                                                                handlePackagingChange(value, index);
+                                                            }}
+                                                            defaultValue={packagingField.value}
+                                                        >
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="Pilih Kemasan" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {packagingOptions.map(opt => (
+                                                                    <SelectItem key={opt.id} value={opt.id}>
+                                                                        {opt.name} ({formatRupiah(opt.cost)})
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
                                   </TableCell>
                                   <TableCell className="text-right font-medium">
                                       {formatRupiah(subtotal > 0 ? subtotal : 0)}
@@ -437,7 +470,8 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                               quantity: 1,
                               price: 0,
                               discount: 0,
-                              packingFee: 0,
+                              packagingId: '',
+                              packagingCost: 0,
                               imageUrl: null
                           });
                       }}

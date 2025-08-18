@@ -13,20 +13,20 @@ import {
 } from '@/components/ui/card';
 import { ExpeditionSettings } from '@/components/expedition-settings';
 import { Skeleton } from '@/components/ui/skeleton';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { ChevronRight } from 'lucide-react';
 
 export default function SettingsPage() {
     const { user, loading } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
-        // Redirect if not an admin after loading is complete
         if (!loading && user?.role !== 'admin') {
             router.push('/shipments');
         }
     }, [user, loading, router]);
 
-
-    // Show a loading skeleton while the auth state is being determined
     if (loading) {
         return (
             <div className="container mx-auto p-4 md:p-8 space-y-6">
@@ -34,21 +34,14 @@ export default function SettingsPage() {
                     <Skeleton className="h-9 w-1/3" />
                     <Skeleton className="h-5 w-2/3 mt-2" />
                 </div>
-                <Card>
-                    <CardHeader>
-                        <Skeleton className="h-7 w-1/4" />
-                        <Skeleton className="h-4 w-1/2" />
-                    </CardHeader>
-                    <CardContent>
-                       <Skeleton className="h-48 w-full" />
-                    </CardContent>
-                </Card>
+                <div className="grid gap-6">
+                    <Skeleton className="h-36 w-full" />
+                    <Skeleton className="h-36 w-full" />
+                </div>
             </div>
         );
     }
     
-    // If loading is finished and user is not an admin, show a redirecting message.
-    // The useEffect above will handle the redirection.
     if (!user || user.role !== 'admin') {
         return (
             <div className="flex h-screen w-full items-center justify-center">
@@ -57,7 +50,6 @@ export default function SettingsPage() {
         );
     }
     
-    // Render the page if the user is authenticated as an admin
     return (
         <div className="container mx-auto p-4 md:p-8 space-y-6">
             <div>
@@ -65,17 +57,44 @@ export default function SettingsPage() {
                 <p className="text-muted-foreground">Kelola konfigurasi dan data master aplikasi Anda di sini.</p>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Manajemen Ekspedisi</CardTitle>
-                    <CardDescription>
-                        Tambah, hapus, atau edit daftar ekspedisi yang tersedia untuk dipilih saat menambah data pengiriman.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <ExpeditionSettings />
-                </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="flex flex-col">
+                    <CardHeader>
+                        <CardTitle>Manajemen Ekspedisi</CardTitle>
+                        <CardDescription>
+                            Kelola daftar ekspedisi yang tersedia untuk dipilih saat menambah data pengiriman.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-grow">
+                       <p className="text-sm text-muted-foreground">Tambah, hapus, atau edit daftar ekspedisi.</p>
+                    </CardContent>
+                    <div className="p-6 pt-0">
+                       <Button asChild>
+                           <Link href="/settings/expeditions">
+                                Kelola Ekspedisi <ChevronRight className="ml-2 h-4 w-4" />
+                           </Link>
+                       </Button>
+                    </div>
+                </Card>
+                 <Card className="flex flex-col">
+                    <CardHeader>
+                        <CardTitle>Manajemen Kemasan</CardTitle>
+                        <CardDescription>
+                            Kelola tipe kemasan dan biayanya yang dapat dipilih saat membuat pengiriman.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-grow">
+                       <p className="text-sm text-muted-foreground">Tambah, hapus, atau edit tipe kemasan dan biayanya.</p>
+                    </CardContent>
+                    <div className="p-6 pt-0">
+                       <Button asChild>
+                           <Link href="/settings/packaging">
+                                Kelola Kemasan <ChevronRight className="ml-2 h-4 w-4" />
+                           </Link>
+                       </Button>
+                    </div>
+                </Card>
+            </div>
         </div>
     );
 }
