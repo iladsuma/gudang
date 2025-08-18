@@ -19,13 +19,13 @@ export default function SettingsPage() {
     const router = useRouter();
 
     useEffect(() => {
-        // Hanya alihkan jika loading sudah selesai dan user bukan admin
+        // Redirect if loading is finished and user is not an admin
         if (!loading && user?.role !== 'admin') {
             router.push('/');
         }
     }, [user, loading, router]);
     
-    // Tampilkan loading skeleton selama status auth diperiksa
+    // Show a loading skeleton while the auth state is being determined
     if (loading) {
         return (
             <div className="container mx-auto p-4 md:p-8 space-y-6">
@@ -55,7 +55,8 @@ export default function SettingsPage() {
         );
     }
     
-    // Jika loading selesai dan user tetap bukan admin, tampilkan pesan
+    // If loading is done and the user is still not an admin, show a message.
+    // The useEffect above will handle the redirect.
     if (!user || user.role !== 'admin') {
         return (
             <div className="flex h-screen w-full items-center justify-center">
@@ -64,7 +65,7 @@ export default function SettingsPage() {
         );
     }
     
-    // Tampilkan halaman jika user adalah admin
+    // Render the page if the user is an admin
     return (
         <div className="container mx-auto p-4 md:p-8 space-y-6">
             <div>

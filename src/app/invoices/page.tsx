@@ -16,36 +16,30 @@ import { InvoicesClient } from '@/components/invoices-client';
 import { useRouter } from 'next/navigation';
 
 export default function InvoicesPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [batches, setBatches] = useState<Checkout[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
-    if (user?.role !== 'admin') {
+    // Redirect if loading is finished and user is not an admin
+    if (!authLoading && user?.role !== 'admin') {
       router.push('/');
     }
-  }, [user, router]);
+  }, [user, authLoading, router]);
   
   useEffect(() => {
-    if (user) {
-      // Mengambil data dari riwayat checkout/pemrosesan
+    // Fetch data only if the user is an admin
+    if (user?.role === 'admin') {
       getCheckoutHistory().then(data => {
         setBatches(data);
-        setLoading(false);
+        setDataLoading(false);
       });
     }
   }, [user]);
   
-  if (user?.role !== 'admin') {
-      return (
-           <div className="flex h-screen w-full items-center justify-center">
-                <p>Anda tidak memiliki akses ke halaman ini. Mengalihkan...</p>
-           </div>
-      );
-  }
-
-  if (loading) {
+  // Show a loading skeleton while the auth state or data is being determined
+  if (authLoading || dataLoading && user?.role === 'admin') {
       return (
           <div className="container mx-auto p-4 md:p-8">
               <Card>
@@ -60,6 +54,16 @@ export default function InvoicesPage() {
           </div>
       );
   }
+  
+  // If loading is done and the user is still not an admin, show a message.
+  // The useEffect above will handle the redirect.
+  if (user?.role !== 'admin') {
+      return (
+           <div className="flex h-screen w-full items-center justify-center">
+                <p>Anda tidak memiliki akses ke halaman ini. Mengalihkan...</p>
+           </div>
+      );
+  }
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -67,7 +71,7 @@ export default function InvoicesPage() {
         <CardHeader>
           <CardTitle>Manajemen Faktur</CardTitle>
           <CardDescription>
-            Pilih satu atau beberapa batch untuk membuat faktur gabungan.
+            Pilih satu atau beberapa item untuk membuat faktur gabungan.
           </CardDescription>
         </CardHeader>
         <CardContent>

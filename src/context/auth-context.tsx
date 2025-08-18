@@ -72,14 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const value = { user, login, logout, loading };
-
-   // Don't render children if we are still loading or need to redirect
-   const publicPaths = ['/login'];
-   const pathIsPublic = publicPaths.includes(pathname);
-   if (loading || (!user && !pathIsPublic)) {
-       return <div className="flex h-screen w-full items-center justify-center">Loading...</div>;
-   }
-
+  
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
