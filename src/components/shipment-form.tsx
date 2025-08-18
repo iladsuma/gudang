@@ -125,7 +125,18 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
       user: user?.name || '',
       transactionId: '',
       expedition: '',
-      products: [],
+      products: [
+        {
+            productId: '',
+            code: '',
+            name: 'N/A',
+            quantity: 1,
+            price: 0,
+            discount: 0,
+            packingFee: 0,
+            imageUrl: null,
+        }
+      ],
     },
   });
   
@@ -141,21 +152,6 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     getExpeditions().then(setExpeditions);
     getProducts().then(setMasterProducts);
   }, [user, form]);
-  
-  React.useEffect(() => {
-    if (fields.length === 0) {
-      append({
-        productId: '',
-        code: '',
-        name: 'N/A',
-        quantity: 1,
-        price: 0,
-        discount: 0,
-        packingFee: 0, 
-        imageUrl: null
-      });
-    }
-  }, [fields.length, append]);
 
 
   const handlePdfFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -466,4 +462,3 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     </Form>
   );
 }
-
