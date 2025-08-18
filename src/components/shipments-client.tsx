@@ -229,12 +229,10 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
   return (
     <div className="space-y-4">
       <div className="flex justify-end gap-2">
-        {user?.role === 'admin' && (
-          <Button onClick={handleProcessAndPrintReceipts} disabled={selectedShipments.length === 0 || isProcessing}>
-              {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
-              Proses & Cetak ({selectedShipments.length})
-          </Button>
-        )}
+        <Button onClick={handleProcessAndPrintReceipts} disabled={selectedShipments.length === 0 || isProcessing}>
+            {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
+            Proses & Cetak ({selectedShipments.length})
+        </Button>
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -258,15 +256,13 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
         <Table>
           <TableHeader>
             <TableRow>
-              {user?.role === 'admin' && (
-                <TableHead className="w-[50px]">
-                  <Checkbox
-                      checked={shipments.length > 0 && selectedShipments.length === shipments.length}
-                      onCheckedChange={handleSelectAll}
-                      aria-label="Pilih semua"
-                  />
-                </TableHead>
-              )}
+              <TableHead className="w-[50px]">
+                <Checkbox
+                    checked={shipments.length > 0 && selectedShipments.length === shipments.length}
+                    onCheckedChange={handleSelectAll}
+                    aria-label="Pilih semua"
+                />
+              </TableHead>
               <TableHead>No.</TableHead>
               <TableHead>User</TableHead>
               <TableHead>No Transaksi</TableHead>
@@ -278,22 +274,20 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
               <TableHead className="text-right">Total Produk</TableHead>
               <TableHead className="text-right">Total Keseluruhan</TableHead>
               <TableHead>Tanggal Dibuat</TableHead>
-              {user?.role === 'admin' && <TableHead className="text-right">Aksi</TableHead>}
+              <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {shipments.length > 0 ? (
               shipments.map((shipment, index) => (
                 <TableRow key={shipment.id} data-state={selectedShipments.includes(shipment.id) ? "selected" : undefined}>
-                   {user?.role === 'admin' && (
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedShipments.includes(shipment.id)}
-                          onCheckedChange={(checked) => handleSelectSingle(shipment.id, !!checked)}
-                          aria-label={`Pilih pengiriman ${shipment.transactionId}`}
-                        />
-                      </TableCell>
-                   )}
+                   <TableCell>
+                    <Checkbox
+                      checked={selectedShipments.includes(shipment.id)}
+                      onCheckedChange={(checked) => handleSelectSingle(shipment.id, !!checked)}
+                      aria-label={`Pilih pengiriman ${shipment.transactionId}`}
+                    />
+                  </TableCell>
                   <TableCell>{index + 1}</TableCell>
                   <TableCell className="font-medium">{shipment.user}</TableCell>
                   <TableCell>{shipment.transactionId}</TableCell>
@@ -355,39 +349,37 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
                         <Skeleton className="h-4 w-3/4" />
                     )}
                   </TableCell>
-                  {user?.role === 'admin' && (
-                    <TableCell className="text-right">
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" disabled={!!isDeleting}>
-                              {isDeleting === shipment.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Apakah Anda yakin?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Tindakan ini tidak dapat dibatalkan. Ini akan menghapus data pengiriman secara permanen.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Batal</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => onDelete(shipment.id)}
-                              disabled={!!isDeleting}
-                            >
-                              Lanjutkan
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TableCell>
-                  )}
+                  <TableCell className="text-right">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" disabled={!!isDeleting}>
+                            {isDeleting === shipment.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Apakah Anda yakin?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Tindakan ini tidak dapat dibatalkan. Ini akan menghapus data pengiriman secara permanen.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Batal</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => onDelete(shipment.id)}
+                            disabled={!!isDeleting}
+                          >
+                            Lanjutkan
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={user?.role === 'admin' ? 13 : 12} className="h-24 text-center">
+                <TableCell colSpan={13} className="h-24 text-center">
                   Tidak ada data pengiriman.
                 </TableCell>
               </TableRow>
