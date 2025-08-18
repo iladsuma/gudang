@@ -57,7 +57,7 @@ const productFormSchema = z.object({
   name: z.string().min(1, 'Nama produk harus diisi.'),
   price: z.coerce.number().min(0, 'Harga harus diisi.'),
   stock: z.coerce.number().int().min(0, 'Stok harus bilangan bulat non-negatif.'),
-  imageUrl: z.string().optional().default('https://placehold.co/100x100.png'),
+  imageUrl: z.string().nullable().optional(),
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
@@ -86,7 +86,7 @@ export default function MasterDataPage() {
 
     const form = useForm<ProductFormValues>({
         resolver: zodResolver(productFormSchema),
-        defaultValues: { code: '', name: '', price: 0, stock: 0, imageUrl: 'https://placehold.co/100x100.png' },
+        defaultValues: { code: '', name: '', price: 0, stock: 0, imageUrl: null },
     });
 
     const stockForm = useForm<StockFormValues>({
@@ -122,8 +122,8 @@ export default function MasterDataPage() {
             });
             setPreviewImage(product.imageUrl);
         } else {
-            form.reset({ code: '', name: '', price: 0, stock: 0, imageUrl: 'https://placehold.co/100x100.png' });
-            setPreviewImage('https://placehold.co/100x100.png');
+            form.reset({ code: '', name: '', price: 0, stock: 0, imageUrl: null });
+            setPreviewImage(null);
         }
         setIsFormOpen(true);
     };
@@ -156,11 +156,15 @@ export default function MasterDataPage() {
     const onProductSubmit = async (data: ProductFormValues) => {
         setIsSubmitting(true);
         try {
+            const payload = {
+                ...data,
+                imageUrl: data.imageUrl || 'https://placehold.co/100x100.png'
+            };
             if (editingProduct) {
-                await updateProduct(editingProduct.id, data);
+                await updateProduct(editingProduct.id, payload);
                 toast({ title: 'Sukses', description: 'Produk berhasil diperbarui.' });
             } else {
-                await addProduct(data);
+                await addProduct(payload);
                 toast({ title: 'Sukses', description: 'Produk berhasil ditambahkan.' });
             }
             setIsFormOpen(false);
@@ -335,7 +339,7 @@ export default function MasterDataPage() {
                                     products.map((product) => (
                                         <TableRow key={product.id}>
                                             <TableCell>
-                                                <Image src={product.imageUrl} alt={product.name} width={40} height={40} className="h-10 w-10 rounded-md object-cover" />
+                                                <Image src={product.imageUrl || 'https://placehold.co/100x100.png'} alt={product.name} width={40} height={40} className="h-10 w-10 rounded-md object-cover" />
                                             </TableCell>
                                             <TableCell className="font-mono">{product.code}</TableCell>
                                             <TableCell className="font-medium">{product.name}</TableCell>
@@ -394,3 +398,5 @@ export default function MasterDataPage() {
         </div>
     );
 }
+
+    
