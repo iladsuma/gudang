@@ -180,25 +180,19 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
   };
   
   const handleProductChange = (value: string, index: number) => {
-    const selectedProduct = masterProducts.find(p => p.id === value || p.name === value);
+    const selectedProduct = masterProducts.find(p => p.id === value);
 
     if (selectedProduct) {
-        update(index, {
-            ...fields[index],
-            productId: selectedProduct.id,
-            name: selectedProduct.name,
-            price: selectedProduct.price,
-            packingFee: selectedProduct.packingFee,
-        });
+        form.setValue(`products.${index}.productId`, selectedProduct.id, { shouldValidate: true });
+        form.setValue(`products.${index}.name`, selectedProduct.name, { shouldValidate: true });
+        form.setValue(`products.${index}.price`, selectedProduct.price, { shouldValidate: true });
+        form.setValue(`products.${index}.packingFee`, selectedProduct.packingFee, { shouldValidate: true });
     } else {
         // This is a new product typed manually
-        update(index, {
-            ...fields[index],
-            productId: undefined, // It's a new product, no ID
-            name: value,
-            price: 0, // Reset price for manual entry
-            packingFee: 0, // Reset packing fee
-        });
+        form.setValue(`products.${index}.productId`, undefined, { shouldValidate: true });
+        form.setValue(`products.${index}.name`, value, { shouldValidate: true });
+        form.setValue(`products.${index}.price`, 0); // Reset price
+        form.setValue(`products.${index}.packingFee`, 0); // Reset packing fee
     }
   };
 
@@ -368,14 +362,11 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                             <FormControl>
                                             <Combobox
                                                 options={productOptions}
-                                                value={field.value}
-                                                onChange={(value) => {
-                                                  handleProductChange(value, index);
-                                                  // We don't need field.onChange here as handleProductChange does the update
-                                                }}
+                                                value={product.productId || field.value}
+                                                onChange={(value) => handleProductChange(value, index)}
                                                 placeholder="Cari atau ketik produk..."
                                                 searchPlaceholder='Cari produk...'
-                                                notFoundMessage='Produk baru:'
+                                                notFoundMessage='Tambah produk baru:'
                                             />
                                             </FormControl>
                                             <FormMessage />

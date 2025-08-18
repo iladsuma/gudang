@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Check, ChevronsUpDown } from "lucide-react"
+import { Check, ChevronsUpDown, PlusCircle } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -35,21 +35,25 @@ export function Combobox({
     onChange, 
     placeholder = "Select option...",
     searchPlaceholder = "Search...",
-    notFoundMessage = "No option found."
+    notFoundMessage = "Produk baru:"
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
-  const [inputValue, setInputValue] = React.useState(value || "");
+  const [inputValue, setInputValue] = React.useState("");
 
-  // When the popover opens, if there's a value, sync the input search
+  // When the popover opens, reset the search input value
   React.useEffect(() => {
     if (open) {
-      const currentOption = options.find((option) => option.value === value);
-      setInputValue(currentOption ? currentOption.label : "");
+      setInputValue("");
     }
-  }, [open, value, options]);
+  }, [open]);
 
   // Find the label for the current value to display on the button
   const currentLabel = options.find((option) => option.value === value)?.label;
+  
+  const handleSelect = (selectedValue: string) => {
+    onChange(selectedValue);
+    setOpen(false);
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -58,7 +62,7 @@ export function Combobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between"
+          className="w-full justify-between font-normal"
         >
           <span className="truncate">
             {currentLabel || value || placeholder}
@@ -74,25 +78,24 @@ export function Combobox({
             onValueChange={setInputValue}
           />
           <CommandList>
-            <CommandEmpty
-                onSelect={() => {
-                    onChange(inputValue);
-                    setOpen(false);
-                }}
-            >
-                <div className="p-2 text-sm">
-                    {notFoundMessage} <span className="font-bold">{inputValue}</span>
-                </div>
+            <CommandEmpty>
+                 {inputValue.length > 0 && (
+                    <CommandItem
+                        value={inputValue}
+                        onSelect={() => handleSelect(inputValue)}
+                        className="flex items-center gap-2"
+                    >
+                       <PlusCircle className="h-4 w-4" />
+                       <span>{notFoundMessage} <span className="font-medium">{inputValue}</span></span>
+                    </CommandItem>
+                )}
             </CommandEmpty>
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
                   value={option.label} // Match against the label for searching
-                  onSelect={() => {
-                    onChange(option.value)
-                    setOpen(false)
-                  }}
+                  onSelect={() => handleSelect(option.value)}
                 >
                   <Check
                     className={cn(
