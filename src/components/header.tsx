@@ -50,6 +50,12 @@ export function Header() {
                       Faktur
                     </Link>
                      <Link
+                      href="/products"
+                      className="text-foreground/60 transition-colors hover:text-foreground/80"
+                    >
+                      Produk
+                    </Link>
+                     <Link
                       href="/settings"
                       className="text-foreground/60 transition-colors hover:text-foreground/80"
                     >

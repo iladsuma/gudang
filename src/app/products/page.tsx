@@ -41,6 +41,10 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import Image from 'next/image';
+import { useAuth } from '@/context/auth-context';
+import { useRouter } from 'next/navigation';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 
 const productFormSchema = z.object({
   code: z.string().min(1, 'Kode produk harus diisi.'),
@@ -59,7 +63,7 @@ const stockFormSchema = z.object({
 type StockFormValues = z.infer<typeof stockFormSchema>;
 
 
-export function ProductSettings() {
+function ProductsClient() {
     const [products, setProducts] = React.useState<Product[]>([]);
     const [loading, setLoading] = React.useState(true);
     const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -67,7 +71,6 @@ export function ProductSettings() {
     const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
     const [stockEditProduct, setStockEditProduct] = React.useState<Product | null>(null);
     const [isFormOpen, setIsFormOpen] = React.useState(false);
-    const [isStockFormOpen, setIsStockFormOpen] = React.useState(false);
     const [previewImage, setPreviewImage] = React.useState<string | null>(null);
     const imageInputRef = React.useRef<HTMLInputElement>(null);
     const { toast } = useToast();
@@ -114,7 +117,6 @@ export function ProductSettings() {
     const handleOpenStockForm = (product: Product) => {
         setStockEditProduct(product);
         stockForm.reset({ stock: product.stock });
-        setIsStockFormOpen(true);
     };
 
 
@@ -295,36 +297,34 @@ export function ProductSettings() {
                                     <TableCell>{formatRupiah(product.price)}</TableCell>
                                     <TableCell>{product.stock}</TableCell>
                                     <TableCell className="text-right">
-                                       <Dialog onOpenChange={(open) => !open && setStockEditProduct(null)}>
+                                       <Dialog open={stockEditProduct?.id === product.id} onOpenChange={(open) => !open && setStockEditProduct(null)}>
                                             <DialogTrigger asChild>
                                                 <Button variant="ghost" size="icon" onClick={() => handleOpenStockForm(product)}>
                                                     <Edit className="h-4 w-4" />
                                                 </Button>
                                             </DialogTrigger>
-                                            {stockEditProduct?.id === product.id && (
-                                                <DialogContent>
-                                                    <Form {...stockForm}>
-                                                        <form onSubmit={stockForm.handleSubmit(onStockSubmit)}>
-                                                            <DialogHeader>
-                                                                <DialogTitle>Edit Stok: {stockEditProduct?.name}</DialogTitle>
-                                                                <DialogDescription>Perbarui jumlah stok untuk produk ini.</DialogDescription>
-                                                            </DialogHeader>
-                                                            <div className="grid gap-4 py-4">
-                                                                <FormField control={stockForm.control} name="stock" render={({ field }) => (
-                                                                    <FormItem><FormLabel>Jumlah Stok Baru</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                                                                )} />
-                                                            </div>
-                                                            <DialogFooter>
-                                                                <Button type="button" variant="outline" onClick={() => setStockEditProduct(null)}>Batal</Button>
-                                                                <Button type="submit" disabled={isSubmitting}>
-                                                                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                                                    Simpan Stok
-                                                                </Button>
-                                                            </DialogFooter>
-                                                        </form>
-                                                    </Form>
-                                                </DialogContent>
-                                            )}
+                                            <DialogContent>
+                                                <Form {...stockForm}>
+                                                    <form onSubmit={stockForm.handleSubmit(onStockSubmit)}>
+                                                        <DialogHeader>
+                                                            <DialogTitle>Edit Stok: {stockEditProduct?.name}</DialogTitle>
+                                                            <DialogDescription>Perbarui jumlah stok untuk produk ini.</DialogDescription>
+                                                        </DialogHeader>
+                                                        <div className="grid gap-4 py-4">
+                                                            <FormField control={stockForm.control} name="stock" render={({ field }) => (
+                                                                <FormItem><FormLabel>Jumlah Stok Baru</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                                            )} />
+                                                        </div>
+                                                        <DialogFooter>
+                                                            <Button type="button" variant="outline" onClick={() => setStockEditProduct(null)}>Batal</Button>
+                                                            <Button type="submit" disabled={isSubmitting}>
+                                                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                                Simpan Stok
+                                                            </Button>
+                                                        </DialogFooter>
+                                                    </form>
+                                                </Form>
+                                            </DialogContent>
                                         </Dialog>
 
                                         <Button variant="ghost" size="icon" onClick={() => handleOpenForm(product)}><Pencil className="h-4 w-4" /></Button>
@@ -349,6 +349,64 @@ export function ProductSettings() {
                     </TableBody>
                 </Table>
             </div>
+        </div>
+    );
+}
+
+
+export default function ProductsPage() {
+    const { user, loading } = useAuth();
+    const router = useRouter();
+
+    React.useEffect(() => {
+        // Redirect if not an admin after loading is complete
+        if (!loading && user?.role !== 'admin') {
+            router.push('/shipments');
+        }
+    }, [user, loading, router]);
+
+
+    // Show a loading skeleton while the auth state is being determined
+    if (loading) {
+        return (
+            <div className="container mx-auto p-4 md:p-8 space-y-6">
+                 <Card>
+                    <CardHeader>
+                        <Skeleton className="h-9 w-1/3" />
+                        <Skeleton className="h-5 w-2/3 mt-2" />
+                    </CardHeader>
+                    <CardContent>
+                       <Skeleton className="h-96 w-full" />
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+    
+    // If loading is finished and user is not an admin, show a redirecting message.
+    // The useEffect above will handle the redirection.
+    if (!user || user.role !== 'admin') {
+        return (
+            <div className="flex h-screen w-full items-center justify-center">
+                <p>Anda tidak memiliki akses ke halaman ini. Mengalihkan...</p>
+            </div>
+        );
+    }
+    
+    // Render the page if the user is authenticated as an admin
+    return (
+        <div className="container mx-auto p-4 md:p-8 space-y-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Manajemen Produk</CardTitle>
+                    <CardDescription>
+                        Kelola semua data item yang ada di gudang. Tambah, hapus, atau edit produk.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <ProductsClient />
+                </CardContent>
+            </Card>
         </div>
     );
 }

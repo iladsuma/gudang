@@ -12,7 +12,6 @@ import {
   CardContent,
 } from '@/components/ui/card';
 import { ExpeditionSettings } from '@/components/expedition-settings';
-import { ProductSettings } from '@/components/product-settings';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function SettingsPage() {
@@ -44,15 +43,6 @@ export default function SettingsPage() {
                        <Skeleton className="h-48 w-full" />
                     </CardContent>
                 </Card>
-                 <Card>
-                    <CardHeader>
-                        <Skeleton className="h-7 w-1/4" />
-                        <Skeleton className="h-4 w-1/2" />
-                    </CardHeader>
-                    <CardContent>
-                       <Skeleton className="h-48 w-full" />
-                    </CardContent>
-                </Card>
             </div>
         );
     }
@@ -74,18 +64,6 @@ export default function SettingsPage() {
                 <h1 className="text-3xl font-bold">Pengaturan Aplikasi</h1>
                 <p className="text-muted-foreground">Kelola konfigurasi dan data master aplikasi Anda di sini.</p>
             </div>
-            
-            <Card>
-                <CardHeader>
-                    <CardTitle>Manajemen Produk</CardTitle>
-                    <CardDescription>
-                        Kelola semua data item yang ada di gudang. Tambah, hapus, atau edit produk.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <ProductSettings />
-                </CardContent>
-            </Card>
 
             <Card>
                 <CardHeader>
