@@ -18,7 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, PlusCircle, Trash2, Pencil, X, Upload, Edit } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Pencil, Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -113,7 +113,7 @@ export function ProductSettings() {
 
     const handleOpenStockForm = (product: Product) => {
         setStockEditProduct(product);
-        stockForm.setValue('stock', product.stock);
+        stockForm.reset({ stock: product.stock });
         setIsStockFormOpen(true);
     };
 
@@ -166,7 +166,7 @@ export function ProductSettings() {
         try {
             await updateProductStock(stockEditProduct.id, data.stock);
             toast({ title: 'Sukses', description: 'Stok produk berhasil diperbarui.' });
-            setIsStockFormOpen(false);
+            setStockEditProduct(null); // Close dialog
             fetchProducts();
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Gagal memperbarui stok.';
@@ -295,8 +295,40 @@ export function ProductSettings() {
                                     <TableCell>{formatRupiah(product.price)}</TableCell>
                                     <TableCell>{product.stock}</TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon" onClick={() => handleOpenStockForm(product)}><Edit className="h-4 w-4" /></Button>
+                                       <Dialog onOpenChange={(open) => !open && setStockEditProduct(null)}>
+                                            <DialogTrigger asChild>
+                                                <Button variant="ghost" size="icon" onClick={() => handleOpenStockForm(product)}>
+                                                    <Edit className="h-4 w-4" />
+                                                </Button>
+                                            </DialogTrigger>
+                                            {stockEditProduct?.id === product.id && (
+                                                <DialogContent>
+                                                    <Form {...stockForm}>
+                                                        <form onSubmit={stockForm.handleSubmit(onStockSubmit)}>
+                                                            <DialogHeader>
+                                                                <DialogTitle>Edit Stok: {stockEditProduct?.name}</DialogTitle>
+                                                                <DialogDescription>Perbarui jumlah stok untuk produk ini.</DialogDescription>
+                                                            </DialogHeader>
+                                                            <div className="grid gap-4 py-4">
+                                                                <FormField control={stockForm.control} name="stock" render={({ field }) => (
+                                                                    <FormItem><FormLabel>Jumlah Stok Baru</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                                                )} />
+                                                            </div>
+                                                            <DialogFooter>
+                                                                <Button type="button" variant="outline" onClick={() => setStockEditProduct(null)}>Batal</Button>
+                                                                <Button type="submit" disabled={isSubmitting}>
+                                                                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                                    Simpan Stok
+                                                                </Button>
+                                                            </DialogFooter>
+                                                        </form>
+                                                    </Form>
+                                                </DialogContent>
+                                            )}
+                                        </Dialog>
+
                                         <Button variant="ghost" size="icon" onClick={() => handleOpenForm(product)}><Pencil className="h-4 w-4" /></Button>
+                                        
                                         <AlertDialog>
                                             <AlertDialogTrigger asChild>
                                                 <Button variant="ghost" size="icon" disabled={!!isDeleting}>
@@ -317,30 +349,6 @@ export function ProductSettings() {
                     </TableBody>
                 </Table>
             </div>
-             <Dialog open={isStockFormOpen} onOpenChange={setIsStockFormOpen}>
-                <DialogContent>
-                    <Form {...stockForm}>
-                        <form onSubmit={stockForm.handleSubmit(onStockSubmit)}>
-                            <DialogHeader>
-                                <DialogTitle>Edit Stok: {stockEditProduct?.name}</DialogTitle>
-                                <DialogDescription>Perbarui jumlah stok untuk produk ini.</DialogDescription>
-                            </DialogHeader>
-                            <div className="grid gap-4 py-4">
-                                <FormField control={stockForm.control} name="stock" render={({ field }) => (
-                                    <FormItem><FormLabel>Jumlah Stok Baru</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                                )} />
-                            </div>
-                            <DialogFooter>
-                                <Button type="button" variant="outline" onClick={() => setIsStockFormOpen(false)}>Batal</Button>
-                                <Button type="submit" disabled={isSubmitting}>
-                                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Simpan Stok
-                                </Button>
-                            </DialogFooter>
-                        </form>
-                    </Form>
-                </DialogContent>
-            </Dialog>
         </div>
     );
 }
