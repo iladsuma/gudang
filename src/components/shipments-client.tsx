@@ -14,7 +14,6 @@ import {
   TableHeader,
   TableRow,
   TableCaption,
-  TableFooter,
 } from '@/components/ui/table';
 import {
   Dialog,
@@ -368,24 +367,28 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
               </TableRow>
             )}
           </TableBody>
-           {shipments.length > 0 && (
-            <TableFooter>
-                <TableRow>
-                    <TableCell colSpan={7} className="font-bold text-right">Total</TableCell>
-                    <TableCell className="text-right font-bold">{tableTotals.totalItems}</TableCell>
-                    <TableCell className="text-right font-bold">{formatRupiah(tableTotals.totalPackingCost)}</TableCell>
-                    <TableCell colSpan={1}></TableCell>
-                    <TableCell className="text-right font-bold">{formatRupiah(tableTotals.totalAmount)}</TableCell>
-                    <TableCell colSpan={2}></TableCell>
-                </TableRow>
-            </TableFooter>
-           )}
-          {shipments.length > 0 && (
-            <TableCaption>Daftar semua pengiriman barang masuk.</TableCaption>
-          )}
+          <TableCaption>Daftar semua pengiriman barang masuk.</TableCaption>
         </Table>
       </div>
+        {shipments.length > 0 && (
+            <div className="flex justify-end pt-4">
+                <div className="w-full max-w-sm space-y-2 rounded-md border p-4">
+                    <h3 className="text-lg font-medium">Ringkasan Total</h3>
+                    <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Total Item</span>
+                        <span className="font-medium">{tableTotals.totalItems} pcs</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Total Pengemasan</span>
+                        <span className="font-medium">{formatRupiah(tableTotals.totalPackingCost)}</span>
+                    </div>
+                    <div className="flex justify-between text-lg font-bold border-t pt-2 mt-2">
+                        <span>Total Keseluruhan</span>
+                        <span>{formatRupiah(tableTotals.totalAmount)}</span>
+                    </div>
+                </div>
+            </div>
+        )}
     </div>
   );
 }
-
