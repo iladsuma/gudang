@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { Shipment } from '@/lib/types';
+import type { Shipment, Expedition } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ import { DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Loader2, PlusCircle, Trash2, Upload } from 'lucide-react';
 import { Card, CardContent, CardFooter } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import { addShipment } from '@/lib/data';
+import { addShipment, getExpeditions } from '@/lib/data';
 import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
@@ -29,7 +29,7 @@ const shipmentProductSchema = z.object({
 const shipmentFormSchema = z.object({
   user: z.string().min(1, 'User harus diisi'),
   transactionId: z.string().min(1, 'No. Transaksi harus diisi'),
-  expedition: z.string().min(1, 'Nama ekspedisi harus diisi'),
+  expedition: z.string().min(1, 'Nama ekspedisi harus dipilih'),
   receipt: z.object({
       fileName: z.string().min(1, 'Nama file resi harus ada'),
       dataUrl: z.string().min(1, 'Data resi harus ada').refine(val => val.startsWith('data:application/pdf;base64,'), { message: 'File harus berupa PDF.' }),
@@ -44,13 +44,12 @@ interface ShipmentFormProps {
   onCancel: () => void;
 }
 
-const userExpeditions = ['JNE', 'POS', 'J&T', 'ANTERAJA', 'SICEPAT'];
-
 export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
   const { toast } = useToast();
   const pdfFileInputRef = React.useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [expeditions, setExpeditions] = React.useState<Expedition[]>([]);
   // Create a ref for each product image input
   const imageInputRefs = React.useRef<(HTMLInputElement | null)[]>([]);
 
@@ -87,6 +86,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     if (user) {
       form.setValue('user', user.name);
     }
+    getExpeditions().then(setExpeditions);
   }, [user, form]);
 
   const handlePdfFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -205,20 +205,16 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                 <FormItem>
                 <FormLabel>Nama Ekspedisi</FormLabel>
                  <FormControl>
-                    {user?.role === 'user' ? (
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Pilih ekspedisi" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {userExpeditions.map(exp => (
-                                    <SelectItem key={exp} value={exp}>{exp}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    ) : (
-                        <Input placeholder="cth. JNE Express" {...field} />
-                    )}
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Pilih ekspedisi" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {expeditions.map(exp => (
+                                <SelectItem key={exp.id} value={exp.name}>{exp.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </FormControl>
                 <FormMessage />
                 </FormItem>

@@ -55,3 +55,8 @@ export interface Checkout {
     totalBatchAmount: number; // Sum of all amounts from all shipments in the batch
     createdAt: string; // ISO String for when it was processed
 }
+
+export interface Expedition {
+    id: string;
+    name: string;
+}

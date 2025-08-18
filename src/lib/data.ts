@@ -1,6 +1,6 @@
 'use client';
 
-import type { User, Shipment, Checkout, ProcessedShipmentSummary } from '@/lib/types';
+import type { User, Shipment, Checkout, ProcessedShipmentSummary, Expedition } from '@/lib/types';
 
 // =================================================================
 // Helper functions to interact with localStorage
@@ -42,6 +42,15 @@ const initialUsers: User[] = [
     { id: 'usr_1', username: 'admin', name: 'Admin', role: 'admin' },
     { id: 'usr_2', username: 'user', name: 'User Biasa', role: 'user' },
 ];
+
+const initialExpeditions: Expedition[] = [
+    { id: 'exp_1', name: 'JNE' },
+    { id: 'exp_2', name: 'POS' },
+    { id: 'exp_3', name: 'J&T' },
+    { id: 'exp_4', name: 'ANTERAJA' },
+    { id: 'exp_5', name: 'SICEPAT' },
+];
+
 
 // =================================================================
 // Data Access Functions (Now using localStorage)
@@ -192,4 +201,40 @@ export async function getProcessedShipmentsForInvoicing(): Promise<Shipment[]> {
     );
 
     return shipmentsForInvoicing;
+}
+
+// Expedition Functions
+export async function getExpeditions(): Promise<Expedition[]> {
+    await new Promise(resolve => setTimeout(resolve, 50));
+    let expeditions = getFromStorage<Expedition[]>('expeditions', null);
+    if (expeditions === null) {
+        saveToStorage('expeditions', initialExpeditions);
+        expeditions = initialExpeditions;
+    }
+    return [...expeditions].sort((a,b) => a.name.localeCompare(b.name));
+}
+
+export async function addExpedition(name: string): Promise<Expedition> {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const expeditions = await getExpeditions();
+    if(expeditions.some(e => e.name.toLowerCase() === name.toLowerCase())) {
+        throw new Error('Nama ekspedisi sudah ada.');
+    }
+    const newExpedition: Expedition = {
+        id: `exp_${Date.now()}`,
+        name: name,
+    };
+    const updatedExpeditions = [...expeditions, newExpedition];
+    saveToStorage('expeditions', updatedExpeditions);
+    return newExpedition;
+}
+
+export async function deleteExpedition(id: string): Promise<void> {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    let expeditions = await getExpeditions();
+    const updatedExpeditions = expeditions.filter(e => e.id !== id);
+    if(expeditions.length === updatedExpeditions.length) {
+        throw new Error('Ekspedisi tidak ditemukan.');
+    }
+    saveToStorage('expeditions', updatedExpeditions);
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Boxes, LogOut } from 'lucide-react';
+import { Boxes, LogOut, Settings } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { Button } from './ui/button';
 import { useRouter } from 'next/navigation';
@@ -47,6 +47,12 @@ export function Header() {
                       className="text-foreground/60 transition-colors hover:text-foreground/80"
                     >
                       Faktur
+                    </Link>
+                     <Link
+                      href="/settings"
+                      className="text-foreground/60 transition-colors hover:text-foreground/80"
+                    >
+                      Pengaturan
                     </Link>
                   </>
                 )}
