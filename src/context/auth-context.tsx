@@ -46,15 +46,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const publicPaths = ['/login'];
     const pathIsPublic = publicPaths.includes(pathname);
     
+    // Redirect unauthenticated users from protected pages
     if (!user && !pathIsPublic) {
       router.push('/login');
-      return;
     }
 
-    if (user) {
-        if(pathIsPublic){
-            router.push('/shipments');
-        }
+    // Redirect authenticated users from the login page
+    if (user && pathIsPublic) {
+        router.push('/shipments');
     }
 
   }, [user, loading, pathname, router]);
@@ -74,10 +73,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value = { user, login, logout, loading };
 
-  if (loading) {
-      // You can return a global loading spinner here
-      return <div className="flex h-screen w-full items-center justify-center">Loading...</div>;
-  }
+   // Don't render children if we are still loading or need to redirect
+   const publicPaths = ['/login'];
+   const pathIsPublic = publicPaths.includes(pathname);
+   if (loading || (!user && !pathIsPublic)) {
+       return <div className="flex h-screen w-full items-center justify-center">Loading...</div>;
+   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
