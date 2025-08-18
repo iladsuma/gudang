@@ -38,10 +38,35 @@ export function Combobox({
     notFoundMessage = "Tambah produk baru:"
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
-  const [inputValue, setInputValue] = React.useState("")
+  
+  // Find the full option object based on the current value.
+  const selectedOption = options.find((option) => option.value === value || option.label === value);
 
-  const currentOption = options.find((option) => option.value === value || option.label === value)
-  const displayLabel = currentOption ? currentOption.label : value;
+  // The value shown in the input. If an option is selected, show its label. Otherwise show the raw value (for manual input).
+  const displayValue = selectedOption ? selectedOption.label : value || "";
+
+  // The value used for filtering inside the command list
+  const [filterValue, setFilterValue] = React.useState('');
+
+  React.useEffect(() => {
+    // When the popover opens, sync the filter with the display value
+    if (open) {
+      setFilterValue(displayValue);
+    }
+  }, [open, displayValue]);
+
+  const handleSelect = (selectedValue: string) => {
+    const option = options.find(o => o.value === selectedValue || o.label === selectedValue);
+    onChange(option ? option.value : selectedValue);
+    setOpen(false);
+  };
+  
+  const handleManualInput = () => {
+    if (filterValue && !options.some(o => o.label === filterValue)) {
+       onChange(filterValue);
+    }
+  };
+
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -53,31 +78,33 @@ export function Combobox({
           className="w-full justify-between font-normal"
         >
           <span className="truncate">
-            {displayLabel || placeholder}
+            {displayValue || placeholder}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+      <PopoverContent 
+          className="w-[--radix-popover-trigger-width] p-0"
+          onCloseAutoFocus={(e) => e.preventDefault()} // Prevents re-focusing trigger
+          >
         <Command>
           <CommandInput
             placeholder={searchPlaceholder}
-            value={inputValue}
-            onValueChange={setInputValue}
+            value={filterValue}
+            onValueChange={setFilterValue}
+            onBlur={handleManualInput}
           />
           <CommandList>
             <CommandEmpty>
-                 {inputValue && (
+                 {filterValue && (
                     <CommandItem
-                        value={inputValue}
+                        value={filterValue}
                         onSelect={() => {
-                            onChange(inputValue)
-                            setOpen(false)
-                            setInputValue("")
+                            handleSelect(filterValue)
                         }}
                     >
                        <PlusCircle className="mr-2 h-4 w-4" />
-                       <span>{notFoundMessage} <span className="font-medium">{`"${inputValue}"`}</span></span>
+                       <span>{notFoundMessage} <span className="font-medium">{`"${filterValue}"`}</span></span>
                     </CommandItem>
                 )}
             </CommandEmpty>
@@ -85,15 +112,9 @@ export function Combobox({
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.label}
-                  onSelect={(currentValue) => {
-                    // currentValue is the label of the selected item
-                    const selectedOption = options.find(o => o.label.toLowerCase() === currentValue.toLowerCase());
-                    if (selectedOption) {
-                      onChange(selectedOption.value)
-                    }
-                    setOpen(false)
-                    setInputValue("")
+                  value={option.label} // Use label for filtering/searching in CMD-K
+                  onSelect={() => {
+                    handleSelect(option.value);
                   }}
                 >
                   <Check
