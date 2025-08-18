@@ -18,7 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, PlusCircle, Trash2, Pencil, Edit } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Pencil, Edit, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -45,6 +45,7 @@ import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import Link from 'next/link';
 
 const productFormSchema = z.object({
   code: z.string().min(1, 'Kode produk harus diisi.'),
@@ -355,7 +356,7 @@ function ProductsClient() {
 }
 
 
-export default function ProductsPage() {
+export default function ProductsSettingsPage() {
     const { user, loading } = useAuth();
     const router = useRouter();
 
@@ -371,6 +372,7 @@ export default function ProductsPage() {
     if (loading) {
         return (
             <div className="container mx-auto p-4 md:p-8 space-y-6">
+                <Skeleton className="h-8 w-48" />
                  <Card>
                     <CardHeader>
                         <Skeleton className="h-9 w-1/3" />
@@ -397,6 +399,12 @@ export default function ProductsPage() {
     // Render the page if the user is authenticated as an admin
     return (
         <div className="container mx-auto p-4 md:p-8 space-y-6">
+            <Button asChild variant="outline">
+                <Link href="/settings">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Kembali ke Pengaturan
+                </Link>
+            </Button>
             <Card>
                 <CardHeader>
                     <CardTitle>Manajemen Produk</CardTitle>

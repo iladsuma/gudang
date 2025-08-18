@@ -61,12 +61,6 @@ export function Header() {
                     >
                       Faktur
                     </Link>
-                     <Link
-                      href="/products"
-                      className={cn("transition-colors hover:text-foreground/80", pathname === '/products' ? 'text-foreground' : 'text-foreground/60')}
-                    >
-                      Produk
-                    </Link>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className={cn("gap-1 px-2 h-auto text-sm transition-colors hover:text-foreground/80", isSettingsPage ? 'text-foreground' : 'text-foreground/60')}>
@@ -76,6 +70,7 @@ export function Header() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
                         <DropdownMenuItem onSelect={() => router.push('/settings')}>Pengaturan Umum</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => router.push('/settings/products')}>Produk</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => router.push('/settings/expeditions')}>Ekspedisi</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => router.push('/settings/packaging')}>Kemasan</DropdownMenuItem>
                       </DropdownMenuContent>

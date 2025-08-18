@@ -11,7 +11,6 @@ import {
   CardDescription,
   CardContent,
 } from '@/components/ui/card';
-import { ExpeditionSettings } from '@/components/expedition-settings';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -37,6 +36,7 @@ export default function SettingsPage() {
                 <div className="grid gap-6">
                     <Skeleton className="h-36 w-full" />
                     <Skeleton className="h-36 w-full" />
+                    <Skeleton className="h-36 w-full" />
                 </div>
             </div>
         );
@@ -58,6 +58,24 @@ export default function SettingsPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="flex flex-col">
+                    <CardHeader>
+                        <CardTitle>Manajemen Produk</CardTitle>
+                        <CardDescription>
+                            Kelola semua data item yang ada di gudang. Tambah, hapus, atau edit produk.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-grow">
+                       <p className="text-sm text-muted-foreground">Atur kode, nama, harga jual, dan stok awal untuk setiap item.</p>
+                    </CardContent>
+                    <div className="p-6 pt-0">
+                       <Button asChild>
+                           <Link href="/settings/products">
+                                Kelola Produk <ChevronRight className="ml-2 h-4 w-4" />
+                           </Link>
+                       </Button>
+                    </div>
+                </Card>
                 <Card className="flex flex-col">
                     <CardHeader>
                         <CardTitle>Manajemen Ekspedisi</CardTitle>
