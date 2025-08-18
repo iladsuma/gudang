@@ -35,6 +35,7 @@ export function Header() {
                 >
                   Rekap Pengiriman
                 </Link>
+                {user.role === 'admin' && (
                   <>
                     <Link
                       href="/history"
@@ -55,6 +56,7 @@ export function Header() {
                       Pengaturan
                     </Link>
                   </>
+                )}
               </nav>
             )}
           </div>
