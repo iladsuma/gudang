@@ -9,8 +9,7 @@ export interface Product {
 }
 
 export interface ShipmentProduct {
-    productId?: string; // Reference to the master product
-    isManual?: boolean;
+    productId: string; // Reference to the master product, now required
     name: string;
     quantity: number;
     price: number; // Can be overridden from master product's price

@@ -18,13 +18,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { addShipment, getExpeditions, getProducts } from '@/lib/data';
 import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Switch } from './ui/switch';
-import { cn } from '@/lib/utils';
 
 const shipmentProductSchema = z.object({
-  productId: z.string().optional(),
-  isManual: z.boolean().default(false),
-  name: z.string().min(1, 'Nama produk harus diisi'),
+  productId: z.string().min(1, 'Produk harus dipilih.'),
+  name: z.string(), // Will be populated automatically
   quantity: z.coerce.number().int().min(1, 'Kuantitas min 1'),
   price: z.coerce.number().min(0, 'Harga harus diisi'),
   discount: z.coerce.number().min(0, 'Diskon tidak boleh negatif').default(0),
@@ -39,7 +36,7 @@ const shipmentFormSchema = z.object({
   receipt: z.object({
       fileName: z.string().min(1, 'Nama file resi harus ada'),
       dataUrl: z.string().min(1, 'Data resi harus ada').refine(val => val.startsWith('data:application/pdf;base64,'), { message: 'File harus berupa PDF.' }),
-  }, { required_error: 'File resi harus diunggah' }),
+  }).optional(),
   products: z.array(shipmentProductSchema).min(1, 'Minimal harus ada satu produk'),
 });
 
@@ -120,8 +117,6 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [expeditions, setExpeditions] = React.useState<Expedition[]>([]);
   const [masterProducts, setMasterProducts] = React.useState<Product[]>([]);
-  
-  const imageInputRefs = React.useRef<(HTMLInputElement | null)[]>([]);
 
   const form = useForm<ShipmentFormValues>({
     resolver: zodResolver(shipmentFormSchema),
@@ -133,7 +128,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     },
   });
   
-  const { fields, append, remove, update } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: 'products',
   });
@@ -152,7 +147,6 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
       append({
         productId: firstProduct.id,
         name: firstProduct.name,
-        isManual: false,
         quantity: 1,
         price: firstProduct.price,
         discount: 0,
@@ -182,26 +176,6 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     };
     reader.onerror = () => {
         toast({ variant: 'destructive', title: 'Kesalahan', description: 'Tidak bisa membaca file.' });
-    };
-  };
-
-  const handleProductImageChange = (event: React.ChangeEvent<HTMLInputElement>, index: number) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-        toast({ variant: 'destructive', title: 'File tidak valid', description: 'Silakan pilih file gambar.' });
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => {
-        form.setValue(`products.${index}.imageUrl`, reader.result as string, { shouldValidate: true });
-    };
-    reader.onerror = (error) => {
-        console.error("Error reading file:", error);
-        toast({ variant: 'destructive', title: 'Kesalahan', description: 'Gagal membaca file gambar.' });
     };
   };
 
@@ -235,27 +209,6 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
         form.setValue(`products.${index}.imageUrl`, selectedProduct.imageUrl);
       }
   };
-
-  const handleManualToggle = (isManual: boolean, index: number) => {
-    const currentProduct = fields[index];
-    if (isManual) {
-        update(index, { ...currentProduct, isManual: true, productId: '', name: '', price: 0, packingFee: 0, imageUrl: null });
-    } else {
-        const firstProduct = masterProducts[0];
-        if (firstProduct) {
-            update(index, {
-                ...currentProduct,
-                isManual: false,
-                productId: firstProduct.id,
-                name: firstProduct.name,
-                price: firstProduct.price,
-                imageUrl: firstProduct.imageUrl,
-                packingFee: 0,
-            });
-        }
-    }
-  };
-  
 
   const receiptValue = form.watch('receipt');
   
@@ -323,7 +276,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
             name="receipt"
             render={() => (
                 <FormItem>
-                    <FormLabel>Resi (PDF)</FormLabel>
+                    <FormLabel>Resi (PDF) (Opsional)</FormLabel>
                     <FormControl>
                         <div>
                             <input
@@ -352,7 +305,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead className="w-[120px]">Gambar</TableHead>
+                            <TableHead className="w-[80px]">Gambar</TableHead>
                             <TableHead>Nama Produk</TableHead>
                             <TableHead className="w-[100px]">Jumlah</TableHead>
                             <TableHead className="w-[150px]">Harga (Rp)</TableHead>
@@ -369,97 +322,59 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                             const price = form.watch(`products.${index}.price`) || 0;
                             const discount = form.watch(`products.${index}.discount`) || 0;
                             const subtotal = (price * quantity) - discount;
-                            const isManual = form.watch(`products.${index}.isManual`);
                             const currentStock = masterProducts.find(p => p.id === productValues.productId)?.stock;
 
                             return (
                             <TableRow key={field.id}>
                                 <TableCell>
-                                    <div className='flex flex-col items-center gap-2'>
-                                        <Image 
-                                            src={productValues.imageUrl || 'https://placehold.co/100x100.png'}
-                                            alt={productValues.name || 'Pratinjau Gambar'}
-                                            width={64}
-                                            height={64}
-                                            className='rounded-md object-cover h-16 w-16'
-                                            data-ai-hint="product image preview"
-                                        />
-                                         <input
-                                            type="file"
-                                            accept="image/*"
-                                            ref={(el) => (imageInputRefs.current[index] = el)}
-                                            onChange={(e) => handleProductImageChange(e, index)}
-                                            className="hidden"
-                                            disabled={!isManual}
-                                        />
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => imageInputRefs.current[index]?.click()}
-                                            disabled={!isManual}
-                                        >
-                                           <Upload className='mr-2 h-3 w-3'/> Unggah
-                                        </Button>
-                                    </div>
+                                    <Image 
+                                        src={productValues.imageUrl || 'https://placehold.co/100x100.png'}
+                                        alt={productValues.name || 'Pratinjau Gambar'}
+                                        width={64}
+                                        height={64}
+                                        className='rounded-md object-cover h-16 w-16'
+                                        data-ai-hint="product image preview"
+                                    />
                                     <FormField
                                         control={form.control}
                                         name={`products.${index}.imageUrl`}
-                                        render={({ field }) => (
-                                            <FormItem><FormControl><Input type="hidden" value={field.value || ''} /></FormControl><FormMessage /></FormItem>
+                                        render={({ field: imageField }) => (
+                                            <FormItem><FormControl><Input type="hidden" value={imageField.value || ''} /></FormControl><FormMessage /></FormItem>
                                         )}
                                     />
                                 </TableCell>
                                 <TableCell>
                                     <div className='space-y-2'>
-                                        <div className='flex items-center space-x-2'>
-                                            <Switch
-                                               id={`manual-switch-${index}`}
-                                               checked={isManual}
-                                               onCheckedChange={(checked) => handleManualToggle(checked, index)}
-                                            />
-                                            <label htmlFor={`manual-switch-${index}`} className='text-sm'>Input Manual</label>
-                                        </div>
-                                        {isManual ? (
-                                            <FormField
-                                                control={form.control}
-                                                name={`products.${index}.name`}
-                                                render={({ field }) => (
-                                                    <FormItem><FormControl><Input placeholder="Nama produk baru" {...field} /></FormControl><FormMessage /></FormItem>
-                                                )}
-                                            />
-                                        ) : (
-                                            <FormField
-                                                control={form.control}
-                                                name={`products.${index}.productId`}
-                                                render={({ field }) => (
-                                                <FormItem>
-                                                    <FormControl>
-                                                    <Select
-                                                        onValueChange={(value) => {
-                                                            field.onChange(value);
-                                                            handleProductSelectionChange(value, index);
-                                                        }}
-                                                        value={field.value}
-                                                    >
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Pilih produk" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {masterProducts.map(p => (
-                                                                <SelectItem key={p.id} value={p.id}>
-                                                                    {p.name} (Stok: {p.stock})
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                                )}
-                                            />
-                                        )}
-                                        {!isManual && typeof currentStock !== 'undefined' && (
+                                        <FormField
+                                            control={form.control}
+                                            name={`products.${index}.productId`}
+                                            render={({ field: productField }) => (
+                                            <FormItem>
+                                                <FormControl>
+                                                <Select
+                                                    onValueChange={(value) => {
+                                                        productField.onChange(value);
+                                                        handleProductSelectionChange(value, index);
+                                                    }}
+                                                    value={productField.value}
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Pilih produk" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {masterProducts.map(p => (
+                                                            <SelectItem key={p.id} value={p.id}>
+                                                                {p.name} (Stok: {p.stock})
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                            )}
+                                        />
+                                        {typeof currentStock !== 'undefined' && (
                                             <p className='text-xs text-muted-foreground'>Stok tersedia: {currentStock}</p>
                                         )}
                                     </div>
@@ -468,8 +383,8 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                      <FormField
                                         control={form.control}
                                         name={`products.${index}.quantity`}
-                                        render={({ field }) => (
-                                            <FormItem><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                        render={({ field: qtyField }) => (
+                                            <FormItem><FormControl><Input type="number" {...qtyField} /></FormControl><FormMessage /></FormItem>
                                         )}
                                     />
                                 </TableCell>
@@ -477,8 +392,8 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                      <FormField
                                         control={form.control}
                                         name={`products.${index}.price`}
-                                        render={({ field }) => (
-                                            <FormItem><FormControl><Input type="number" placeholder="Rp" {...field} disabled={!isManual} /></FormControl><FormMessage /></FormItem>
+                                        render={({ field: priceField }) => (
+                                            <FormItem><FormControl><Input type="number" placeholder="Rp" {...priceField} readOnly /></FormControl><FormMessage /></FormItem>
                                         )}
                                     />
                                 </TableCell>
@@ -486,8 +401,8 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                      <FormField
                                         control={form.control}
                                         name={`products.${index}.discount`}
-                                        render={({ field }) => (
-                                            <FormItem><FormControl><Input type="number" placeholder="Rp" {...field} /></FormControl><FormMessage /></FormItem>
+                                        render={({ field: discountField }) => (
+                                            <FormItem><FormControl><Input type="number" placeholder="Rp" {...discountField} /></FormControl><FormMessage /></FormItem>
                                         )}
                                     />
                                 </TableCell>
@@ -495,8 +410,8 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                      <FormField
                                         control={form.control}
                                         name={`products.${index}.packingFee`}
-                                        render={({ field }) => (
-                                            <FormItem><FormControl><Input type="number" placeholder="Rp" {...field} /></FormControl><FormMessage /></FormItem>
+                                        render={({ field: packingField }) => (
+                                            <FormItem><FormControl><Input type="number" placeholder="Rp" {...packingField} /></FormControl><FormMessage /></FormItem>
                                         )}
                                     />
                                 </TableCell>
@@ -528,19 +443,13 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                 price: firstProduct.price,
                                 discount: 0,
                                 packingFee: 0,
-                                isManual: false,
                                 imageUrl: firstProduct.imageUrl
                             });
                         } else {
-                            // Fallback if no master products exist
-                            append({
-                                isManual: true,
-                                name: '',
-                                quantity: 1,
-                                price: 0,
-                                discount: 0,
-                                packingFee: 0,
-                                imageUrl: null
+                            toast({
+                                variant: 'destructive',
+                                title: 'Tidak Ada Produk',
+                                description: 'Tidak dapat menambah baris baru karena tidak ada data produk master. Silakan tambah produk di halaman Produk terlebih dahulu.'
                             })
                         }
                     }}
@@ -566,7 +475,5 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     </Form>
   );
 }
-
-    
 
     
