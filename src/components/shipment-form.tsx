@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { useForm, useFieldArray, useWatch } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { Shipment, Expedition, Product } from '@/lib/types';
@@ -56,7 +56,6 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
   const [expeditions, setExpeditions] = React.useState<Expedition[]>([]);
   const [masterProducts, setMasterProducts] = React.useState<Product[]>([]);
   
-  // Create a ref for each product image input
   const imageInputRefs = React.useRef<(HTMLInputElement | null)[]>([]);
 
   const form = useForm<ShipmentFormValues>({
@@ -69,27 +68,26 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     },
   });
   
-  const { fields, append, remove, update } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: 'products',
   });
+  
+  const productsValue = form.watch('products');
 
-  const productsWatch = useWatch({
-    control: form.control,
-    name: 'products'
-  });
-
-  const summary = React.useMemo(() => {
-    const totalItems = productsWatch.reduce((sum, product) => sum + (product.quantity || 0), 0);
-    const totalShopping = productsWatch.reduce((sum, product) => {
+  const calculateSummary = (products: any[]) => {
+    if (!products) return { totalItems: 0, totalShopping: 0, totalPacking: 0, grandTotal: 0 };
+    const totalItems = products.reduce((sum, product) => sum + (product.quantity || 0), 0);
+    const totalShopping = products.reduce((sum, product) => {
         const subtotal = (product.price || 0) * (product.quantity || 0) - (product.discount || 0);
         return sum + (subtotal > 0 ? subtotal : 0);
     }, 0);
-    const totalPacking = productsWatch.reduce((sum, product) => sum + ((product.packingFee || 0) * (product.quantity || 0)), 0);
+    const totalPacking = products.reduce((sum, product) => sum + ((product.packingFee || 0) * (product.quantity || 0)), 0);
     const grandTotal = totalShopping + totalPacking;
     return { totalItems, totalShopping, totalPacking, grandTotal };
-  }, [productsWatch]);
+  };
 
+  const summary = calculateSummary(productsValue);
 
   React.useEffect(() => {
     if (user) {
@@ -100,7 +98,6 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
   }, [user, form]);
   
   React.useEffect(() => {
-    // Add a default product if the list is empty
     if (fields.length === 0 && masterProducts.length > 0) {
       append({
         productId: '',
@@ -188,11 +185,10 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
         form.setValue(`products.${index}.price`, selectedProduct.price, { shouldValidate: true });
         form.setValue(`products.${index}.packingFee`, selectedProduct.packingFee, { shouldValidate: true });
     } else {
-        // This is a new product typed manually
         form.setValue(`products.${index}.productId`, undefined, { shouldValidate: true });
         form.setValue(`products.${index}.name`, value, { shouldValidate: true });
-        form.setValue(`products.${index}.price`, 0); // Reset price
-        form.setValue(`products.${index}.packingFee`, 0); // Reset packing fee
+        form.setValue(`products.${index}.price`, 0);
+        form.setValue(`products.${index}.packingFee`, 0);
     }
   };
 
@@ -314,7 +310,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                     </TableHeader>
                     <TableBody>
                         {fields.map((field, index) => {
-                            const product = productsWatch[index] || {};
+                            const product = productsValue[index] || {};
                             const { quantity = 0, price = 0, discount = 0 } = product;
                             const subtotal = (price * quantity) - discount;
                             return (
@@ -357,12 +353,12 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                     <FormField
                                         control={form.control}
                                         name={`products.${index}.name`}
-                                        render={({ field }) => (
+                                        render={() => (
                                         <FormItem>
                                             <FormControl>
                                             <Combobox
                                                 options={productOptions}
-                                                value={product.productId || field.value}
+                                                value={product.productId || product.name}
                                                 onChange={(value) => handleProductChange(value, index)}
                                                 placeholder="Cari atau ketik produk..."
                                                 searchPlaceholder='Cari produk...'
@@ -472,3 +468,5 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     </Form>
   );
 }
+
+    
