@@ -59,7 +59,7 @@ export default function SettingsPage() {
     
     // If loading is finished and user is not an admin, show a redirecting message.
     // The useEffect above will handle the redirection.
-    if (user?.role !== 'admin') {
+    if (!user || user.role !== 'admin') {
         return (
             <div className="flex h-screen w-full items-center justify-center">
                 <p>Anda tidak memiliki akses ke halaman ini. Mengalihkan...</p>
