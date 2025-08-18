@@ -431,10 +431,10 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                 </Button>
                 <FormMessage>{form.formState.errors.products?.root?.message}</FormMessage>
             </CardContent>
-             <CardFooter className="flex justify-end bg-slate-50 dark:bg-slate-900 p-4">
-                 <div className="w-full max-w-sm space-y-2 text-right">
+             <CardFooter className="flex flex-col items-end bg-slate-50 dark:bg-slate-900 p-4 gap-2">
+                 <div className="w-full max-w-sm space-y-2 text-sm">
                     <div className="flex justify-between">
-                        <span className="text-muted-foreground">Total Item</span>
+                        <span className="text-muted-foreground">Jumlah Item</span>
                         <span className="font-medium">{summary.totalItems} pcs</span>
                     </div>
                      <div className="flex justify-between">
@@ -445,9 +445,11 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                         <span className="text-muted-foreground">Total Biaya Pengemasan</span>
                         <span className="font-medium">{formatRupiah(summary.totalPacking)}</span>
                     </div>
+                </div>
+                <div className="w-full max-w-sm space-y-2 text-sm">
                     <div className="flex justify-between border-t pt-2 mt-2">
-                        <span className="text-lg font-bold">Total Keseluruhan</span>
-                        <span className="text-lg font-bold">{formatRupiah(summary.grandTotal)}</span>
+                        <span className="text-base font-bold">Total Keseluruhan</span>
+                        <span className="text-base font-bold">{formatRupiah(summary.grandTotal)}</span>
                     </div>
                 </div>
             </CardFooter>
@@ -466,3 +468,5 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     </Form>
   );
 }
+
+    
