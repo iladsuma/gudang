@@ -75,18 +75,30 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
   
   const productsValue = form.watch('products');
 
-  const calculateSummary = (products: any[]) => {
+  const calculateSummary = (products: (Partial<ShipmentProduct> | undefined)[]) => {
     if (!products) return { totalItems: 0, totalShopping: 0, totalPacking: 0, grandTotal: 0 };
-    const totalItems = products.reduce((sum, product) => sum + (product.quantity || 0), 0);
+    
+    const totalItems = products.reduce((sum, product) => sum + (product?.quantity || 0), 0);
+    
     const totalShopping = products.reduce((sum, product) => {
-        const subtotal = (product.price || 0) * (product.quantity || 0) - (product.discount || 0);
+        const price = product?.price || 0;
+        const quantity = product?.quantity || 0;
+        const discount = product?.discount || 0;
+        const subtotal = (price * quantity) - discount;
         return sum + (subtotal > 0 ? subtotal : 0);
     }, 0);
-    const totalPacking = products.reduce((sum, product) => sum + ((product.packingFee || 0) * (product.quantity || 0)), 0);
+
+    const totalPacking = products.reduce((sum, product) => {
+        const packingFee = product?.packingFee || 0;
+        const quantity = product?.quantity || 0;
+        return sum + (packingFee * quantity);
+    }, 0);
+
     const grandTotal = totalShopping + totalPacking;
+    
     return { totalItems, totalShopping, totalPacking, grandTotal };
   };
-
+  
   const summary = calculateSummary(productsValue);
 
   React.useEffect(() => {
