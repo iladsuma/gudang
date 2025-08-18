@@ -9,7 +9,7 @@ export interface Product {
 }
 
 export interface ShipmentProduct {
-    productId: string; // Reference to the master product, now required
+    productId: string; // Reference to the master product
     code: string;
     name: string;
     quantity: number;
