@@ -77,7 +77,7 @@ function ProductsClient() {
 
     const form = useForm<ProductFormValues>({
         resolver: zodResolver(productFormSchema),
-        defaultValues: { code: '', name: '', price: 0, stock: 0, imageUrl: null },
+        defaultValues: { code: '', name: '', price: 0, stock: 0, imageUrl: '' },
     });
 
     const stockForm = useForm<StockFormValues>({
@@ -104,11 +104,11 @@ function ProductsClient() {
                 name: product.name,
                 price: product.price,
                 stock: product.stock,
-                imageUrl: product.imageUrl,
+                imageUrl: product.imageUrl || '',
             });
             setPreviewImage(product.imageUrl);
         } else {
-            form.reset({ code: '', name: '', price: 0, stock: 0, imageUrl: null });
+            form.reset({ code: '', name: '', price: 0, stock: 0, imageUrl: '' });
             setPreviewImage(null);
         }
         setIsFormOpen(true);
@@ -243,6 +243,8 @@ function ProductsClient() {
                                                     </div>
                                                 </FormControl>
                                                 <FormMessage />
+                                                {/* Hidden input to hold the value for the form state */}
+                                                <input type="hidden" {...field} value={field.value || ''} />
                                             </FormItem>
                                         )}
                                     />
@@ -410,3 +412,5 @@ export default function ProductsPage() {
         </div>
     );
 }
+
+    
