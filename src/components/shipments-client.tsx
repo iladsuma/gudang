@@ -76,8 +76,6 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
   };
 
   const handleFormSuccess = (newShipment: Shipment) => {
-    // Optimistically update products state after successful recap/add
-    getProducts().then(setMasterProducts);
     setShipments((prev) => [newShipment, ...prev]);
     setIsFormOpen(false);
   };
@@ -191,12 +189,15 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
         
         toast({
             title: 'Sukses!',
-            description: 'Data terpilih berhasil diproses dan dicatat di Riwayat.'
+            description: 'Data terpilih berhasil diproses, stok diperbarui, dan dicatat di Riwayat.'
         });
 
-        setSelectedShipments([]);
-        // Refresh router can be slow, let's just optimistically remove from UI
+        
+        // Optimistically remove from UI
         setShipments(prev => prev.filter(s => !selectedShipments.includes(s.id)));
+        setSelectedShipments([]);
+        // update master product list to reflect new stock
+        getProducts().then(setMasterProducts);
         router.refresh();
 
     } catch (error) {
@@ -241,7 +242,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
               Tambah Pengiriman
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-4xl max-h-[90dvh]">
+          <DialogContent className="sm:max-w-4xl">
             <DialogHeader>
               <DialogTitle>Tambah Data Pengiriman Baru</DialogTitle>
             </DialogHeader>

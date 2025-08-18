@@ -104,17 +104,18 @@ export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'tot
     throw new Error('ID Transaksi harus unik.');
   }
 
-  const allProducts = await getProducts();
-  for (const p of data.products) {
-    if (!p.productId) continue;
-    const productInDb = allProducts.find(dbP => dbP.id === p.productId);
-    if (productInDb && productInDb.stock < p.quantity) {
-        throw new Error(`Stok tidak mencukupi untuk produk "${p.name}". Sisa stok: ${productInDb.stock}.`);
-    }
-    if (productInDb) {
-        await updateProductStock(p.productId, productInDb.stock - p.quantity);
-    }
-  }
+  // Stock deduction is moved to processShipments
+  // const allProducts = await getProducts();
+  // for (const p of data.products) {
+  //   if (!p.productId) continue;
+  //   const productInDb = allProducts.find(dbP => dbP.id === p.productId);
+  //   if (productInDb && productInDb.stock < p.quantity) {
+  //       throw new Error(`Stok tidak mencukupi untuk produk "${p.name}". Sisa stok: ${productInDb.stock}.`);
+  //   }
+  //   if (productInDb) {
+  //       await updateProductStock(p.productId, productInDb.stock - p.quantity);
+  //   }
+  // }
 
   const totalItems = data.products.reduce((sum, p) => sum + p.quantity, 0);
   
@@ -169,6 +170,35 @@ export async function processShipments(shipmentIds: string[]): Promise<Checkout>
         throw new Error("Tidak ada pengiriman yang valid untuk diproses.");
     }
 
+    // --- New Stock Deduction Logic ---
+    const allMasterProducts = await getProducts();
+    const productStockUpdates: { [productId: string]: number } = {};
+
+    // First, check if all stocks are sufficient
+    for (const shipment of shipmentsToProcess) {
+        for (const product of shipment.products) {
+            const masterProduct = allMasterProducts.find(p => p.id === product.productId);
+            if (!masterProduct) {
+                throw new Error(`Produk dengan kode "${product.code}" tidak ditemukan di database.`);
+            }
+            const currentStock = masterProduct.stock;
+            const stockNeeded = product.quantity;
+            const stockAfterThisTx = (productStockUpdates[product.productId] ?? currentStock) - stockNeeded;
+
+            if (stockAfterThisTx < 0) {
+                throw new Error(`Stok tidak mencukupi untuk produk "${product.name}". Stok sisa: ${currentStock}, dibutuhkan: ${stockNeeded}.`);
+            }
+            productStockUpdates[product.productId] = stockAfterThisTx;
+        }
+    }
+
+    // If all stocks are sufficient, proceed to update them
+    for (const productId in productStockUpdates) {
+        await updateProductStock(productId, productStockUpdates[productId]);
+    }
+    // --- End of New Stock Deduction Logic ---
+
+
     const processedShipments: ProcessedShipmentSummary[] = shipmentsToProcess.map(s => ({
         shipmentId: s.id, // Keep the original ID
         transactionId: s.transactionId,
@@ -191,7 +221,9 @@ export async function processShipments(shipmentIds: string[]): Promise<Checkout>
     const updatedHistory = [newBatchCheckout, ...checkoutHistory];
     saveToStorage('checkoutHistory', updatedHistory);
     
-    // Data in 'shipments' is NOT removed, as per user request.
+    // Remove processed shipments from the main list
+    const remainingShipments = shipments.filter(s => !shipmentIds.includes(s.id));
+    saveToStorage('shipments', remainingShipments);
     
     return newBatchCheckout;
 }
