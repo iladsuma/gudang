@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { useForm, useFieldArray, useWatch } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { Shipment, Expedition, Product } from '@/lib/types';
@@ -81,11 +81,8 @@ const calculateSummary = (products: Partial<z.infer<typeof shipmentProductSchema
   return { totalItems, totalShopping, totalPacking, grandTotal };
 };
 
-const Summary = ({ control }: { control: any }) => {
-    const productsValue = useWatch({
-      control,
-      name: 'products',
-    });
+const Summary = ({ form }: { form: any }) => {
+    const productsValue = form.watch('products');
     const summary = calculateSummary(productsValue);
   
     return (
@@ -409,7 +406,6 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                                 value={field.value}
                                                 onChange={(value) => {
                                                     handleProductChange(value, index);
-                                                    field.onChange(value); 
                                                 }}
                                                 placeholder="Cari atau ketik produk..."
                                                 searchPlaceholder='Cari produk...'
@@ -482,7 +478,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                 </Button>
                 <FormMessage>{form.formState.errors.products?.root?.message}</FormMessage>
             </CardContent>
-            <Summary control={form.control} />
+            <Summary form={form} />
         </Card>
         
         <DialogFooter>
