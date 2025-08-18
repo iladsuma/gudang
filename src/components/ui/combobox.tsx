@@ -37,39 +37,48 @@ export function Combobox({
     searchPlaceholder = "Search...",
     notFoundMessage = "Tambah produk baru:"
 }: ComboboxProps) {
-  const [open, setOpen] = React.useState(false)
-  const [inputValue, setInputValue] = React.useState(value || "");
+  const [open, setOpen] = React.useState(false);
+  // State to manage the input value for searching, separate from the form's value
+  const [inputValue, setInputValue] = React.useState(value || '');
 
+  // Effect to sync the internal input value with the external form value when it changes
   React.useEffect(() => {
     const selectedOption = options.find(option => option.value === value);
     setInputValue(selectedOption ? selectedOption.label : value || '');
   }, [value, options]);
 
-  const handleSelect = (currentValue: string) => {
-    const option = options.find(o => o.value.toLowerCase() === currentValue.toLowerCase() || o.label.toLowerCase() === currentValue.toLowerCase());
-    const finalValue = option ? option.value : currentValue;
-    onChange(finalValue);
-    setInputValue(option ? option.label : finalValue);
+  const handleSelect = (selectedValue: string) => {
+    const option = options.find(o => o.value === selectedValue);
+    onChange(option ? option.value : selectedValue);
+    setInputValue(option ? option.label : selectedValue);
     setOpen(false);
   };
   
-  const handleInputChange = (search: string) => {
-    setInputValue(search);
-  }
-
+  // This function is for when the user manually types a value and leaves the input
   const handleBlur = () => {
-    // Only update form if the input value does not match any existing option's label
+    // Check if the current input text matches an existing option's label
     const matchingOption = options.find(option => option.label.toLowerCase() === inputValue.toLowerCase());
-    if (!matchingOption) {
+    if (matchingOption) {
+      // If it matches, ensure the form value is the option's value (ID), not its label
+      if (value !== matchingOption.value) {
+        onChange(matchingOption.value);
+      }
+    } else {
+      // If it doesn't match any option, treat it as a new manual entry
       onChange(inputValue);
     }
-  }
-  
+  };
+
   const displayLabel = React.useMemo(() => {
     const selectedOption = options.find(option => option.value === value);
-    return selectedOption ? selectedOption.label : value;
-  }, [value, options]);
+    return selectedOption ? selectedOption.label : value || placeholder;
+  }, [value, options, placeholder]);
 
+  const filteredOptions = React.useMemo(() => 
+    options.filter(option => option.label.toLowerCase().includes(inputValue.toLowerCase())),
+    [options, inputValue]
+  );
+  
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -80,7 +89,7 @@ export function Combobox({
           className="w-full justify-between font-normal"
         >
           <span className="truncate">
-            {displayLabel || placeholder}
+            {displayLabel}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -89,11 +98,11 @@ export function Combobox({
           className="w-[--radix-popover-trigger-width] p-0"
           onCloseAutoFocus={(e) => e.preventDefault()}
       >
-        <Command shouldFilter={false}>
+        <Command>
           <CommandInput
             placeholder={searchPlaceholder}
             value={inputValue}
-            onValueChange={handleInputChange}
+            onValueChange={setInputValue}
             onBlur={handleBlur}
           />
           <CommandList>
@@ -101,7 +110,7 @@ export function Combobox({
                  {inputValue && (
                     <CommandItem
                         value={inputValue}
-                        onSelect={() => handleSelect(inputValue)}
+                        onSelect={handleSelect}
                     >
                        <PlusCircle className="mr-2 h-4 w-4" />
                        <span>{notFoundMessage} <span className="font-medium">{`"${inputValue}"`}</span></span>
@@ -109,7 +118,7 @@ export function Combobox({
                 )}
             </CommandEmpty>
             <CommandGroup>
-              {options.filter(option => option.label.toLowerCase().includes(inputValue.toLowerCase())).map((option) => (
+              {filteredOptions.map((option) => (
                 <CommandItem
                   key={option.value}
                   value={option.value}

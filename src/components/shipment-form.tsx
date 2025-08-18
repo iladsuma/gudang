@@ -57,6 +57,7 @@ const formatRupiah = (number: number) => {
     }).format(number);
 };
 
+
 const calculateSummary = (products: Partial<z.infer<typeof shipmentProductSchema>>[]) => {
   if (!products) return { totalItems: 0, totalShopping: 0, totalPacking: 0, grandTotal: 0 };
   
@@ -406,6 +407,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                                 value={field.value}
                                                 onChange={(value) => {
                                                     handleProductChange(value, index);
+                                                    field.onChange(value);
                                                 }}
                                                 placeholder="Cari atau ketik produk..."
                                                 searchPlaceholder='Cari produk...'
