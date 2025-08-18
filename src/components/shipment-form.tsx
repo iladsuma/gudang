@@ -20,7 +20,8 @@ import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 const shipmentProductSchema = z.object({
-  productId: z.string().min(1, 'Produk harus dipilih.'),
+  productId: z.string().min(1, 'Produk harus valid.'),
+  code: z.string().min(1, 'Kode harus diisi.'),
   name: z.string(), // Will be populated automatically
   quantity: z.coerce.number().int().min(1, 'Kuantitas min 1'),
   price: z.coerce.number().min(0, 'Harga harus diisi'),
@@ -142,19 +143,19 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
   }, [user, form]);
   
   React.useEffect(() => {
-    if (fields.length === 0 && masterProducts.length > 0) {
-      const firstProduct = masterProducts[0];
+    if (fields.length === 0) {
       append({
-        productId: firstProduct.id,
-        name: firstProduct.name,
+        productId: '',
+        code: '',
+        name: 'N/A',
         quantity: 1,
-        price: firstProduct.price,
+        price: 0,
         discount: 0,
         packingFee: 0, 
-        imageUrl: firstProduct.imageUrl
+        imageUrl: null
       });
     }
-  }, [fields.length, masterProducts, append]);
+  }, [fields.length, append]);
 
 
   const handlePdfFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -201,12 +202,22 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     }
   };
   
-  const handleProductSelectionChange = (value: string, index: number) => {
-      const selectedProduct = masterProducts.find(p => p.id === value);
-      if (selectedProduct) {
-        form.setValue(`products.${index}.name`, selectedProduct.name);
-        form.setValue(`products.${index}.price`, selectedProduct.price);
-        form.setValue(`products.${index}.imageUrl`, selectedProduct.imageUrl);
+  const handleProductCodeBlur = (code: string, index: number) => {
+      const product = masterProducts.find(p => p.code.toLowerCase() === code.toLowerCase());
+      
+      form.clearErrors(`products.${index}.code`);
+
+      if (product) {
+        form.setValue(`products.${index}.productId`, product.id, { shouldValidate: true });
+        form.setValue(`products.${index}.name`, product.name);
+        form.setValue(`products.${index}.price`, product.price);
+        form.setValue(`products.${index}.imageUrl`, product.imageUrl);
+      } else if (code) { // only show error if there is some input
+        form.setError(`products.${index}.code`, { type: 'manual', message: 'Kode tidak ditemukan' });
+        form.setValue(`products.${index}.productId`, '');
+        form.setValue(`products.${index}.name`, 'N/A');
+        form.setValue(`products.${index}.price`, 0);
+        form.setValue(`products.${index}.imageUrl`, null);
       }
   };
 
@@ -306,6 +317,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                     <TableHeader>
                         <TableRow>
                             <TableHead className="w-[80px]">Gambar</TableHead>
+                            <TableHead className="w-[180px]">Kode Item</TableHead>
                             <TableHead>Nama Produk</TableHead>
                             <TableHead className="w-[120px]">Jumlah</TableHead>
                             <TableHead className="w-[150px]">Harga (Rp)</TableHead>
@@ -322,7 +334,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                             const price = form.watch(`products.${index}.price`) || 0;
                             const discount = form.watch(`products.${index}.discount`) || 0;
                             const subtotal = (price * quantity) - discount;
-                            const currentStock = masterProducts.find(p => p.id === productValues.productId)?.stock;
+                            const productInfo = masterProducts.find(p => p.id === productValues.productId);
 
                             return (
                             <TableRow key={field.id}>
@@ -335,47 +347,33 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                         className='rounded-md object-cover h-16 w-16'
                                         data-ai-hint="product image preview"
                                     />
-                                    <FormField
+                                </TableCell>
+                                <TableCell>
+                                     <FormField
                                         control={form.control}
-                                        name={`products.${index}.imageUrl`}
-                                        render={({ field: imageField }) => (
-                                            <FormItem><FormControl><Input type="hidden" value={imageField.value || ''} /></FormControl><FormMessage /></FormItem>
+                                        name={`products.${index}.code`}
+                                        render={({ field: codeField }) => (
+                                            <FormItem>
+                                                <FormControl>
+                                                    <Input 
+                                                        {...codeField} 
+                                                        onBlur={(e) => {
+                                                            codeField.onBlur();
+                                                            handleProductCodeBlur(e.target.value, index);
+                                                        }}
+                                                        placeholder="Ketik kode item..."
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
                                         )}
                                     />
                                 </TableCell>
                                 <TableCell>
-                                    <div className='space-y-2'>
-                                        <FormField
-                                            control={form.control}
-                                            name={`products.${index}.productId`}
-                                            render={({ field: productField }) => (
-                                            <FormItem>
-                                                <FormControl>
-                                                <Select
-                                                    onValueChange={(value) => {
-                                                        productField.onChange(value);
-                                                        handleProductSelectionChange(value, index);
-                                                    }}
-                                                    value={productField.value}
-                                                >
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Pilih produk" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {masterProducts.map(p => (
-                                                            <SelectItem key={p.id} value={p.id}>
-                                                                {p.name} (Stok: {p.stock})
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                            )}
-                                        />
-                                        {typeof currentStock !== 'undefined' && (
-                                            <p className='text-xs text-muted-foreground'>Stok tersedia: {currentStock}</p>
+                                    <div className='space-y-1'>
+                                        <p className="font-medium">{form.watch(`products.${index}.name`)}</p>
+                                        {productInfo && (
+                                            <p className='text-xs text-muted-foreground'>Stok: {productInfo.stock}</p>
                                         )}
                                     </div>
                                 </TableCell>
@@ -434,30 +432,23 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                     size="sm"
                     className="mt-4"
                     onClick={() => {
-                        const firstProduct = masterProducts[0];
-                        if (firstProduct) {
-                            append({ 
-                                productId: firstProduct.id, 
-                                name: firstProduct.name, 
-                                quantity: 1,
-                                price: firstProduct.price,
-                                discount: 0,
-                                packingFee: 0,
-                                imageUrl: firstProduct.imageUrl
-                            });
-                        } else {
-                            toast({
-                                variant: 'destructive',
-                                title: 'Tidak Ada Produk',
-                                description: 'Tidak dapat menambah baris baru karena tidak ada data produk master. Silakan tambah produk di halaman Produk terlebih dahulu.'
-                            })
-                        }
+                        append({ 
+                            productId: '',
+                            code: '',
+                            name: 'N/A', 
+                            quantity: 1,
+                            price: 0,
+                            discount: 0,
+                            packingFee: 0,
+                            imageUrl: null
+                        });
                     }}
                     >
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Tambah Produk
                 </Button>
                 <FormMessage>{form.formState.errors.products?.root?.message}</FormMessage>
+                <FormMessage>{form.formState.errors.products?.[0]?.productId?.message}</FormMessage>
             </CardContent>
             <Summary control={form.control} />
         </Card>
@@ -475,3 +466,4 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     </Form>
   );
 }
+

@@ -10,6 +10,7 @@ export interface Product {
 
 export interface ShipmentProduct {
     productId: string; // Reference to the master product, now required
+    code: string;
     name: string;
     quantity: number;
     price: number; // Can be overridden from master product's price
