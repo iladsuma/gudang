@@ -2,9 +2,9 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import type { Shipment } from '@/lib/types';
+import type { Shipment, Product } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2, Loader2, FileText, Printer } from 'lucide-react';
+import { PlusCircle, Trash2, Loader2, FileText, Printer, ScanLine } from 'lucide-react';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import {
   Table,
@@ -40,12 +40,122 @@ import { Checkbox } from './ui/checkbox';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { deleteShipment, processShipments } from '@/lib/data';
+import { deleteShipment, processShipments, getProducts, addShipment } from '@/lib/data';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { useAuth } from '@/context/auth-context';
+import { Input } from './ui/input';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from './ui/form';
+
+
+const recapFormSchema = z.object({
+  productCode: z.string().min(1, 'Kode item harus diisi'),
+});
+type RecapFormValues = z.infer<typeof recapFormSchema>;
+
+const UserRecapForm = ({ 
+    onSuccess, 
+    masterProducts 
+}: { 
+    onSuccess: (newShipment: Shipment) => void,
+    masterProducts: Product[]
+}) => {
+    const { user } = useAuth();
+    const { toast } = useToast();
+    
+    const form = useForm<RecapFormValues>({
+        resolver: zodResolver(recapFormSchema),
+        defaultValues: { productCode: '' },
+    });
+    
+    const onRecapSubmit = async ({ productCode }: RecapFormValues) => {
+        if (!user) return;
+
+        const product = masterProducts.find(p => p.code.toLowerCase() === productCode.toLowerCase());
+        if (!product) {
+            form.setError('productCode', { message: 'Kode item tidak ditemukan.'});
+            return;
+        }
+
+        if (product.stock <= 0) {
+            form.setError('productCode', { message: `Stok untuk ${product.name} habis.`});
+            return;
+        }
+
+        try {
+             const newShipmentData = {
+                user: user.name,
+                transactionId: `RECAP-${product.code}-${Date.now()}`,
+                expedition: 'Internal', // Default expedition for user recaps
+                products: [{
+                    productId: product.id,
+                    name: product.name,
+                    quantity: 1,
+                    price: product.price,
+                    discount: 0,
+                    packingFee: 0,
+                    imageUrl: product.imageUrl,
+                    isManual: false
+                }],
+            };
+
+            const newShipment = await addShipment(newShipmentData);
+            toast({
+                title: 'Rekap Berhasil!',
+                description: `Produk ${product.name} berhasil direkap.`,
+            });
+            onSuccess(newShipment);
+            form.reset();
+        } catch (error) {
+             const message = error instanceof Error ? error.message : 'Terjadi kesalahan.';
+             toast({ variant: 'destructive', title: 'Gagal Merekap', description: message });
+        }
+    };
+    
+    return (
+         <Card className="mb-6">
+            <CardHeader>
+                <CardTitle>Rekap Cepat Pengiriman</CardTitle>
+                <CardDescription>Masukkan kode item untuk merekap pengiriman produk secara otomatis.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onRecapSubmit)} className="flex items-start gap-4">
+                        <FormField
+                            control={form.control}
+                            name="productCode"
+                            render={({ field }) => (
+                                <FormItem className='flex-1'>
+                                    <FormLabel>Kode Item</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="Contoh: BA-001" {...field} />
+                                    </FormControl>
+                                    <FormMessage/>
+                                </FormItem>
+                            )}
+                        />
+                        <div className="pt-8">
+                            <Button type="submit" disabled={form.formState.isSubmitting}>
+                                {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ScanLine className="mr-2 h-4 w-4" />}
+                                Rekap
+                            </Button>
+                        </div>
+                    </form>
+                </Form>
+            </CardContent>
+        </Card>
+    );
+};
+
 
 export function ShipmentsClient({ shipments: initialShipments }: { shipments: Shipment[] }) {
+  const { user } = useAuth();
   const [shipments, setShipments] = useState(initialShipments);
+  const [masterProducts, setMasterProducts] = useState<Product[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -61,6 +171,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
 
   useEffect(() => {
     setIsClient(true);
+    getProducts().then(setMasterProducts);
   }, []);
   
   const formatRupiah = (number: number) => {
@@ -72,6 +183,8 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
   };
 
   const handleFormSuccess = (newShipment: Shipment) => {
+    // Optimistically update products state after successful recap/add
+    getProducts().then(setMasterProducts);
     setShipments((prev) => [newShipment, ...prev]);
     setIsFormOpen(false);
   };
@@ -142,8 +255,10 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
         const font = await mergedPdf.embedFont(StandardFonts.HelveticaBold);
 
         for (const [index, shipment] of shipmentsToProcess.entries()) {
+            // Skip PDF merging if receipt doesn't exist
+            if (!shipment.receipt?.dataUrl) continue;
+            
             const pdfDataUrl = shipment.receipt.dataUrl;
-            // Convert base64 to ArrayBuffer without fetch
             const base64 = pdfDataUrl.split(',')[1];
             if (!base64) {
                 console.error('Invalid Data URL for PDF:', pdfDataUrl);
@@ -154,7 +269,6 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
             
             const copiedPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
 
-            // Add marker to the first page of the copied document
             const { height } = copiedPages[0].getSize();
             copiedPages[0].drawText(`resi-sel-${index + 1}`, {
                 x: 20,
@@ -167,29 +281,34 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
             copiedPages.forEach((page) => mergedPdf.addPage(page));
         }
         
-        const mergedPdfBytes = await mergedPdf.save();
-        const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
-        const url = URL.createObjectURL(blob);
-        
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `resi-terpilih-${new Date().toISOString().split('T')[0]}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        // Only save and download if there are pages to merge
+        if (mergedPdf.getPageCount() > 0) {
+          const mergedPdfBytes = await mergedPdf.save();
+          const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
+          const url = URL.createObjectURL(blob);
+          
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `resi-terpilih-${new Date().toISOString().split('T')[0]}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
         
         toast({
             title: 'Sukses!',
-            description: 'Resi berhasil diproses dan dicatat di Riwayat.'
+            description: 'Data terpilih berhasil diproses dan dicatat di Riwayat.'
         });
 
         setSelectedShipments([]);
+        // Refresh router can be slow, let's just optimistically remove from UI
+        setShipments(prev => prev.filter(s => !selectedShipments.includes(s.id)));
         router.refresh();
 
     } catch (error) {
         console.error("Failed to process or merge PDFs", error);
-        const message = error instanceof Error ? error.message : 'Terjadi kesalahan saat memproses resi.';
+        const message = error instanceof Error ? error.message : 'Terjadi kesalahan saat memproses data.';
         toast({
             variant: 'destructive',
             title: 'Gagal Memproses',
@@ -216,39 +335,50 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
   return (
     <div className="space-y-4">
       <div className="flex justify-end gap-2">
-        <Button onClick={handleProcessAndPrintReceipts} disabled={selectedShipments.length === 0 || isProcessing}>
-            {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
-            Proses & Cetak Resi ({selectedShipments.length})
-        </Button>
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Tambah Pengiriman
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-4xl">
-            <DialogHeader>
-              <DialogTitle>Tambah Data Pengiriman Baru</DialogTitle>
-            </DialogHeader>
-            <ShipmentForm
-              onSuccess={handleFormSuccess}
-              onCancel={() => setIsFormOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
+        {user?.role === 'admin' && (
+          <>
+          <Button onClick={handleProcessAndPrintReceipts} disabled={selectedShipments.length === 0 || isProcessing}>
+              {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
+              Proses & Cetak ({selectedShipments.length})
+          </Button>
+          <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Tambah Pengiriman
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-4xl">
+              <DialogHeader>
+                <DialogTitle>Tambah Data Pengiriman Baru</DialogTitle>
+              </DialogHeader>
+              <ShipmentForm
+                onSuccess={handleFormSuccess}
+                onCancel={() => setIsFormOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
+        </>
+        )}
       </div>
+
+       {user?.role === 'user' && (
+         <UserRecapForm onSuccess={handleFormSuccess} masterProducts={masterProducts} />
+       )}
+
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[50px]">
-                <Checkbox
-                    checked={shipments.length > 0 && selectedShipments.length === shipments.length}
-                    onCheckedChange={handleSelectAll}
-                    aria-label="Pilih semua"
-                />
-              </TableHead>
+              {user?.role === 'admin' && (
+                <TableHead className="w-[50px]">
+                  <Checkbox
+                      checked={shipments.length > 0 && selectedShipments.length === shipments.length}
+                      onCheckedChange={handleSelectAll}
+                      aria-label="Pilih semua"
+                  />
+                </TableHead>
+              )}
               <TableHead>No.</TableHead>
               <TableHead>User</TableHead>
               <TableHead>No Transaksi</TableHead>
@@ -260,29 +390,35 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
               <TableHead className="text-right">Total Produk</TableHead>
               <TableHead className="text-right">Total Keseluruhan</TableHead>
               <TableHead>Tanggal Dibuat</TableHead>
-              <TableHead className="text-right">Aksi</TableHead>
+              {user?.role === 'admin' && <TableHead className="text-right">Aksi</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {shipments.length > 0 ? (
               shipments.map((shipment, index) => (
                 <TableRow key={shipment.id} data-state={selectedShipments.includes(shipment.id) ? "selected" : undefined}>
-                  <TableCell>
-                      <Checkbox
-                        checked={selectedShipments.includes(shipment.id)}
-                        onCheckedChange={(checked) => handleSelectSingle(shipment.id, !!checked)}
-                        aria-label={`Pilih pengiriman ${shipment.transactionId}`}
-                      />
-                  </TableCell>
+                   {user?.role === 'admin' && (
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedShipments.includes(shipment.id)}
+                          onCheckedChange={(checked) => handleSelectSingle(shipment.id, !!checked)}
+                          aria-label={`Pilih pengiriman ${shipment.transactionId}`}
+                        />
+                      </TableCell>
+                   )}
                   <TableCell>{index + 1}</TableCell>
                   <TableCell className="font-medium">{shipment.user}</TableCell>
                   <TableCell>{shipment.transactionId}</TableCell>
                   <TableCell>{shipment.expedition}</TableCell>
                   <TableCell>
-                    <Button variant="link" className="p-0 h-auto" onClick={() => openPdf(shipment.receipt.dataUrl)}>
-                        <FileText className="mr-2 h-4 w-4" />
-                        {shipment.receipt.fileName}
-                    </Button>
+                    {shipment.receipt ? (
+                      <Button variant="link" className="p-0 h-auto" onClick={() => openPdf(shipment.receipt!.dataUrl)}>
+                          <FileText className="mr-2 h-4 w-4" />
+                          {shipment.receipt.fileName}
+                      </Button>
+                    ) : (
+                      <span className='text-xs text-muted-foreground'>-</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-2">
@@ -331,37 +467,39 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
                         <Skeleton className="h-4 w-3/4" />
                     )}
                   </TableCell>
-                  <TableCell className="text-right">
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" disabled={!!isDeleting}>
-                            {isDeleting === shipment.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Apakah Anda yakin?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Tindakan ini tidak dapat dibatalkan. Ini akan menghapus data pengiriman secara permanen.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Batal</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => onDelete(shipment.id)}
-                            disabled={!!isDeleting}
-                          >
-                            Lanjutkan
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </TableCell>
+                  {user?.role === 'admin' && (
+                    <TableCell className="text-right">
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" disabled={!!isDeleting}>
+                              {isDeleting === shipment.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Apakah Anda yakin?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Tindakan ini tidak dapat dibatalkan. Ini akan menghapus data pengiriman secara permanen.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Batal</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => onDelete(shipment.id)}
+                              disabled={!!isDeleting}
+                            >
+                              Lanjutkan
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={13} className="h-24 text-center">
+                <TableCell colSpan={user?.role === 'admin' ? 13 : 12} className="h-24 text-center">
                   Tidak ada data pengiriman.
                 </TableCell>
               </TableRow>

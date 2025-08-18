@@ -24,7 +24,7 @@ export interface Shipment {
     user: string;
     transactionId: string;
     expedition: string;
-    receipt: {
+    receipt?: { // Receipt is now optional
         fileName: string;
         dataUrl: string; // Base64 encoded PDF
     };
