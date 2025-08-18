@@ -16,6 +16,7 @@ import { Card, CardContent, CardFooter } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { addShipment } from '@/lib/data';
 import Image from 'next/image';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 const shipmentProductSchema = z.object({
   name: z.string().min(1, 'Nama produk harus diisi'),
@@ -42,6 +43,8 @@ interface ShipmentFormProps {
   onSuccess: (newShipment: Shipment) => void;
   onCancel: () => void;
 }
+
+const userExpeditions = ['JNE', 'POS', 'J&T', 'ANTERAJA', 'SICEPAT'];
 
 export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
   const { toast } = useToast();
@@ -201,8 +204,21 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
             render={({ field }) => (
                 <FormItem>
                 <FormLabel>Nama Ekspedisi</FormLabel>
-                <FormControl>
-                    <Input placeholder="cth. JNE Express" {...field} />
+                 <FormControl>
+                    {user?.role === 'user' ? (
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Pilih ekspedisi" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {userExpeditions.map(exp => (
+                                    <SelectItem key={exp} value={exp}>{exp}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    ) : (
+                        <Input placeholder="cth. JNE Express" {...field} />
+                    )}
                 </FormControl>
                 <FormMessage />
                 </FormItem>
