@@ -92,17 +92,22 @@ export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'tot
   }
 
   const totalItems = data.products.reduce((sum, p) => sum + p.quantity, 0);
-  const totalAmount = data.products.reduce((sum, p) => {
-    const discountedPrice = p.price * (1 - p.discount / 100);
-    return sum + (discountedPrice * p.quantity);
+  
+  const totalShoppingAmount = data.products.reduce((sum, p) => {
+    const subtotal = (p.price * p.quantity) - p.discount;
+    return sum + subtotal;
   }, 0);
+  
+  const totalPackingAmount = data.products.reduce((sum, p) => sum + p.packingFee, 0);
+
+  const grandTotal = totalShoppingAmount + totalPackingAmount;
 
   const newShipment: Shipment = {
     ...data,
     id: `ship_${Date.now()}_${Math.random()}`,
     createdAt: new Date().toISOString(),
     totalItems,
-    totalAmount,
+    totalAmount: grandTotal,
     products: data.products.map(p => ({ ...p }))
   };
   

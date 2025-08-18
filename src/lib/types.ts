@@ -2,7 +2,8 @@ export interface ShipmentProduct {
     name: string;
     quantity: number;
     price: number;
-    discount: number; // in percentage (0-100)
+    discount: number; // in nominal value (e.g. Rp 1000)
+    packingFee: number; // packing fee per product
     imageUrl: string;
 }
 
@@ -17,7 +18,7 @@ export interface Shipment {
     };
     products: ShipmentProduct[];
     totalItems: number;
-    totalAmount: number; // Grand total after discounts
+    totalAmount: number; // Grand total after discounts and including packing fees
     createdAt: string; // ISO String for when it was added
 }
 

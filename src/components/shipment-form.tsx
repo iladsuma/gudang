@@ -22,7 +22,8 @@ const shipmentProductSchema = z.object({
   name: z.string().min(1, 'Nama produk harus diisi'),
   quantity: z.coerce.number().int().min(1, 'Kuantitas min 1'),
   price: z.coerce.number().min(0, 'Harga tidak boleh negatif'),
-  discount: z.coerce.number().min(0, 'Diskon min 0').max(100, 'Diskon maks 100'),
+  discount: z.coerce.number().min(0, 'Diskon tidak boleh negatif'),
+  packingFee: z.coerce.number().min(0, 'Biaya pengemasan tidak boleh negatif'),
   imageUrl: z.string().optional().or(z.literal('')),
 });
 
@@ -59,7 +60,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
       user: user?.name || '',
       transactionId: '',
       expedition: '',
-      products: [{ name: '', quantity: 1, price: 0, discount: 0, imageUrl: 'https://placehold.co/100x100.png' }],
+      products: [{ name: '', quantity: 1, price: 0, discount: 0, packingFee: 0, imageUrl: 'https://placehold.co/100x100.png' }],
     },
   });
 
@@ -73,12 +74,15 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     name: 'products'
   });
 
-  const totalAmount = React.useMemo(() => {
-    return productsWatch.reduce((sum, product) => {
-        const { quantity, price, discount } = product;
-        const subtotal = (price * quantity) * (1 - (discount || 0) / 100);
-        return sum + (subtotal || 0);
+  const summary = React.useMemo(() => {
+    const totalItems = productsWatch.reduce((sum, product) => sum + (product.quantity || 0), 0);
+    const totalShopping = productsWatch.reduce((sum, product) => {
+        const subtotal = (product.price || 0) * (product.quantity || 0) - (product.discount || 0);
+        return sum + (subtotal > 0 ? subtotal : 0);
     }, 0);
+    const totalPacking = productsWatch.reduce((sum, product) => sum + (product.packingFee || 0), 0);
+    const grandTotal = totalShopping + totalPacking;
+    return { totalItems, totalShopping, totalPacking, grandTotal };
   }, [productsWatch]);
 
 
@@ -255,11 +259,12 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Gambar Produk</TableHead>
+                            <TableHead className="w-[120px]">Gambar</TableHead>
                             <TableHead>Nama Produk</TableHead>
                             <TableHead className="w-[100px]">Jumlah</TableHead>
-                            <TableHead className="w-[150px]">Harga</TableHead>
-                            <TableHead className="w-[120px]">Diskon (%)</TableHead>
+                            <TableHead className="w-[150px]">Harga (Rp)</TableHead>
+                            <TableHead className="w-[150px]">Diskon (Rp)</TableHead>
+                            <TableHead className="w-[150px]">Pengemasan (Rp)</TableHead>
                             <TableHead className="w-[160px] text-right">Subtotal</TableHead>
                             <TableHead className="w-[50px]"></TableHead>
                         </TableRow>
@@ -267,8 +272,8 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                     <TableBody>
                         {fields.map((field, index) => {
                             const product = productsWatch[index] || {};
-                            const { quantity = 0, price = 0, discount = 0, imageUrl } = product;
-                            const subtotal = (price * quantity) * (1 - (discount || 0) / 100);
+                            const { quantity = 0, price = 0, discount = 0, packingFee = 0, imageUrl } = product;
+                            const subtotal = (price * quantity) - discount;
                             return (
                             <TableRow key={field.id}>
                                 <TableCell>
@@ -337,12 +342,21 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                         control={form.control}
                                         name={`products.${index}.discount`}
                                         render={({ field }) => (
-                                            <FormItem><FormControl><Input type="number" placeholder="0-100" {...field} /></FormControl><FormMessage /></FormItem>
+                                            <FormItem><FormControl><Input type="number" placeholder="Rp" {...field} /></FormControl><FormMessage /></FormItem>
+                                        )}
+                                    />
+                                </TableCell>
+                                <TableCell>
+                                     <FormField
+                                        control={form.control}
+                                        name={`products.${index}.packingFee`}
+                                        render={({ field }) => (
+                                            <FormItem><FormControl><Input type="number" placeholder="Rp" {...field} /></FormControl><FormMessage /></FormItem>
                                         )}
                                     />
                                 </TableCell>
                                 <TableCell className="text-right font-medium">
-                                    {formatRupiah(subtotal)}
+                                    {formatRupiah(subtotal > 0 ? subtotal : 0)}
                                 </TableCell>
                                 <TableCell>
                                     <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
@@ -359,7 +373,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                     variant="outline"
                     size="sm"
                     className="mt-4"
-                    onClick={() => append({ name: '', quantity: 1, price: 0, discount: 0, imageUrl: 'https://placehold.co/100x100.png' })}
+                    onClick={() => append({ name: '', quantity: 1, price: 0, discount: 0, packingFee: 0, imageUrl: 'https://placehold.co/100x100.png' })}
                     >
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Tambah Produk
@@ -367,9 +381,23 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                 <FormMessage>{form.formState.errors.products?.message}</FormMessage>
             </CardContent>
              <CardFooter className="flex justify-end bg-slate-50 dark:bg-slate-900 p-4">
-                <div className="flex flex-col items-end gap-1">
-                    <span className="text-muted-foreground">Total Keseluruhan</span>
-                    <span className="text-2xl font-bold">{formatRupiah(totalAmount)}</span>
+                 <div className="w-full max-w-sm space-y-2 text-right">
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Total Item</span>
+                        <span className="font-medium">{summary.totalItems} pcs</span>
+                    </div>
+                     <div className="flex justify-between">
+                        <span className="text-muted-foreground">Total Belanja</span>
+                        <span className="font-medium">{formatRupiah(summary.totalShopping)}</span>
+                    </div>
+                     <div className="flex justify-between">
+                        <span className="text-muted-foreground">Total Pengemasan</span>
+                        <span className="font-medium">{formatRupiah(summary.totalPacking)}</span>
+                    </div>
+                    <div className="flex justify-between border-t pt-2 mt-2">
+                        <span className="text-lg font-bold">Grand Total</span>
+                        <span className="text-lg font-bold">{formatRupiah(summary.grandTotal)}</span>
+                    </div>
                 </div>
             </CardFooter>
         </Card>
