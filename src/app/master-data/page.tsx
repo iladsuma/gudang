@@ -271,7 +271,7 @@ export default function MasterDataPage() {
                                                     <FormItem className="flex flex-col items-center">
                                                         <FormLabel>Gambar Produk</FormLabel>
                                                         <FormControl>
-                                                            <>
+                                                            <div>
                                                                 <input
                                                                     type="file"
                                                                     accept="image/*"
@@ -287,7 +287,7 @@ export default function MasterDataPage() {
                                                                     className="h-32 w-32 rounded-md object-cover cursor-pointer"
                                                                     onClick={() => imageInputRef.current?.click()}
                                                                 />
-                                                            </>
+                                                            </div>
                                                         </FormControl>
                                                         <FormMessage />
                                                     </FormItem>
@@ -398,5 +398,7 @@ export default function MasterDataPage() {
         </div>
     );
 }
+
+    
 
     
