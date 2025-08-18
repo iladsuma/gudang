@@ -9,13 +9,14 @@ export interface Product {
 }
 
 export interface ShipmentProduct {
-    productId: string; // Reference to the master product
+    productId?: string; // Reference to the master product
+    isManual?: boolean;
     name: string;
     quantity: number;
     price: number; // Can be overridden from master product's price
     discount: number; // in nominal value (e.g. Rp 1000)
     packingFee: number; 
-    imageUrl: string;
+    imageUrl: string | null;
 }
 
 export interface Shipment {
@@ -74,3 +75,5 @@ export interface Expedition {
     id: string;
     name: string;
 }
+
+    

@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { Shipment, Expedition, Product } from '@/lib/types';
@@ -29,7 +29,7 @@ const shipmentProductSchema = z.object({
   price: z.coerce.number().min(0, 'Harga harus diisi'),
   discount: z.coerce.number().min(0, 'Diskon tidak boleh negatif').default(0),
   packingFee: z.coerce.number().min(0, 'Biaya pengemasan tidak boleh negatif').default(0),
-  imageUrl: z.string().optional().or(z.literal('')),
+  imageUrl: z.string().optional().nullable().default(null),
 });
 
 const shipmentFormSchema = z.object({
@@ -59,34 +59,32 @@ const formatRupiah = (number: number) => {
     }).format(number);
 };
 
-const Summary = ({ form }: { form: any }) => {
-    const productsValue = form.watch('products');
+const Summary = ({ control }: { control: any }) => {
+    const productsValue = useWatch({ control, name: 'products' });
     
-    const calculateSummary = React.useCallback((products: any[]) => {
-      if (!products) return { totalItems: 0, totalShopping: 0, totalPacking: 0, grandTotal: 0 };
-      
-      const totalItems = products.reduce((sum, product) => sum + (product?.quantity || 0), 0);
-      
-      const totalShopping = products.reduce((sum, product) => {
-          const price = product?.price || 0;
-          const quantity = product?.quantity || 0;
-          const discount = product?.discount || 0;
-          const subtotal = (price * quantity) - discount;
-          return sum + (subtotal > 0 ? subtotal : 0);
-      }, 0);
+    const summary = React.useMemo(() => {
+        if (!productsValue) return { totalItems: 0, totalShopping: 0, totalPacking: 0, grandTotal: 0 };
+        
+        const totalItems = productsValue.reduce((sum: number, product: any) => sum + (product?.quantity || 0), 0);
+        
+        const totalShopping = productsValue.reduce((sum: number, product: any) => {
+            const price = product?.price || 0;
+            const quantity = product?.quantity || 0;
+            const discount = product?.discount || 0;
+            const subtotal = (price * quantity) - discount;
+            return sum + (subtotal > 0 ? subtotal : 0);
+        }, 0);
 
-      const totalPacking = products.reduce((sum, product) => {
-          const packingFee = product?.packingFee || 0;
-          const quantity = product?.quantity || 0;
-          return sum + (packingFee * quantity);
-      }, 0);
+        const totalPacking = productsValue.reduce((sum: number, product: any) => {
+            const packingFee = product?.packingFee || 0;
+            const quantity = product?.quantity || 0;
+            return sum + (packingFee * quantity);
+        }, 0);
 
-      const grandTotal = totalShopping + totalPacking;
-      
-      return { totalItems, totalShopping, totalPacking, grandTotal };
-    }, []);
-
-    const summary = calculateSummary(productsValue);
+        const grandTotal = totalShopping + totalPacking;
+        
+        return { totalItems, totalShopping, totalPacking, grandTotal };
+    }, [productsValue]);
   
     return (
       <CardFooter className="flex flex-col items-end bg-slate-50 dark:bg-slate-900 p-4 gap-2">
@@ -158,7 +156,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
         quantity: 1,
         price: firstProduct.price,
         discount: 0,
-        packingFee: 0, // default packing fee to 0
+        packingFee: 0, 
         imageUrl: firstProduct.imageUrl
       });
     }
@@ -211,7 +209,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     setIsSubmitting(true);
     try {
         const productsWithImage = data.products.map(p => ({...p, imageUrl: p.imageUrl || 'https://placehold.co/100x100.png' }));
-        const newShipment = await addShipment({...data, products: productsWithImage });
+        const newShipment = await addShipment({...data, products: productsWithImage as any });
         toast({
             title: 'Sukses!',
             description: 'Data pengiriman berhasil ditambahkan.',
@@ -230,35 +228,18 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
   };
   
   const handleProductSelectionChange = (value: string, index: number) => {
-    const isManual = !masterProducts.some(p => p.id === value);
-    
-    if (isManual) {
-        // This case is for manual input, handled by onBlur or Enter.
-        // We just update the name for now.
-        update(index, {
-            ...fields[index],
-            name: value,
-            productId: undefined,
-        });
-    } else {
-        const selectedProduct = masterProducts.find(p => p.id === value);
-        if (selectedProduct) {
-            update(index, {
-                ...fields[index],
-                productId: selectedProduct.id,
-                name: selectedProduct.name,
-                price: selectedProduct.price,
-                imageUrl: selectedProduct.imageUrl,
-                isManual: false,
-            });
-        }
-    }
+      const selectedProduct = masterProducts.find(p => p.id === value);
+      if (selectedProduct) {
+        form.setValue(`products.${index}.name`, selectedProduct.name);
+        form.setValue(`products.${index}.price`, selectedProduct.price);
+        form.setValue(`products.${index}.imageUrl`, selectedProduct.imageUrl);
+      }
   };
 
   const handleManualToggle = (isManual: boolean, index: number) => {
     const currentProduct = fields[index];
     if (isManual) {
-        update(index, { ...currentProduct, isManual: true, productId: '', name: '', price: 0, packingFee: 0, imageUrl: 'https://placehold.co/100x100.png' });
+        update(index, { ...currentProduct, isManual: true, productId: '', name: '', price: 0, packingFee: 0, imageUrl: null });
     } else {
         const firstProduct = masterProducts[0];
         if (firstProduct) {
@@ -425,7 +406,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                         control={form.control}
                                         name={`products.${index}.imageUrl`}
                                         render={({ field }) => (
-                                            <FormItem><FormControl><Input type="hidden" {...field} /></FormControl><FormMessage /></FormItem>
+                                            <FormItem><FormControl><Input type="hidden" {...field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                                         )}
                                     />
                                 </TableCell>
@@ -439,22 +420,28 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                             />
                                             <label htmlFor={`manual-switch-${index}`} className='text-sm'>Input Manual</label>
                                         </div>
-                                        <FormField
-                                            control={form.control}
-                                            name={`products.${index}.name`}
-                                            render={({ field }) => (
-                                            <FormItem>
-                                                <FormControl>
-                                                    {isManual ? (
-                                                      <Input placeholder="Nama produk baru" {...field} />
-                                                    ) : (
-                                                      <Select
+                                        {isManual ? (
+                                            <FormField
+                                                control={form.control}
+                                                name={`products.${index}.name`}
+                                                render={({ field }) => (
+                                                    <FormItem><FormControl><Input placeholder="Nama produk baru" {...field} /></FormControl><FormMessage /></FormItem>
+                                                )}
+                                            />
+                                        ) : (
+                                            <FormField
+                                                control={form.control}
+                                                name={`products.${index}.productId`}
+                                                render={({ field }) => (
+                                                <FormItem>
+                                                    <FormControl>
+                                                    <Select
                                                         onValueChange={(value) => {
-                                                            field.onChange(value); // Important to keep this to update the form's internal state for the field
+                                                            field.onChange(value);
                                                             handleProductSelectionChange(value, index);
                                                         }}
-                                                        value={productValues.productId} // Use productId for value
-                                                      >
+                                                        value={field.value}
+                                                    >
                                                         <SelectTrigger>
                                                             <SelectValue placeholder="Pilih produk" />
                                                         </SelectTrigger>
@@ -465,13 +452,13 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                                                 </SelectItem>
                                                             ))}
                                                         </SelectContent>
-                                                      </Select>
-                                                    )}
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                            )}
-                                        />
+                                                    </Select>
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                                )}
+                                            />
+                                        )}
                                         {!isManual && typeof currentStock !== 'undefined' && (
                                             <p className='text-xs text-muted-foreground'>Stok tersedia: {currentStock}</p>
                                         )}
@@ -553,7 +540,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                 price: 0,
                                 discount: 0,
                                 packingFee: 0,
-                                imageUrl: 'https://placehold.co/100x100.png'
+                                imageUrl: null
                             })
                         }
                     }}
@@ -563,7 +550,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                 </Button>
                 <FormMessage>{form.formState.errors.products?.root?.message}</FormMessage>
             </CardContent>
-            <Summary form={form} />
+            <Summary control={form.control} />
         </Card>
         
         <DialogFooter>
@@ -579,3 +566,5 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     </Form>
   );
 }
+
+    
