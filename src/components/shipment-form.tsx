@@ -18,10 +18,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { addShipment, getExpeditions, getProducts } from '@/lib/data';
 import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Combobox } from './ui/combobox';
+import { Switch } from './ui/switch';
+import { cn } from '@/lib/utils';
 
 const shipmentProductSchema = z.object({
   productId: z.string().optional(),
+  isManual: z.boolean().default(false),
   name: z.string().min(1, 'Nama produk harus diisi'),
   quantity: z.coerce.number().int().min(1, 'Kuantitas min 1'),
   price: z.coerce.number().min(0, 'Harga harus diisi'),
@@ -49,7 +51,7 @@ interface ShipmentFormProps {
 }
 
 const formatRupiah = (number: number) => {
-    if (!number || number === 0) return 'Rp 0';
+    if (number === null || typeof number === 'undefined' || isNaN(number)) return 'Rp 0';
     return new Intl.NumberFormat('id-ID', {
         style: 'currency',
         currency: 'IDR',
@@ -57,33 +59,33 @@ const formatRupiah = (number: number) => {
     }).format(number);
 };
 
-
-const calculateSummary = (products: Partial<z.infer<typeof shipmentProductSchema>>[]) => {
-  if (!products) return { totalItems: 0, totalShopping: 0, totalPacking: 0, grandTotal: 0 };
-  
-  const totalItems = products.reduce((sum, product) => sum + (product?.quantity || 0), 0);
-  
-  const totalShopping = products.reduce((sum, product) => {
-      const price = product?.price || 0;
-      const quantity = product?.quantity || 0;
-      const discount = product?.discount || 0;
-      const subtotal = (price * quantity) - discount;
-      return sum + (subtotal > 0 ? subtotal : 0);
-  }, 0);
-
-  const totalPacking = products.reduce((sum, product) => {
-      const packingFee = product?.packingFee || 0;
-      const quantity = product?.quantity || 0;
-      return sum + (packingFee * quantity);
-  }, 0);
-
-  const grandTotal = totalShopping + totalPacking;
-  
-  return { totalItems, totalShopping, totalPacking, grandTotal };
-};
-
 const Summary = ({ form }: { form: any }) => {
     const productsValue = form.watch('products');
+    
+    const calculateSummary = (products: any[]) => {
+      if (!products) return { totalItems: 0, totalShopping: 0, totalPacking: 0, grandTotal: 0 };
+      
+      const totalItems = products.reduce((sum, product) => sum + (product?.quantity || 0), 0);
+      
+      const totalShopping = products.reduce((sum, product) => {
+          const price = product?.price || 0;
+          const quantity = product?.quantity || 0;
+          const discount = product?.discount || 0;
+          const subtotal = (price * quantity) - discount;
+          return sum + (subtotal > 0 ? subtotal : 0);
+      }, 0);
+
+      const totalPacking = products.reduce((sum, product) => {
+          const packingFee = product?.packingFee || 0;
+          const quantity = product?.quantity || 0;
+          return sum + (packingFee * quantity);
+      }, 0);
+
+      const grandTotal = totalShopping + totalPacking;
+      
+      return { totalItems, totalShopping, totalPacking, grandTotal };
+    };
+
     const summary = calculateSummary(productsValue);
   
     return (
@@ -133,7 +135,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     },
   });
   
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, update } = useFieldArray({
     control: form.control,
     name: 'products',
   });
@@ -148,17 +150,19 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
   
   React.useEffect(() => {
     if (fields.length === 0 && masterProducts.length > 0) {
+      const firstProduct = masterProducts[0];
       append({
-        productId: '',
-        name: '',
+        productId: firstProduct.id,
+        name: firstProduct.name,
+        isManual: false,
         quantity: 1,
-        price: 0,
+        price: firstProduct.price,
         discount: 0,
-        packingFee: 0,
+        packingFee: firstProduct.packingFee,
         imageUrl: 'https://placehold.co/100x100.png'
       });
     }
-  }, [fields.length, masterProducts.length, append]);
+  }, [fields.length, masterProducts.length, masterProducts, append]);
 
 
   const handlePdfFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -225,29 +229,39 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     }
   };
   
-  const handleProductChange = (value: string, index: number) => {
-    const selectedProduct = masterProducts.find(p => p.id === value);
-
+  const handleProductSelectionChange = (productId: string, index: number) => {
+    const selectedProduct = masterProducts.find(p => p.id === productId);
     if (selectedProduct) {
-        form.setValue(`products.${index}.productId`, selectedProduct.id);
-        form.setValue(`products.${index}.name`, selectedProduct.name);
-        form.setValue(`products.${index}.price`, selectedProduct.price);
-        form.setValue(`products.${index}.packingFee`, selectedProduct.packingFee);
-    } else {
-        form.setValue(`products.${index}.productId`, undefined);
-        form.setValue(`products.${index}.name`, value);
-        // Reset price and packing fee for manual input, allow user to fill them
-        form.setValue(`products.${index}.price`, 0);
-        form.setValue(`products.${index}.packingFee`, 0);
+        update(index, {
+            ...fields[index],
+            productId: selectedProduct.id,
+            name: selectedProduct.name,
+            price: selectedProduct.price,
+            packingFee: selectedProduct.packingFee,
+        });
     }
   };
 
+  const handleManualToggle = (isManual: boolean, index: number) => {
+    const currentProduct = fields[index];
+    if (isManual) {
+        update(index, { ...currentProduct, isManual: true, productId: '', name: '' });
+    } else {
+        const firstProduct = masterProducts[0];
+        update(index, {
+            ...currentProduct,
+            isManual: false,
+            productId: firstProduct?.id || '',
+            name: firstProduct?.name || '',
+            price: firstProduct?.price || 0,
+            packingFee: firstProduct?.packingFee || 0,
+        });
+    }
+  };
+  
+
   const receiptValue = form.watch('receipt');
   
-  const productOptions = React.useMemo(() => {
-    return masterProducts.map(p => ({ value: p.id, label: p.name }));
-  }, [masterProducts]);
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -358,6 +372,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                             const price = form.watch(`products.${index}.price`) || 0;
                             const discount = form.watch(`products.${index}.discount`) || 0;
                             const subtotal = (price * quantity) - discount;
+                            const isManual = form.watch(`products.${index}.isManual`);
 
                             return (
                             <TableRow key={field.id}>
@@ -396,28 +411,47 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                     />
                                 </TableCell>
                                 <TableCell>
-                                    <FormField
-                                        control={form.control}
-                                        name={`products.${index}.name`}
-                                        render={({ field }) => (
-                                        <FormItem>
-                                            <FormControl>
-                                            <Combobox
-                                                options={productOptions}
-                                                value={field.value}
-                                                onChange={(value) => {
-                                                    handleProductChange(value, index);
-                                                    field.onChange(value);
-                                                }}
-                                                placeholder="Cari atau ketik produk..."
-                                                searchPlaceholder='Cari produk...'
-                                                notFoundMessage='Tambah produk baru:'
+                                    <div className='space-y-2'>
+                                        <div className='flex items-center space-x-2'>
+                                            <Switch
+                                               id={`manual-switch-${index}`}
+                                               checked={isManual}
+                                               onCheckedChange={(checked) => handleManualToggle(checked, index)}
                                             />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                        )}
-                                    />
+                                            <label htmlFor={`manual-switch-${index}`} className='text-sm'>Input Manual</label>
+                                        </div>
+                                        <FormField
+                                            control={form.control}
+                                            name={`products.${index}.name`}
+                                            render={({ field }) => (
+                                            <FormItem>
+                                                <FormControl>
+                                                    {isManual ? (
+                                                      <Input placeholder="Nama produk baru" {...field} />
+                                                    ) : (
+                                                      <Select
+                                                        onValueChange={(value) => {
+                                                            field.onChange(value);
+                                                            handleProductSelectionChange(value, index);
+                                                        }}
+                                                        value={field.value}
+                                                      >
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Pilih produk" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {masterProducts.map(p => (
+                                                                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                      </Select>
+                                                    )}
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                            )}
+                                        />
+                                    </div>
                                 </TableCell>
                                 <TableCell>
                                      <FormField
@@ -433,7 +467,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                         control={form.control}
                                         name={`products.${index}.price`}
                                         render={({ field }) => (
-                                            <FormItem><FormControl><Input type="number" placeholder="Rp" {...field} /></FormControl><FormMessage /></FormItem>
+                                            <FormItem><FormControl><Input type="number" placeholder="Rp" {...field} disabled={!isManual} /></FormControl><FormMessage /></FormItem>
                                         )}
                                     />
                                 </TableCell>
@@ -451,7 +485,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                         control={form.control}
                                         name={`products.${index}.packingFee`}
                                         render={({ field }) => (
-                                            <FormItem><FormControl><Input type="number" placeholder="Rp" {...field} /></FormControl><FormMessage /></FormItem>
+                                            <FormItem><FormControl><Input type="number" placeholder="Rp" {...field} disabled={!isManual} /></FormControl><FormMessage /></FormItem>
                                         )}
                                     />
                                 </TableCell>
@@ -473,7 +507,19 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                     variant="outline"
                     size="sm"
                     className="mt-4"
-                    onClick={() => append({ productId: '', name: '', quantity: 1, price: 0, discount: 0, packingFee: 0, imageUrl: 'https://placehold.co/100x100.png' })}
+                    onClick={() => {
+                        const firstProduct = masterProducts[0] || { id: '', name: '', price: 0, packingFee: 0 };
+                        append({ 
+                            productId: firstProduct.id, 
+                            name: firstProduct.name, 
+                            quantity: 1,
+                            price: firstProduct.price,
+                            discount: 0,
+                            packingFee: firstProduct.packingFee,
+                            isManual: false,
+                            imageUrl: 'https://placehold.co/100x100.png'
+                        })
+                    }}
                     >
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Tambah Produk
@@ -496,3 +542,5 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     </Form>
   );
 }
+
+    
