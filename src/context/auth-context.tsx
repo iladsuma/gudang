@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -39,8 +40,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     setLoading(false);
   }, []);
-  
+
   useEffect(() => {
+    // This effect runs only on the client, after the initial render and hydration.
     if (loading) return;
 
     const publicPaths = ['/login'];
@@ -68,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
-    router.push('/login');
+    // No need to push here, the useEffect will handle it
   };
 
   const value = { user, login, logout, loading };
