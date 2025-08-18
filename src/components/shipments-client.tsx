@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -236,19 +237,23 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
                     aria-label="Pilih semua"
                 />
               </TableHead>
+              <TableHead>No.</TableHead>
               <TableHead>User</TableHead>
-              <TableHead>No. Transaksi</TableHead>
+              <TableHead>No Transaksi</TableHead>
               <TableHead>Ekspedisi</TableHead>
               <TableHead>Resi</TableHead>
               <TableHead>Produk</TableHead>
-              <TableHead className="text-right">Total Nilai</TableHead>
+              <TableHead className="text-right">Total Item</TableHead>
+              <TableHead className="text-right">Total Pengemasan</TableHead>
+              <TableHead className="text-right">Total Produk</TableHead>
+              <TableHead className="text-right">Total Keseluruhan</TableHead>
               <TableHead>Tanggal Dibuat</TableHead>
               <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {shipments.length > 0 ? (
-              shipments.map((shipment) => (
+              shipments.map((shipment, index) => (
                 <TableRow key={shipment.id} data-state={selectedShipments.includes(shipment.id) ? "selected" : undefined}>
                   <TableCell>
                       <Checkbox
@@ -257,6 +262,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
                         aria-label={`Pilih pengiriman ${shipment.transactionId}`}
                       />
                   </TableCell>
+                  <TableCell>{index + 1}</TableCell>
                   <TableCell className="font-medium">{shipment.user}</TableCell>
                   <TableCell>{shipment.transactionId}</TableCell>
                   <TableCell>{shipment.expedition}</TableCell>
@@ -302,6 +308,9 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
                       ))}
                     </div>
                   </TableCell>
+                  <TableCell className="text-right">{shipment.totalItems}</TableCell>
+                  <TableCell className="text-right">{formatRupiah(shipment.totalPackingCost)}</TableCell>
+                  <TableCell className="text-right">{formatRupiah(shipment.totalProductCost)}</TableCell>
                   <TableCell className="text-right font-medium">{formatRupiah(shipment.totalAmount)}</TableCell>
                    <TableCell>
                     {isClient ? (
@@ -340,7 +349,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={9} className="h-24 text-center">
+                <TableCell colSpan={13} className="h-24 text-center">
                   Tidak ada data pengiriman.
                 </TableCell>
               </TableRow>

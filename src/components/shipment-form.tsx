@@ -438,15 +438,15 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                         <span className="font-medium">{summary.totalItems} pcs</span>
                     </div>
                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Total Belanja</span>
+                        <span className="text-muted-foreground">Total Belanja (Produk)</span>
                         <span className="font-medium">{formatRupiah(summary.totalShopping)}</span>
                     </div>
                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Total Pengemasan</span>
+                        <span className="text-muted-foreground">Total Biaya Pengemasan</span>
                         <span className="font-medium">{formatRupiah(summary.totalPacking)}</span>
                     </div>
                     <div className="flex justify-between border-t pt-2 mt-2">
-                        <span className="text-lg font-bold">Grand Total</span>
+                        <span className="text-lg font-bold">Total Keseluruhan</span>
                         <span className="text-lg font-bold">{formatRupiah(summary.grandTotal)}</span>
                     </div>
                 </div>

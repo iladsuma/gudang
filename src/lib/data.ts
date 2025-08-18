@@ -90,7 +90,7 @@ export async function getShipments(): Promise<Shipment[]> {
 }
 
 
-export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'totalItems' | 'totalAmount'>): Promise<Shipment> {
+export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'totalItems' | 'totalAmount' | 'totalPackingCost' | 'totalProductCost'>): Promise<Shipment> {
   await new Promise(resolve => setTimeout(resolve, 500));
   const shipments = await getShipments();
 
@@ -100,20 +100,22 @@ export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'tot
 
   const totalItems = data.products.reduce((sum, p) => sum + p.quantity, 0);
   
-  const totalShoppingAmount = data.products.reduce((sum, p) => {
+  const totalProductCost = data.products.reduce((sum, p) => {
     const subtotal = (p.price * p.quantity) - p.discount;
     return sum + subtotal;
   }, 0);
   
-  const totalPackingAmount = data.products.reduce((sum, p) => sum + (p.packingFee * p.quantity), 0);
+  const totalPackingCost = data.products.reduce((sum, p) => sum + (p.packingFee * p.quantity), 0);
 
-  const grandTotal = totalShoppingAmount + totalPackingAmount;
+  const grandTotal = totalProductCost + totalPackingCost;
 
   const newShipment: Shipment = {
     ...data,
     id: `ship_${Date.now()}_${Math.random()}`,
     createdAt: new Date().toISOString(),
     totalItems,
+    totalProductCost,
+    totalPackingCost,
     totalAmount: grandTotal,
     products: data.products.map(p => ({ ...p }))
   };

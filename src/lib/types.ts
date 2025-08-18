@@ -27,7 +27,9 @@ export interface Shipment {
     };
     products: ShipmentProduct[];
     totalItems: number;
-    totalAmount: number; // Grand total after discounts and including packing fees
+    totalProductCost: number; // Total price of products after discount
+    totalPackingCost: number; // Total of all packing fees
+    totalAmount: number; // Grand total (totalProductCost + totalPackingCost)
     createdAt: string; // ISO String for when it was added
 }
 
