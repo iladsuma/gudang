@@ -81,6 +81,7 @@ export function Combobox({
             <CommandEmpty>
                  {inputValue.length > 0 && (
                     <CommandItem
+                        key="new-product-item" // Use a static key for the new item
                         value={inputValue}
                         onSelect={() => handleSelect(inputValue)}
                         className="flex items-center gap-2"
@@ -93,7 +94,7 @@ export function Combobox({
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem
-                  key={option.value}
+                  key={option.value} // Use the stable and unique product ID as the key
                   value={option.label} // Match against the label for searching
                   onSelect={() => handleSelect(option.value)}
                 >
