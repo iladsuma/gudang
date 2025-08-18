@@ -40,13 +40,7 @@ export function Combobox({
   const [open, setOpen] = React.useState(false)
   const [inputValue, setInputValue] = React.useState("")
 
-  React.useEffect(() => {
-    if (!open) {
-      setInputValue("")
-    }
-  }, [open])
-
-  const currentOption = options.find((option) => option.value === value)
+  const currentOption = options.find((option) => option.value === value || option.label === value)
   const displayLabel = currentOption ? currentOption.label : value;
 
   return (
@@ -79,10 +73,11 @@ export function Combobox({
                         onSelect={() => {
                             onChange(inputValue)
                             setOpen(false)
+                            setInputValue("")
                         }}
                     >
                        <PlusCircle className="mr-2 h-4 w-4" />
-                       <span>{notFoundMessage} <span className="font-medium">{inputValue}</span></span>
+                       <span>{notFoundMessage} <span className="font-medium">{`"${inputValue}"`}</span></span>
                     </CommandItem>
                 )}
             </CommandEmpty>
@@ -91,15 +86,20 @@ export function Combobox({
                 <CommandItem
                   key={option.value}
                   value={option.label}
-                  onSelect={() => {
-                    onChange(option.value)
+                  onSelect={(currentValue) => {
+                    // currentValue is the label of the selected item
+                    const selectedOption = options.find(o => o.label.toLowerCase() === currentValue.toLowerCase());
+                    if (selectedOption) {
+                      onChange(selectedOption.value)
+                    }
                     setOpen(false)
+                    setInputValue("")
                   }}
                 >
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      value === option.value ? "opacity-100" : "opacity-0"
+                      (value === option.value || value === option.label) ? "opacity-100" : "opacity-0"
                     )}
                   />
                   {option.label}

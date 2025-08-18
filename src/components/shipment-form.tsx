@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { Shipment, Expedition, Product } from '@/lib/types';
@@ -24,7 +24,7 @@ const shipmentProductSchema = z.object({
   productId: z.string().optional(),
   name: z.string().min(1, 'Nama produk harus diisi'),
   quantity: z.coerce.number().int().min(1, 'Kuantitas min 1'),
-  price: z.coerce.number().min(0, 'Harga tidak boleh negatif'),
+  price: z.coerce.number().min(0, 'Harga harus diisi'),
   discount: z.coerce.number().min(0, 'Diskon tidak boleh negatif').default(0),
   packingFee: z.coerce.number().min(0, 'Biaya pengemasan tidak boleh negatif').default(0),
   imageUrl: z.string().optional().or(z.literal('')),
@@ -79,6 +79,39 @@ const calculateSummary = (products: Partial<z.infer<typeof shipmentProductSchema
   const grandTotal = totalShopping + totalPacking;
   
   return { totalItems, totalShopping, totalPacking, grandTotal };
+};
+
+const Summary = ({ control }: { control: any }) => {
+    const productsValue = useWatch({
+      control,
+      name: 'products',
+    });
+    const summary = calculateSummary(productsValue);
+  
+    return (
+      <CardFooter className="flex flex-col items-end bg-slate-50 dark:bg-slate-900 p-4 gap-2">
+        <div className="w-full max-w-sm space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Jumlah Item</span>
+            <span className="font-medium">{summary.totalItems} pcs</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Total Belanja (Produk)</span>
+            <span className="font-medium">{formatRupiah(summary.totalShopping)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Total Biaya Pengemasan</span>
+            <span className="font-medium">{formatRupiah(summary.totalPacking)}</span>
+          </div>
+        </div>
+        <div className="w-full max-w-sm space-y-2 text-sm">
+          <div className="flex justify-between border-t pt-2 mt-2">
+            <span className="text-base font-bold">Total Keseluruhan</span>
+            <span className="text-base font-bold">{formatRupiah(summary.grandTotal)}</span>
+          </div>
+        </div>
+      </CardFooter>
+    );
 };
 
 
@@ -198,14 +231,14 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     const selectedProduct = masterProducts.find(p => p.id === value);
 
     if (selectedProduct) {
-        form.setValue(`products.${index}.productId`, selectedProduct.id, { shouldValidate: true });
-        form.setValue(`products.${index}.name`, selectedProduct.name, { shouldValidate: true });
-        form.setValue(`products.${index}.price`, selectedProduct.price, { shouldValidate: true });
-        form.setValue(`products.${index}.packingFee`, selectedProduct.packingFee, { shouldValidate: true });
+        form.setValue(`products.${index}.productId`, selectedProduct.id);
+        form.setValue(`products.${index}.name`, selectedProduct.name);
+        form.setValue(`products.${index}.price`, selectedProduct.price);
+        form.setValue(`products.${index}.packingFee`, selectedProduct.packingFee);
     } else {
-        form.setValue(`products.${index}.productId`, undefined, { shouldValidate: true });
-        form.setValue(`products.${index}.name`, value, { shouldValidate: true });
-        // Reset price and packing fee for manual input
+        form.setValue(`products.${index}.productId`, undefined);
+        form.setValue(`products.${index}.name`, value);
+        // Reset price and packing fee for manual input, allow user to fill them
         form.setValue(`products.${index}.price`, 0);
         form.setValue(`products.${index}.packingFee`, 0);
     }
@@ -216,9 +249,6 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
   const productOptions = React.useMemo(() => {
     return masterProducts.map(p => ({ value: p.id, label: p.name }));
   }, [masterProducts]);
-
-  const productsValue = form.watch('products');
-  const summary = calculateSummary(productsValue);
 
   return (
     <Form {...form}>
@@ -326,8 +356,11 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                     <TableBody>
                         {fields.map((field, index) => {
                             const productValues = form.getValues(`products.${index}`);
-                            const { quantity = 0, price = 0, discount = 0 } = productValues;
+                            const quantity = form.watch(`products.${index}.quantity`) || 0;
+                            const price = form.watch(`products.${index}.price`) || 0;
+                            const discount = form.watch(`products.${index}.discount`) || 0;
                             const subtotal = (price * quantity) - discount;
+
                             return (
                             <TableRow key={field.id}>
                                 <TableCell>
@@ -375,8 +408,8 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                                 options={productOptions}
                                                 value={field.value}
                                                 onChange={(value) => {
-                                                    field.onChange(value); // Important for RHF to know the field changed
                                                     handleProductChange(value, index);
+                                                    field.onChange(value); 
                                                 }}
                                                 placeholder="Cari atau ketik produk..."
                                                 searchPlaceholder='Cari produk...'
@@ -449,28 +482,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                 </Button>
                 <FormMessage>{form.formState.errors.products?.root?.message}</FormMessage>
             </CardContent>
-            <CardFooter className="flex flex-col items-end bg-slate-50 dark:bg-slate-900 p-4 gap-2">
-              <div className="w-full max-w-sm space-y-2 text-sm">
-                  <div className="flex justify-between">
-                      <span className="text-muted-foreground">Jumlah Item</span>
-                      <span className="font-medium">{summary.totalItems} pcs</span>
-                  </div>
-                  <div className="flex justify-between">
-                      <span className="text-muted-foreground">Total Belanja (Produk)</span>
-                      <span className="font-medium">{formatRupiah(summary.totalShopping)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                      <span className="text-muted-foreground">Total Biaya Pengemasan</span>
-                      <span className="font-medium">{formatRupiah(summary.totalPacking)}</span>
-                  </div>
-              </div>
-              <div className="w-full max-w-sm space-y-2 text-sm">
-                  <div className="flex justify-between border-t pt-2 mt-2">
-                      <span className="text-base font-bold">Total Keseluruhan</span>
-                      <span className="text-base font-bold">{formatRupiah(summary.grandTotal)}</span>
-                  </div>
-              </div>
-            </CardFooter>
+            <Summary control={form.control} />
         </Card>
         
         <DialogFooter>
