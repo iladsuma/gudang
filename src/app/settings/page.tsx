@@ -11,6 +11,7 @@ import {
   CardContent,
 } from '@/components/ui/card';
 import { ExpeditionSettings } from '@/components/expedition-settings';
+import { ProductSettings } from '@/components/product-settings';
 
 export default function SettingsPage() {
     const { user } = useAuth();
@@ -34,9 +35,21 @@ export default function SettingsPage() {
         <div className="container mx-auto p-4 md:p-8 space-y-6">
             <div>
                 <h1 className="text-3xl font-bold">Pengaturan Aplikasi</h1>
-                <p className="text-muted-foreground">Kelola konfigurasi aplikasi Anda di sini.</p>
+                <p className="text-muted-foreground">Kelola konfigurasi dan data master aplikasi Anda di sini.</p>
             </div>
             
+            <Card>
+                <CardHeader>
+                    <CardTitle>Manajemen Produk</CardTitle>
+                    <CardDescription>
+                        Tambah, hapus, atau lihat daftar produk yang tersedia untuk dipilih saat menambah data pengiriman.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <ProductSettings />
+                </CardContent>
+            </Card>
+
             <Card>
                 <CardHeader>
                     <CardTitle>Manajemen Ekspedisi</CardTitle>

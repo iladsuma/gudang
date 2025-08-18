@@ -1,6 +1,7 @@
+
 'use client';
 
-import type { User, Shipment, Checkout, ProcessedShipmentSummary, Expedition } from '@/lib/types';
+import type { User, Shipment, Checkout, ProcessedShipmentSummary, Expedition, Product } from '@/lib/types';
 
 // =================================================================
 // Helper functions to interact with localStorage
@@ -51,6 +52,12 @@ const initialExpeditions: Expedition[] = [
     { id: 'exp_5', name: 'SICEPAT' },
 ];
 
+const initialProducts: Product[] = [
+    { id: 'prod_1', name: 'Baju Anak', price: 50000, packingFee: 1000 },
+    { id: 'prod_2', name: 'Celana Panjang', price: 120000, packingFee: 1500 },
+    { id: 'prod_3', name: 'Topi', price: 35000, packingFee: 500 },
+]
+
 
 // =================================================================
 // Data Access Functions (Now using localStorage)
@@ -98,7 +105,7 @@ export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'tot
     return sum + subtotal;
   }, 0);
   
-  const totalPackingAmount = data.products.reduce((sum, p) => sum + p.packingFee, 0);
+  const totalPackingAmount = data.products.reduce((sum, p) => sum + (p.packingFee * p.quantity), 0);
 
   const grandTotal = totalShoppingAmount + totalPackingAmount;
 
@@ -242,4 +249,41 @@ export async function deleteExpedition(id: string): Promise<void> {
         throw new Error('Ekspedisi tidak ditemukan.');
     }
     saveToStorage('expeditions', updatedExpeditions);
+}
+
+
+// Master Product Functions
+export async function getProducts(): Promise<Product[]> {
+    await new Promise(resolve => setTimeout(resolve, 50));
+    let products = getFromStorage<Product[]>('products', null);
+    if (products === null) {
+        saveToStorage('products', initialProducts);
+        products = initialProducts;
+    }
+    return [...products].sort((a,b) => a.name.localeCompare(b.name));
+}
+
+export async function addProduct(product: Omit<Product, 'id'>): Promise<Product> {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const products = await getProducts();
+    if(products.some(p => p.name.toLowerCase() === product.name.toLowerCase())) {
+        throw new Error('Nama produk sudah ada.');
+    }
+    const newProduct: Product = {
+        ...product,
+        id: `prod_${Date.now()}`,
+    };
+    const updatedProducts = [...products, newProduct];
+    saveToStorage('products', updatedProducts);
+    return newProduct;
+}
+
+export async function deleteProduct(id: string): Promise<void> {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    let products = await getProducts();
+    const updatedProducts = products.filter(p => p.id !== id);
+    if(products.length === updatedProducts.length) {
+        throw new Error('Produk tidak ditemukan.');
+    }
+    saveToStorage('products', updatedProducts);
 }

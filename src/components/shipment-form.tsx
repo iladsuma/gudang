@@ -1,10 +1,11 @@
+
 'use client';
 
 import * as React from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { Shipment, Expedition } from '@/lib/types';
+import type { Shipment, Expedition, Product } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
@@ -14,11 +15,12 @@ import { DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Loader2, PlusCircle, Trash2, Upload } from 'lucide-react';
 import { Card, CardContent, CardFooter } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import { addShipment, getExpeditions } from '@/lib/data';
+import { addShipment, getExpeditions, getProducts } from '@/lib/data';
 import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 const shipmentProductSchema = z.object({
+  productId: z.string().min(1, 'Produk harus dipilih'),
   name: z.string().min(1, 'Nama produk harus diisi'),
   quantity: z.coerce.number().int().min(1, 'Kuantitas min 1'),
   price: z.coerce.number().min(0, 'Harga tidak boleh negatif'),
@@ -51,6 +53,8 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [expeditions, setExpeditions] = React.useState<Expedition[]>([]);
+  const [masterProducts, setMasterProducts] = React.useState<Product[]>([]);
+  
   // Create a ref for each product image input
   const imageInputRefs = React.useRef<(HTMLInputElement | null)[]>([]);
 
@@ -60,11 +64,11 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
       user: user?.name || '',
       transactionId: '',
       expedition: '',
-      products: [{ name: '', quantity: 1, price: 0, discount: 0, packingFee: 0, imageUrl: 'https://placehold.co/100x100.png' }],
+      products: [],
     },
   });
-
-  const { fields, append, remove } = useFieldArray({
+  
+  const { fields, append, remove, update } = useFieldArray({
     control: form.control,
     name: 'products',
   });
@@ -80,7 +84,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
         const subtotal = (product.price || 0) * (product.quantity || 0) - (product.discount || 0);
         return sum + (subtotal > 0 ? subtotal : 0);
     }, 0);
-    const totalPacking = productsWatch.reduce((sum, product) => sum + (product.packingFee || 0), 0);
+    const totalPacking = productsWatch.reduce((sum, product) => sum + ((product.packingFee || 0) * (product.quantity || 0)), 0);
     const grandTotal = totalShopping + totalPacking;
     return { totalItems, totalShopping, totalPacking, grandTotal };
   }, [productsWatch]);
@@ -91,7 +95,24 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
       form.setValue('user', user.name);
     }
     getExpeditions().then(setExpeditions);
+    getProducts().then(setMasterProducts);
   }, [user, form]);
+  
+  React.useEffect(() => {
+    // Add a default product if the list is empty
+    if (fields.length === 0 && masterProducts.length > 0) {
+      append({
+        productId: '',
+        name: '',
+        quantity: 1,
+        price: 0,
+        discount: 0,
+        packingFee: 0,
+        imageUrl: 'https://placehold.co/100x100.png'
+      });
+    }
+  }, [fields.length, masterProducts.length, append]);
+
 
   const handlePdfFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -157,6 +178,19 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     }
   };
   
+  const handleProductSelection = (productId: string, index: number) => {
+    const selectedProduct = masterProducts.find(p => p.id === productId);
+    if(selectedProduct){
+      update(index, {
+        ...fields[index],
+        productId: selectedProduct.id,
+        name: selectedProduct.name,
+        price: selectedProduct.price,
+        packingFee: selectedProduct.packingFee,
+      })
+    }
+  }
+
   const receiptValue = form.watch('receipt');
   const formatRupiah = (number: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -264,7 +298,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                             <TableHead className="w-[100px]">Jumlah</TableHead>
                             <TableHead className="w-[150px]">Harga (Rp)</TableHead>
                             <TableHead className="w-[150px]">Diskon (Rp)</TableHead>
-                            <TableHead className="w-[150px]">Pengemasan (Rp)</TableHead>
+                            <TableHead className="w-[150px]">Pengemasan/pcs (Rp)</TableHead>
                             <TableHead className="w-[160px] text-right">Subtotal</TableHead>
                             <TableHead className="w-[50px]"></TableHead>
                         </TableRow>
@@ -313,9 +347,26 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                 <TableCell>
                                     <FormField
                                         control={form.control}
-                                        name={`products.${index}.name`}
+                                        name={`products.${index}.productId`}
                                         render={({ field }) => (
-                                            <FormItem><FormControl><Input placeholder="cth. Baju" {...field} /></FormControl><FormMessage /></FormItem>
+                                            <FormItem>
+                                              <FormControl>
+                                                <Select onValueChange={(value) => {
+                                                  field.onChange(value)
+                                                  handleProductSelection(value, index);
+                                                }} defaultValue={field.value}>
+                                                  <SelectTrigger>
+                                                    <SelectValue placeholder="Pilih produk" />
+                                                  </SelectTrigger>
+                                                  <SelectContent>
+                                                    {masterProducts.map(p => (
+                                                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                                    ))}
+                                                  </SelectContent>
+                                                </Select>
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
                                         )}
                                     />
                                 </TableCell>
@@ -373,12 +424,12 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                     variant="outline"
                     size="sm"
                     className="mt-4"
-                    onClick={() => append({ name: '', quantity: 1, price: 0, discount: 0, packingFee: 0, imageUrl: 'https://placehold.co/100x100.png' })}
+                    onClick={() => append({ productId: '', name: '', quantity: 1, price: 0, discount: 0, packingFee: 0, imageUrl: 'https://placehold.co/100x100.png' })}
                     >
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Tambah Produk
                 </Button>
-                <FormMessage>{form.formState.errors.products?.message}</FormMessage>
+                <FormMessage>{form.formState.errors.products?.root?.message}</FormMessage>
             </CardContent>
              <CardFooter className="flex justify-end bg-slate-50 dark:bg-slate-900 p-4">
                  <div className="w-full max-w-sm space-y-2 text-right">

@@ -1,9 +1,18 @@
+
+export interface Product {
+    id: string;
+    name: string;
+    price: number;
+    packingFee: number;
+}
+
 export interface ShipmentProduct {
+    productId: string; // Reference to the master product
     name: string;
     quantity: number;
-    price: number;
+    price: number; // Can be overridden from master product's price
     discount: number; // in nominal value (e.g. Rp 1000)
-    packingFee: number; // packing fee per product
+    packingFee: number; // Can be overridden from master product's packingFee
     imageUrl: string;
 }
 
