@@ -207,12 +207,14 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
         form.setValue(`products.${index}.productId`, product.id, { shouldValidate: true });
         form.setValue(`products.${index}.name`, product.name);
         form.setValue(`products.${index}.price`, product.price);
+        form.setValue(`products.${index}.packingFee`, product.packingFee);
         form.setValue(`products.${index}.imageUrl`, product.imageUrl);
       } else if (code) { // only show error if there is some input
         form.setError(`products.${index}.code`, { type: 'manual', message: 'Kode tidak ditemukan' });
         form.setValue(`products.${index}.productId`, '');
         form.setValue(`products.${index}.name`, 'N/A');
         form.setValue(`products.${index}.price`, 0);
+        form.setValue(`products.${index}.packingFee`, 0);
         form.setValue(`products.${index}.imageUrl`, null);
       }
   };
@@ -221,8 +223,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
   
   return (
     <>
-      <Form {...form}>
-        <form id="shipment-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form id="shipment-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <DialogDescription>
             Isi detail untuk data pengiriman baru.
           </DialogDescription>
@@ -406,7 +407,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                           control={form.control}
                                           name={`products.${index}.packingFee`}
                                           render={({ field: packingField }) => (
-                                              <FormItem><FormControl><Input type="number" placeholder="Rp" {...packingField} /></FormControl><FormMessage /></FormItem>
+                                              <FormItem><FormControl><Input type="number" placeholder="Rp" {...packingField} readOnly /></FormControl><FormMessage /></FormItem>
                                           )}
                                       />
                                   </TableCell>
@@ -449,8 +450,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
               </CardContent>
               <Summary control={form.control} />
           </Card>
-        </form>
-      </Form>
+      </form>
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onCancel}>
           Batal

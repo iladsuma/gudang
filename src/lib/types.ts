@@ -5,6 +5,7 @@ export interface Product {
     name: string;
     price: number;
     stock: number;
+    packingFee: number; // Biaya pengemasan standar untuk produk ini
     imageUrl: string;
 }
 

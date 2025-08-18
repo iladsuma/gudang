@@ -53,9 +53,9 @@ const initialExpeditions: Expedition[] = [
 ];
 
 const initialProducts: Product[] = [
-    { id: 'prod_1', code: 'BA-001', name: 'Baju Anak', price: 50000, stock: 100, imageUrl: 'https://placehold.co/100x100.png' },
-    { id: 'prod_2', code: 'CP-001', name: 'Celana Panjang', price: 120000, stock: 50, imageUrl: 'https://placehold.co/100x100.png' },
-    { id: 'prod_3', code: 'TP-001', name: 'Topi', price: 35000, stock: 75, imageUrl: 'https://placehold.co/100x100.png' },
+    { id: 'prod_1', code: 'BA-001', name: 'Baju Anak', price: 50000, stock: 100, packingFee: 1000, imageUrl: 'https://placehold.co/100x100.png' },
+    { id: 'prod_2', code: 'CP-001', name: 'Celana Panjang', price: 120000, stock: 50, packingFee: 2500, imageUrl: 'https://placehold.co/100x100.png' },
+    { id: 'prod_3', code: 'TP-001', name: 'Topi', price: 35000, stock: 75, packingFee: 1500, imageUrl: 'https://placehold.co/100x100.png' },
 ]
 
 
