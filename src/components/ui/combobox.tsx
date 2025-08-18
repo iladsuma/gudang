@@ -9,8 +9,8 @@ import { Button } from "@/components/ui/button"
 import {
   Command,
   CommandEmpty,
-  CommandGroup,
   CommandInput,
+  CommandGroup,
   CommandItem,
   CommandList,
 } from "@/components/ui/command"
@@ -38,9 +38,18 @@ export function Combobox({
     notFoundMessage = "No option found."
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
-  
-  // Find the label for the current value
-  const currentLabel = options.find((option) => option.value === value)?.label || value;
+  const [inputValue, setInputValue] = React.useState(value || "");
+
+  // When the popover opens, if there's a value, sync the input search
+  React.useEffect(() => {
+    if (open) {
+      const currentOption = options.find((option) => option.value === value);
+      setInputValue(currentOption ? currentOption.label : "");
+    }
+  }, [open, value, options]);
+
+  // Find the label for the current value to display on the button
+  const currentLabel = options.find((option) => option.value === value)?.label;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -52,26 +61,36 @@ export function Combobox({
           className="w-full justify-between"
         >
           <span className="truncate">
-            {value ? currentLabel : placeholder}
+            {currentLabel || value || placeholder}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
         <Command>
-          <CommandInput 
-            placeholder={searchPlaceholder} 
-            onValueChange={onChange}
+          <CommandInput
+            placeholder={searchPlaceholder}
+            value={inputValue}
+            onValueChange={setInputValue}
           />
           <CommandList>
-            <CommandEmpty>{notFoundMessage}</CommandEmpty>
+            <CommandEmpty
+                onSelect={() => {
+                    onChange(inputValue);
+                    setOpen(false);
+                }}
+            >
+                <div className="p-2 text-sm">
+                    {notFoundMessage} <span className="font-bold">{inputValue}</span>
+                </div>
+            </CommandEmpty>
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.value}
-                  onSelect={(currentValue) => {
-                    onChange(currentValue === value ? "" : currentValue)
+                  value={option.label} // Match against the label for searching
+                  onSelect={() => {
+                    onChange(option.value)
                     setOpen(false)
                   }}
                 >
@@ -91,5 +110,3 @@ export function Combobox({
     </Popover>
   )
 }
-
-    

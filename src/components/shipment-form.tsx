@@ -179,32 +179,25 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     }
   };
   
-  const handleProductSelection = (productId: string | undefined, index: number) => {
-    const selectedProduct = masterProducts.find(p => p.id === productId);
-    if(selectedProduct){
-      update(index, {
-        ...fields[index],
-        productId: selectedProduct.id,
-        name: selectedProduct.name,
-        price: selectedProduct.price,
-        packingFee: selectedProduct.packingFee,
-      })
-    }
-  }
+  const handleProductChange = (value: string, index: number) => {
+    const selectedProduct = masterProducts.find(p => p.id === value || p.name === value);
 
-  const handleManualProductInput = (value: string, index: number) => {
-    // When user types manually, we clear the productId and other fields
-    // that are linked to a master product.
-    const existingProduct = masterProducts.find(p => p.name.toLowerCase() === value.toLowerCase());
-    if (existingProduct) {
-        handleProductSelection(existingProduct.id, index);
-    } else {
+    if (selectedProduct) {
         update(index, {
             ...fields[index],
-            productId: undefined,
+            productId: selectedProduct.id,
+            name: selectedProduct.name,
+            price: selectedProduct.price,
+            packingFee: selectedProduct.packingFee,
+        });
+    } else {
+        // This is a new product typed manually
+        update(index, {
+            ...fields[index],
+            productId: undefined, // It's a new product, no ID
             name: value,
-            price: 0,
-            packingFee: 0,
+            price: 0, // Reset price for manual entry
+            packingFee: 0, // Reset packing fee
         });
     }
   };
@@ -377,17 +370,12 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                                                 options={productOptions}
                                                 value={field.value}
                                                 onChange={(value) => {
-                                                    const selectedProduct = masterProducts.find(p => p.id === value);
-                                                    if (selectedProduct) {
-                                                        handleProductSelection(selectedProduct.id, index);
-                                                    } else {
-                                                        handleManualProductInput(value, index);
-                                                    }
-                                                    field.onChange(value); // Keep RHF updated
+                                                  handleProductChange(value, index);
+                                                  // We don't need field.onChange here as handleProductChange does the update
                                                 }}
                                                 placeholder="Cari atau ketik produk..."
                                                 searchPlaceholder='Cari produk...'
-                                                notFoundMessage='Produk tidak ditemukan.'
+                                                notFoundMessage='Produk baru:'
                                             />
                                             </FormControl>
                                             <FormMessage />
@@ -493,7 +481,3 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     </Form>
   );
 }
-
-    
-
-    
