@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { Shipment, Expedition, Product } from '@/lib/types';
@@ -48,6 +48,70 @@ interface ShipmentFormProps {
   onCancel: () => void;
 }
 
+const formatRupiah = (number: number) => {
+    if (!number || number === 0) return 'Rp 0';
+    return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+    }).format(number);
+};
+
+const calculateSummary = (products: Partial<typeof shipmentProductSchema._type>[]) => {
+    if (!products) return { totalItems: 0, totalShopping: 0, totalPacking: 0, grandTotal: 0 };
+    
+    const totalItems = products.reduce((sum, product) => sum + (product?.quantity || 0), 0);
+    
+    const totalShopping = products.reduce((sum, product) => {
+        const price = product?.price || 0;
+        const quantity = product?.quantity || 0;
+        const discount = product?.discount || 0;
+        const subtotal = (price * quantity) - discount;
+        return sum + (subtotal > 0 ? subtotal : 0);
+    }, 0);
+
+    const totalPacking = products.reduce((sum, product) => {
+        const packingFee = product?.packingFee || 0;
+        const quantity = product?.quantity || 0;
+        return sum + (packingFee * quantity);
+    }, 0);
+
+    const grandTotal = totalShopping + totalPacking;
+    
+    return { totalItems, totalShopping, totalPacking, grandTotal };
+};
+
+function Summary({ control }: { control: any }) {
+    const productsValue = useWatch({ control, name: 'products' });
+    const summary = React.useMemo(() => calculateSummary(productsValue), [productsValue]);
+
+    return (
+         <CardFooter className="flex flex-col items-end bg-slate-50 dark:bg-slate-900 p-4 gap-2">
+            <div className="w-full max-w-sm space-y-2 text-sm">
+                <div className="flex justify-between">
+                    <span className="text-muted-foreground">Jumlah Item</span>
+                    <span className="font-medium">{summary.totalItems} pcs</span>
+                </div>
+                <div className="flex justify-between">
+                    <span className="text-muted-foreground">Total Belanja (Produk)</span>
+                    <span className="font-medium">{formatRupiah(summary.totalShopping)}</span>
+                </div>
+                <div className="flex justify-between">
+                    <span className="text-muted-foreground">Total Biaya Pengemasan</span>
+                    <span className="font-medium">{formatRupiah(summary.totalPacking)}</span>
+                </div>
+            </div>
+            <div className="w-full max-w-sm space-y-2 text-sm">
+                <div className="flex justify-between border-t pt-2 mt-2">
+                    <span className="text-base font-bold">Total Keseluruhan</span>
+                    <span className="text-base font-bold">{formatRupiah(summary.grandTotal)}</span>
+                </div>
+            </div>
+        </CardFooter>
+    );
+}
+
+
 export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
   const { toast } = useToast();
   const pdfFileInputRef = React.useRef<HTMLInputElement>(null);
@@ -73,34 +137,6 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     name: 'products',
   });
   
-  const productsValue = form.watch('products');
-
-  const calculateSummary = (products: (Partial<ShipmentProduct> | undefined)[]) => {
-    if (!products) return { totalItems: 0, totalShopping: 0, totalPacking: 0, grandTotal: 0 };
-    
-    const totalItems = products.reduce((sum, product) => sum + (product?.quantity || 0), 0);
-    
-    const totalShopping = products.reduce((sum, product) => {
-        const price = product?.price || 0;
-        const quantity = product?.quantity || 0;
-        const discount = product?.discount || 0;
-        const subtotal = (price * quantity) - discount;
-        return sum + (subtotal > 0 ? subtotal : 0);
-    }, 0);
-
-    const totalPacking = products.reduce((sum, product) => {
-        const packingFee = product?.packingFee || 0;
-        const quantity = product?.quantity || 0;
-        return sum + (packingFee * quantity);
-    }, 0);
-
-    const grandTotal = totalShopping + totalPacking;
-    
-    return { totalItems, totalShopping, totalPacking, grandTotal };
-  };
-  
-  const summary = calculateSummary(productsValue);
-
   React.useEffect(() => {
     if (user) {
       form.setValue('user', user.name);
@@ -205,13 +241,6 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
   };
 
   const receiptValue = form.watch('receipt');
-  const formatRupiah = (number: number) => {
-    return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-    }).format(number);
-  };
   
   const productOptions = React.useMemo(() => {
     return masterProducts.map(p => ({ value: p.id, label: p.name }));
@@ -322,7 +351,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                     </TableHeader>
                     <TableBody>
                         {fields.map((field, index) => {
-                            const product = productsValue[index] || {};
+                            const product = form.getValues(`products.${index}`);
                             const { quantity = 0, price = 0, discount = 0 } = product;
                             const subtotal = (price * quantity) - discount;
                             return (
@@ -443,28 +472,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
                 </Button>
                 <FormMessage>{form.formState.errors.products?.root?.message}</FormMessage>
             </CardContent>
-             <CardFooter className="flex flex-col items-end bg-slate-50 dark:bg-slate-900 p-4 gap-2">
-                 <div className="w-full max-w-sm space-y-2 text-sm">
-                    <div className="flex justify-between">
-                        <span className="text-muted-foreground">Jumlah Item</span>
-                        <span className="font-medium">{summary.totalItems} pcs</span>
-                    </div>
-                     <div className="flex justify-between">
-                        <span className="text-muted-foreground">Total Belanja (Produk)</span>
-                        <span className="font-medium">{formatRupiah(summary.totalShopping)}</span>
-                    </div>
-                     <div className="flex justify-between">
-                        <span className="text-muted-foreground">Total Biaya Pengemasan</span>
-                        <span className="font-medium">{formatRupiah(summary.totalPacking)}</span>
-                    </div>
-                </div>
-                <div className="w-full max-w-sm space-y-2 text-sm">
-                    <div className="flex justify-between border-t pt-2 mt-2">
-                        <span className="text-base font-bold">Total Keseluruhan</span>
-                        <span className="text-base font-bold">{formatRupiah(summary.grandTotal)}</span>
-                    </div>
-                </div>
-            </CardFooter>
+            <Summary control={form.control} />
         </Card>
         
         <DialogFooter>
@@ -480,5 +488,3 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     </Form>
   );
 }
-
-    
