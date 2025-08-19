@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import type { Shipment, Product } from '@/lib/types';
+import type { Shipment, Product, CartItem } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Trash2, Loader2, FileText, Printer } from 'lucide-react';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
@@ -62,10 +62,10 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
 
 
   useEffect(() => {
-    if (searchParams.get('action') === 'showForm' && cart.length > 0) {
+    if (searchParams.get('action') === 'showForm') {
       setIsFormOpen(true);
     }
-  }, [searchParams, cart]);
+  }, [searchParams]);
 
 
   useEffect(() => {
@@ -243,6 +243,17 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
     );
   }, [shipments]);
 
+  const handleOpenForm = () => {
+    if (cart.length === 0) {
+        toast({
+            variant: 'destructive',
+            title: 'Keranjang Kosong',
+            description: 'Silakan tambahkan produk dari etalase terlebih dahulu.',
+        });
+    } else {
+        setIsFormOpen(true);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -252,7 +263,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
             Proses & Cetak ({selectedShipments.length})
         </Button>
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <Button onClick={() => setIsFormOpen(true)}>
+          <Button onClick={handleOpenForm}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Tambah Pengiriman
           </Button>
@@ -424,5 +435,3 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
     </div>
   );
 }
-
-    

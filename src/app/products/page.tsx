@@ -18,13 +18,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
 import { useCart } from '@/hooks/use-cart';
-import { CartWidget } from '@/components/cart-widget';
+import { useRouter } from 'next/navigation';
 
 export default function ProductsPage() {
   const { user, loading: authLoading } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
-  const cartState = useCart();
+  const { addToCart } = useCart();
+  const router = useRouter();
 
   useEffect(() => {
     if (user) {
@@ -44,6 +45,12 @@ export default function ProductsPage() {
         minimumFractionDigits: 0,
     }).format(number);
   };
+  
+  const handleAddToCart = (product: Product) => {
+    addToCart(product);
+    router.push('/cart');
+  };
+
 
   if (authLoading || (dataLoading && user)) {
     return (
@@ -83,7 +90,6 @@ export default function ProductsPage() {
 
   return (
     <div className="container mx-auto p-4 md:p-8">
-      <CartWidget {...cartState} />
       <div className="mb-6">
         <h1 className="text-3xl font-bold tracking-tight">Etalase Produk</h1>
         <p className="text-muted-foreground">
@@ -105,7 +111,7 @@ export default function ProductsPage() {
                <Button 
                 size="sm" 
                 className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={() => cartState.addToCart(product)}
+                onClick={() => handleAddToCart(product)}
                 disabled={product.stock === 0}
                >
                  <PlusCircle className="mr-2 h-4 w-4"/>

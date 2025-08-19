@@ -32,14 +32,14 @@ export const useCart = () => {
   }, []);
 
   const addToCart = (product: Product, quantity: number = 1) => {
-    const existingItem = cart.find(item => item.id === product.id);
     let updatedCart;
+    const existingItem = cart.find(item => item.id === product.id);
 
     if (existingItem) {
         const newQuantity = existingItem.quantity + quantity;
         if (newQuantity > product.stock) {
             toast({ variant: 'destructive', title: 'Stok tidak cukup', description: `Sisa stok untuk ${product.name} hanya ${product.stock}.` });
-            return; // Do not update cart
+            return;
         }
         updatedCart = cart.map(item =>
             item.id === product.id ? { ...item, quantity: newQuantity } : item
@@ -47,7 +47,7 @@ export const useCart = () => {
     } else {
         if (quantity > product.stock) {
             toast({ variant: 'destructive', title: 'Stok tidak cukup', description: `Sisa stok untuk ${product.name} hanya ${product.stock}.` });
-            return; // Do not update cart
+            return;
         }
         updatedCart = [...cart, { ...product, quantity }];
     }
@@ -59,23 +59,22 @@ export const useCart = () => {
 
   const updateQuantity = (productId: string, quantity: number) => {
     setCart(prevCart => {
+      const itemToUpdate = prevCart.find(item => item.id === productId);
+      if (!itemToUpdate) return prevCart;
+
       let updatedCart;
-      
       if (quantity <= 0) {
           updatedCart = prevCart.filter(item => item.id !== productId);
+      } else if (quantity > itemToUpdate.stock) {
+          // Show toast for feedback but don't block update, just cap it.
+          toast({ variant: 'destructive', title: 'Stok tidak cukup', description: `Sisa stok hanya ${itemToUpdate.stock}.` });
+          updatedCart = prevCart.map(item =>
+              item.id === productId ? { ...item, quantity: item.stock } : item
+          );
       } else {
-          updatedCart = prevCart.map(item => {
-              if (item.id === productId) {
-                  // The stock check should prevent setting quantity higher than stock.
-                  if (quantity > item.stock) {
-                    // Do not show toast here as it causes render issues.
-                    // The button in the UI should be disabled to prevent this.
-                    return { ...item, quantity: item.stock }; // Reset to max stock
-                  }
-                  return { ...item, quantity };
-              }
-              return item;
-          });
+          updatedCart = prevCart.map(item =>
+              item.id === productId ? { ...item, quantity } : item
+          );
       }
       
       saveCartToLocalStorage(updatedCart);

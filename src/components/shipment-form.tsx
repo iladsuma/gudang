@@ -21,9 +21,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Label } from './ui/label';
 
 const shipmentProductSchema = z.object({
-  productId: z.string().min(1, 'Produk harus valid.'),
-  code: z.string().min(1, 'Kode harus diisi.'),
-  name: z.string(), // Will be populated automatically
+  productId: z.string().min(1, 'Produk harus dipilih.'),
+  code: z.string(), // Will be populated
+  name: z.string(), // Will be populated
   quantity: z.coerce.number().int().min(1, 'Jumlah minimal 1'),
   price: z.coerce.number().min(0, 'Harga harus diisi'),
   discount: z.coerce.number().min(0, 'Diskon tidak boleh negatif').default(0),
@@ -120,7 +120,6 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [expeditions, setExpeditions] = React.useState<Expedition[]>([]);
-  const [masterProducts, setMasterProducts] = React.useState<Product[]>([]);
   const [packagingOptions, setPackagingOptions] = React.useState<Packaging[]>([]);
 
   const defaultProducts = initialProductsFromCart.map(item => ({
@@ -141,19 +140,7 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
       user: user?.name || '',
       transactionId: '',
       expedition: '',
-      products: defaultProducts.length > 0 ? defaultProducts : [
-        {
-            productId: '',
-            code: '',
-            name: 'N/A',
-            quantity: 1,
-            price: 0,
-            discount: 0,
-            packagingId: '',
-            packagingCost: 0,
-            imageUrl: null,
-        }
-      ],
+      products: defaultProducts.length > 0 ? defaultProducts : [],
     },
   });
   
@@ -184,7 +171,6 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
       form.setValue('user', user.name);
     }
     getExpeditions().then(setExpeditions);
-    getProducts().then(setMasterProducts);
     getPackagingOptions().then(setPackagingOptions);
   }, [user, form]);
 
@@ -233,23 +219,16 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
     }
   };
   
-  const handleProductCodeBlur = (code: string, index: number) => {
-      const product = masterProducts.find(p => p.code.toLowerCase() === code.toLowerCase());
-      
-      form.clearErrors(`products.${index}.code`);
+  const handleProductSelectionChange = (productId: string, index: number) => {
+      const product = initialProductsFromCart.find(p => p.id === productId);
 
       if (product) {
         form.setValue(`products.${index}.productId`, product.id, { shouldValidate: true });
+        form.setValue(`products.${index}.code`, product.code);
         form.setValue(`products.${index}.name`, product.name);
         form.setValue(`products.${index}.price`, product.price);
         form.setValue(`products.${index}.imageUrl`, product.imageUrl);
-      } else if (code) { // only show error if there is some input
-        form.setError(`products.${index}.code`, { type: 'manual', message: 'Kode tidak ditemukan' });
-        form.setValue(`products.${index}.productId`, '');
-        form.setValue(`products.${index}.name`, 'N/A');
-        form.setValue(`products.${index}.price`, 0);
-        form.setValue(`products.${index}.packagingCost`, 0);
-        form.setValue(`products.${index}.imageUrl`, null);
+        form.setValue(`products.${index}.quantity`, product.quantity);
       }
   };
   
@@ -267,7 +246,7 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
       <DialogHeader>
         <DialogTitle>Tambah Data Pengiriman Baru</DialogTitle>
         <DialogDescription>
-          Isi detail untuk data pengiriman baru.
+          Isi detail untuk data pengiriman baru berdasarkan item di keranjang.
         </DialogDescription>
       </DialogHeader>
     <Form {...form}>
@@ -361,8 +340,8 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
                       <TableHeader>
                           <TableRow>
                               <TableHead className="w-[80px]">Gambar</TableHead>
-                              <TableHead className="w-[180px]">Kode Item</TableHead>
-                              <TableHead>Nama Produk</TableHead>
+                              <TableHead className="w-[220px]">Nama Produk (dari Keranjang)</TableHead>
+                              <TableHead>Kode</TableHead>
                               <TableHead className="w-[100px]">Jumlah</TableHead>
                               <TableHead className="w-[150px]">Harga (Rp)</TableHead>
                               <TableHead className="w-[170px]">Diskon (Rp)</TableHead>
@@ -377,9 +356,8 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
                               const quantity = form.watch(`products.${index}.quantity`) || 0;
                               const price = form.watch(`products.${index}.price`) || 0;
                               const discount = form.watch(`products.${index}.discount`) || 0;
-                              const packagingCost = form.watch(`products.${index}.packagingCost`) || 0;
                               const subtotal = (price * quantity) - discount;
-                              const productInfo = masterProducts.find(p => p.id === productValues.productId);
+                              const productInCart = initialProductsFromCart.find(p => p.id === productValues.productId);
 
                               return (
                               <TableRow key={field.id}>
@@ -393,21 +371,31 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
                                           data-ai-hint="product image preview"
                                       />
                                   </TableCell>
-                                  <TableCell>
+                                   <TableCell>
                                       <FormField
                                           control={form.control}
-                                          name={`products.${index}.code`}
-                                          render={({ field: codeField }) => (
+                                          name={`products.${index}.productId`}
+                                          render={({ field: productField }) => (
                                               <FormItem>
                                                   <FormControl>
-                                                      <Input 
-                                                          {...codeField} 
-                                                          onBlur={(e) => {
-                                                              codeField.onBlur();
-                                                              handleProductCodeBlur(e.target.value, index);
+                                                      <Select
+                                                          onValueChange={(value) => {
+                                                              productField.onChange(value);
+                                                              handleProductSelectionChange(value, index);
                                                           }}
-                                                          placeholder="Ketik kode item..."
-                                                      />
+                                                          defaultValue={productField.value}
+                                                      >
+                                                          <SelectTrigger>
+                                                              <SelectValue placeholder="Pilih Produk dari Keranjang" />
+                                                          </SelectTrigger>
+                                                          <SelectContent>
+                                                              {initialProductsFromCart.map(opt => (
+                                                                  <SelectItem key={opt.id} value={opt.id}>
+                                                                      {opt.name} (Stok: {opt.stock})
+                                                                  </SelectItem>
+                                                              ))}
+                                                          </SelectContent>
+                                                      </Select>
                                                   </FormControl>
                                                   <FormMessage />
                                               </FormItem>
@@ -415,19 +403,14 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
                                       />
                                   </TableCell>
                                   <TableCell>
-                                      <div className='space-y-1'>
-                                          <p className="font-medium">{form.watch(`products.${index}.name`)}</p>
-                                          {productInfo && (
-                                              <p className='text-xs text-muted-foreground'>Stok: {productInfo.stock}</p>
-                                          )}
-                                      </div>
+                                      <p className="font-mono text-sm text-muted-foreground">{form.watch(`products.${index}.code`)}</p>
                                   </TableCell>
                                   <TableCell>
                                       <FormField
                                           control={form.control}
                                           name={`products.${index}.quantity`}
                                           render={({ field: qtyField }) => (
-                                              <FormItem><FormControl><Input type="number" min="1" {...qtyField} /></FormControl><FormMessage /></FormItem>
+                                              <FormItem><FormControl><Input type="number" min="1" max={productInCart?.stock} {...qtyField} /></FormControl><FormMessage /></FormItem>
                                           )}
                                       />
                                   </TableCell>
@@ -502,7 +485,7 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
                           append({ 
                               productId: '',
                               code: '',
-                              name: 'N/A', 
+                              name: '', 
                               quantity: 1,
                               price: 0,
                               discount: 0,
@@ -513,7 +496,7 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
                       }}
                       >
                       <PlusCircle className="mr-2 h-4 w-4" />
-                      Tambah Produk
+                      Tambah Produk dari Keranjang
                   </Button>
                   <FormMessage>{form.formState.errors.products?.root?.message}</FormMessage>
                   <FormMessage>{form.formState.errors.products?.[0]?.productId?.message}</FormMessage>

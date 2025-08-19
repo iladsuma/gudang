@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Boxes, LogOut } from 'lucide-react';
+import { Boxes, LogOut, ShoppingCart } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { Button } from './ui/button';
 import { useRouter, usePathname } from 'next/navigation';
@@ -14,10 +14,13 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useCart } from '@/hooks/use-cart';
+import { Badge } from './ui/badge';
 
 
 export function Header() {
   const { user, logout } = useAuth();
+  const { totalItems } = useCart();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -87,6 +90,22 @@ export function Header() {
             )}
           </div>
           <div className="flex items-center gap-4">
+             {user && (
+                 <Button asChild variant="ghost" size="icon" className='relative'>
+                    <Link href="/cart">
+                        <ShoppingCart className="h-5 w-5" />
+                         {totalItems > 0 && (
+                            <Badge
+                                variant="destructive"
+                                className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center rounded-full p-0 text-xs"
+                            >
+                                {totalItems}
+                            </Badge>
+                        )}
+                        <span className="sr-only">Keranjang</span>
+                    </Link>
+                 </Button>
+             )}
             {user ? (
               <>
                 <span className="text-sm text-muted-foreground">
