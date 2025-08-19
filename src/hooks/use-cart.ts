@@ -61,19 +61,25 @@ export const useCart = () => {
 
   const updateQuantity = (productId: string, quantity: number) => {
     setCart(prevCart => {
+      let updatedCart;
+      
       if (quantity <= 0) {
-        return prevCart.filter(item => item.id !== productId);
+          updatedCart = prevCart.filter(item => item.id !== productId);
+      } else {
+          updatedCart = prevCart.map(item => {
+              if (item.id === productId) {
+                  // The stock check should prevent setting quantity higher than stock.
+                  if (quantity > item.stock) {
+                    // Do not show toast here as it causes render issues.
+                    // The button in the UI should be disabled to prevent this.
+                    return { ...item, quantity: item.stock }; // Reset to max stock
+                  }
+                  return { ...item, quantity };
+              }
+              return item;
+          });
       }
-      const updatedCart = prevCart.map(item => {
-        if (item.id === productId) {
-            if (quantity > item.stock) {
-                toast({ variant: 'destructive', title: 'Stok tidak cukup', description: `Sisa stok untuk ${item.name} hanya ${item.stock}.` });
-                return item;
-            }
-            return { ...item, quantity };
-        }
-        return item;
-      });
+      
       saveCartToLocalStorage(updatedCart);
       return updatedCart;
     });
