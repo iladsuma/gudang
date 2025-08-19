@@ -24,7 +24,7 @@ export default function ProductsPage() {
   const { user, loading: authLoading } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
-  const { addToCart } = useCart();
+  const cartState = useCart();
 
   useEffect(() => {
     if (user) {
@@ -83,7 +83,7 @@ export default function ProductsPage() {
 
   return (
     <div className="container mx-auto p-4 md:p-8">
-      <CartWidget />
+      <CartWidget {...cartState} />
       <div className="mb-6">
         <h1 className="text-3xl font-bold tracking-tight">Etalase Produk</h1>
         <p className="text-muted-foreground">
@@ -105,7 +105,7 @@ export default function ProductsPage() {
                <Button 
                 size="sm" 
                 className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={() => addToCart(product)}
+                onClick={() => cartState.addToCart(product)}
                 disabled={product.stock === 0}
                >
                  <PlusCircle className="mr-2 h-4 w-4"/>

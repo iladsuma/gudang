@@ -5,14 +5,16 @@ import * as React from 'react';
 import { ShoppingCart, Trash2, Plus, Minus } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './ui/card';
-import { useCart } from '@/hooks/use-cart';
+import type { useCart } from '@/hooks/use-cart';
 import Image from 'next/image';
 import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
 import { useRouter } from 'next/navigation';
 
-export function CartWidget() {
-  const { cart, updateQuantity, removeFromCart, clearCart, totalItems } = useCart();
+type CartWidgetProps = ReturnType<typeof useCart>;
+
+
+export function CartWidget({ cart, updateQuantity, removeFromCart, clearCart, totalItems }: CartWidgetProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const router = useRouter();
 
