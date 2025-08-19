@@ -18,6 +18,9 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import { ShipmentForm } from './shipment-form';
 import { useToast } from '@/hooks/use-toast';
@@ -421,3 +424,5 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
     </div>
   );
 }
+
+    
