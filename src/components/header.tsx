@@ -47,6 +47,12 @@ export function Header() {
                 >
                   Rekap Pengiriman
                 </Link>
+                 <Link
+                  href="/products"
+                  className={cn("transition-colors hover:text-foreground/80", pathname === '/products' ? 'text-foreground' : 'text-foreground/60')}
+                >
+                  Etalase Produk
+                </Link>
                 {user.role === 'admin' && (
                   <>
                     <Link
