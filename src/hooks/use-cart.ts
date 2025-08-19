@@ -4,34 +4,52 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { CartItem, Product } from '@/lib/types';
 import { useToast } from './use-toast';
-
-const CART_STORAGE_KEY = 'shipping_cart';
+import { useAuth } from '@/context/auth-context';
 
 export const useCart = () => {
+  const { user } = useAuth();
   const [cart, setCart] = useState<CartItem[]>([]);
   const { toast } = useToast();
+  
+  // Create a dynamic storage key based on the user ID
+  const CART_STORAGE_KEY = user ? `shipping_cart_${user.id}` : null;
 
   useEffect(() => {
-    try {
-      const storedCart = localStorage.getItem(CART_STORAGE_KEY);
-      if (storedCart) {
-        setCart(JSON.parse(storedCart));
-      }
-    } catch (error) {
-        console.error("Gagal mengambil keranjang dari localStorage", error);
-        localStorage.removeItem(CART_STORAGE_KEY);
+    if (CART_STORAGE_KEY) {
+        try {
+          const storedCart = localStorage.getItem(CART_STORAGE_KEY);
+          if (storedCart) {
+            setCart(JSON.parse(storedCart));
+          } else {
+            setCart([]); // If no cart for this user, initialize empty
+          }
+        } catch (error) {
+            console.error("Gagal mengambil keranjang dari localStorage", error);
+            localStorage.removeItem(CART_STORAGE_KEY);
+            setCart([]);
+        }
+    } else {
+        // If no user, clear the cart
+        setCart([]);
     }
-  }, []);
+  }, [CART_STORAGE_KEY]);
 
   const saveCartToLocalStorage = useCallback((updatedCart: CartItem[]) => {
-    try {
-        localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(updatedCart));
-    } catch (error) {
-        console.error("Gagal menyimpan keranjang ke localStorage", error);
+    if (CART_STORAGE_KEY) {
+        try {
+            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(updatedCart));
+        } catch (error) {
+            console.error("Gagal menyimpan keranjang ke localStorage", error);
+        }
     }
-  }, []);
+  }, [CART_STORAGE_KEY]);
 
   const addToCart = (product: Product, quantity: number = 1) => {
+    if (!user) {
+        toast({ variant: 'destructive', title: 'Harus Login', description: 'Anda harus login untuk menambah item ke keranjang.' });
+        return;
+    }
+    
     let updatedCart;
     const existingItem = cart.find(item => item.id === product.id);
 
@@ -52,21 +70,20 @@ export const useCart = () => {
         updatedCart = [...cart, { ...product, quantity }];
     }
     
+    toast({ title: 'Ditambahkan', description: `${product.name} masuk ke keranjang.`});
     setCart(updatedCart);
     saveCartToLocalStorage(updatedCart);
-    toast({ title: 'Ditambahkan', description: `${product.name} masuk ke keranjang.`});
   };
 
   const updateQuantity = (productId: string, quantity: number) => {
+    let updatedCart: CartItem[] = [];
     setCart(prevCart => {
       const itemToUpdate = prevCart.find(item => item.id === productId);
       if (!itemToUpdate) return prevCart;
 
-      let updatedCart;
       if (quantity <= 0) {
           updatedCart = prevCart.filter(item => item.id !== productId);
       } else if (quantity > itemToUpdate.stock) {
-          // Show toast for feedback but don't block update, just cap it.
           toast({ variant: 'destructive', title: 'Stok tidak cukup', description: `Sisa stok hanya ${itemToUpdate.stock}.` });
           updatedCart = prevCart.map(item =>
               item.id === productId ? { ...item, quantity: item.stock } : item
@@ -92,7 +109,9 @@ export const useCart = () => {
 
   const clearCart = () => {
     setCart([]);
-    localStorage.removeItem(CART_STORAGE_KEY);
+    if (CART_STORAGE_KEY) {
+        localStorage.removeItem(CART_STORAGE_KEY);
+    }
   };
   
   const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
