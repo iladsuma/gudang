@@ -5,13 +5,13 @@ import * as React from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { Shipment, Expedition, Product, Packaging } from '@/lib/types';
+import type { Shipment, Expedition, Product, Packaging, CartItem } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Loader2, PlusCircle, Trash2, Upload } from 'lucide-react';
 import { Card, CardContent, CardFooter } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
@@ -48,6 +48,7 @@ type ShipmentFormValues = z.infer<typeof shipmentFormSchema>;
 interface ShipmentFormProps {
   onSuccess: (newShipment: Shipment) => void;
   onCancel: () => void;
+  initialProductsFromCart?: CartItem[];
 }
 
 const formatRupiah = (number: number) => {
@@ -113,7 +114,7 @@ const Summary = ({ control }: { control: any }) => {
 };
 
 
-export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
+export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = [] }: ShipmentFormProps) {
   const { toast } = useToast();
   const pdfFileInputRef = React.useRef<HTMLInputElement>(null);
   const { user } = useAuth();
@@ -122,13 +123,25 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
   const [masterProducts, setMasterProducts] = React.useState<Product[]>([]);
   const [packagingOptions, setPackagingOptions] = React.useState<Packaging[]>([]);
 
+  const defaultProducts = initialProductsFromCart.map(item => ({
+        productId: item.id,
+        code: item.code,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        discount: 0,
+        packagingId: '',
+        packagingCost: 0,
+        imageUrl: item.imageUrl || null,
+  }));
+  
   const form = useForm<ShipmentFormValues>({
     resolver: zodResolver(shipmentFormSchema),
     defaultValues: {
       user: user?.name || '',
       transactionId: '',
       expedition: '',
-      products: [
+      products: defaultProducts.length > 0 ? defaultProducts : [
         {
             productId: '',
             code: '',
@@ -144,10 +157,27 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
     },
   });
   
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
     name: 'products',
   });
+
+  React.useEffect(() => {
+    if (initialProductsFromCart.length > 0) {
+        const cartProducts = initialProductsFromCart.map(item => ({
+            productId: item.id,
+            code: item.code,
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            discount: 0,
+            packagingId: '',
+            packagingCost: 0,
+            imageUrl: item.imageUrl || null,
+        }));
+        replace(cartProducts);
+    }
+  }, [initialProductsFromCart, replace]);
   
   React.useEffect(() => {
     if (user) {
@@ -233,10 +263,14 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
   const receiptValue = form.watch('receipt');
   
   return (
+    <>
+      <DialogHeader>
+        <DialogTitle>Tambah Data Pengiriman Baru</DialogTitle>
+        <DialogDescription>
+          Isi detail untuk data pengiriman baru.
+        </DialogDescription>
+      </DialogHeader>
     <Form {...form}>
-      <DialogDescription>
-        Isi detail untuk data pengiriman baru.
-      </DialogDescription>
         <form id="shipment-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
@@ -487,6 +521,7 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
               <Summary control={form.control} />
           </Card>
         </form>
+    </Form>
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onCancel}>
           Batal
@@ -496,6 +531,6 @@ export function ShipmentForm({ onSuccess, onCancel }: ShipmentFormProps) {
           Simpan Pengiriman
         </Button>
       </DialogFooter>
-    </Form>
+    </>
   );
 }

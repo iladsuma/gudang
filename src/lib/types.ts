@@ -1,4 +1,5 @@
 
+
 export interface Product {
     id: string;
     code: string; // Kode Item
@@ -74,11 +75,15 @@ export interface Checkout {
 
 export interface Expedition {
     id: string;
-    name: string;
+    name:string;
 }
 
 export interface Packaging {
     id: string;
     name: string;
     cost: number;
+}
+
+export interface CartItem extends Product {
+    quantity: number;
 }

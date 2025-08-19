@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { Shipment, Product } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Trash2, Loader2, FileText, Printer } from 'lucide-react';
@@ -18,9 +18,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { ShipmentForm } from './shipment-form';
 import { useToast } from '@/hooks/use-toast';
@@ -41,9 +38,10 @@ import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { deleteShipment, processShipments, getProducts } from '@/lib/data';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/context/auth-context';
+import { useCart } from '@/hooks/use-cart';
 
 export function ShipmentsClient({ shipments: initialShipments }: { shipments: Shipment[] }) {
   const { user } = useAuth();
@@ -56,6 +54,15 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { cart, clearCart } = useCart();
+
+
+  useEffect(() => {
+    if (searchParams.get('action') === 'showForm' && cart.length > 0) {
+      setIsFormOpen(true);
+    }
+  }, [searchParams, cart]);
 
 
   useEffect(() => {
@@ -75,10 +82,18 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
     }).format(number);
   };
 
-  const handleFormSuccess = (newShipment: Shipment) => {
+  const handleFormSuccess = useCallback((newShipment: Shipment) => {
     setShipments((prev) => [newShipment, ...prev]);
     setIsFormOpen(false);
-  };
+    clearCart();
+    // Remove search param
+    router.replace('/shipments', { scroll: false });
+  }, [clearCart, router]);
+  
+  const handleFormCancel = useCallback(() => {
+    setIsFormOpen(false);
+    router.replace('/shipments', { scroll: false });
+  }, [router]);
   
   const onDelete = async (shipmentId: string) => {
     setIsDeleting(shipmentId);
@@ -234,19 +249,15 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
             Proses & Cetak ({selectedShipments.length})
         </Button>
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Tambah Pengiriman
-            </Button>
-          </DialogTrigger>
+          <Button onClick={() => setIsFormOpen(true)}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Tambah Pengiriman
+          </Button>
           <DialogContent className="sm:max-w-4xl">
-            <DialogHeader>
-              <DialogTitle>Tambah Data Pengiriman Baru</DialogTitle>
-            </DialogHeader>
             <ShipmentForm
               onSuccess={handleFormSuccess}
-              onCancel={() => setIsFormOpen(false)}
+              onCancel={handleFormCancel}
+              initialProductsFromCart={cart}
             />
           </DialogContent>
         </Dialog>

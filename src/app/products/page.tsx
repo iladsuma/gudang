@@ -15,11 +15,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/context/auth-context';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { PlusCircle } from 'lucide-react';
+import { useCart } from '@/hooks/use-cart';
+import { CartWidget } from '@/components/cart-widget';
 
 export default function ProductsPage() {
   const { user, loading: authLoading } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
+  const { addToCart } = useCart();
 
   useEffect(() => {
     if (user) {
@@ -78,16 +83,17 @@ export default function ProductsPage() {
 
   return (
     <div className="container mx-auto p-4 md:p-8">
+      <CartWidget />
       <div className="mb-6">
         <h1 className="text-3xl font-bold tracking-tight">Etalase Produk</h1>
         <p className="text-muted-foreground">
-          Lihat semua produk yang tersedia di gudang.
+          Pilih produk untuk ditambahkan ke rekap pengiriman.
         </p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
         {products.map(product => (
-          <Card key={product.id} className="flex flex-col overflow-hidden">
-            <CardContent className="p-0">
+          <Card key={product.id} className="flex flex-col overflow-hidden group">
+            <CardContent className="p-0 relative">
               <Image 
                 src={product.imageUrl || 'https://placehold.co/400x400.png'} 
                 alt={product.name}
@@ -96,6 +102,15 @@ export default function ProductsPage() {
                 className="aspect-square w-full object-cover"
                 data-ai-hint="product image"
               />
+               <Button 
+                size="sm" 
+                className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={() => addToCart(product)}
+                disabled={product.stock === 0}
+               >
+                 <PlusCircle className="mr-2 h-4 w-4"/>
+                 Tambah
+               </Button>
             </CardContent>
             <CardHeader className="flex-grow">
               <CardTitle className="text-base">{product.name}</CardTitle>

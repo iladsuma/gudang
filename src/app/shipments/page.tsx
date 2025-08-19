@@ -9,11 +9,11 @@ import {
   CardContent,
 } from '@/components/ui/card';
 import { useAuth } from '@/context/auth-context';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import type { Shipment } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export default function ShipmentsPage() {
+function ShipmentsPageContent() {
   const { user, loading: authLoading } = useAuth();
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,4 +73,12 @@ export default function ShipmentsPage() {
       </Card>
     </div>
   );
+}
+
+export default function ShipmentsPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ShipmentsPageContent />
+    </Suspense>
+  )
 }
