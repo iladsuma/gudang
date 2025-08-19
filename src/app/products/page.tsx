@@ -18,14 +18,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
 import { useCart } from '@/hooks/use-cart';
-import { useRouter } from 'next/navigation';
 
 export default function ProductsPage() {
   const { user, loading: authLoading } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const { addToCart } = useCart();
-  const router = useRouter();
 
   useEffect(() => {
     if (user) {
@@ -48,7 +46,6 @@ export default function ProductsPage() {
   
   const handleAddToCart = (product: Product) => {
     addToCart(product);
-    router.push('/cart');
   };
 
 
