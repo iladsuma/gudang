@@ -32,31 +32,29 @@ export const useCart = () => {
   }, []);
 
   const addToCart = (product: Product, quantity: number = 1) => {
-    setCart(prevCart => {
-      const existingItem = prevCart.find(item => item.id === product.id);
-      let updatedCart;
+    const existingItem = cart.find(item => item.id === product.id);
+    let updatedCart;
 
-      if (existingItem) {
+    if (existingItem) {
         const newQuantity = existingItem.quantity + quantity;
         if (newQuantity > product.stock) {
             toast({ variant: 'destructive', title: 'Stok tidak cukup', description: `Sisa stok untuk ${product.name} hanya ${product.stock}.` });
-            return prevCart;
+            return; // Do not update cart
         }
-        updatedCart = prevCart.map(item =>
-          item.id === product.id ? { ...item, quantity: newQuantity } : item
+        updatedCart = cart.map(item =>
+            item.id === product.id ? { ...item, quantity: newQuantity } : item
         );
-      } else {
+    } else {
         if (quantity > product.stock) {
             toast({ variant: 'destructive', title: 'Stok tidak cukup', description: `Sisa stok untuk ${product.name} hanya ${product.stock}.` });
-            return prevCart;
+            return; // Do not update cart
         }
-        updatedCart = [...prevCart, { ...product, quantity }];
-      }
-      
-      saveCartToLocalStorage(updatedCart);
-      toast({ title: 'Ditambahkan', description: `${product.name} masuk ke keranjang.`});
-      return updatedCart;
-    });
+        updatedCart = [...cart, { ...product, quantity }];
+    }
+    
+    setCart(updatedCart);
+    saveCartToLocalStorage(updatedCart);
+    toast({ title: 'Ditambahkan', description: `${product.name} masuk ke keranjang.`});
   };
 
   const updateQuantity = (productId: string, quantity: number) => {
