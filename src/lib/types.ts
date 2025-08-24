@@ -15,7 +15,6 @@ export interface ShipmentProduct {
     name: string;
     quantity: number;
     price: number; // Can be overridden from master product's price
-    discount: number; // in nominal value (e.g. Rp 1000)
     packagingId: string;
     packagingCost: number;
     imageUrl: string | null;
@@ -26,6 +25,7 @@ export interface Shipment {
     user: string;
     transactionId: string;
     expedition: string;
+    status: 'Proses' | 'Pengemasan' | 'Terkirim';
     receipt?: { // Receipt is now optional
         fileName: string;
         dataUrl: string; // Base64 encoded PDF

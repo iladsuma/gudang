@@ -1,10 +1,11 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/auth-context';
-import { getCheckoutHistory } from '@/lib/data';
-import type { Checkout } from '@/lib/types';
+import { getShipments, processShipmentsToDelivered } from '@/lib/data';
+import type { Shipment } from '@/lib/types';
 import {
   Card,
   CardHeader,
@@ -13,28 +14,33 @@ import {
   CardContent,
 } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { HistoryClient } from '@/components/history-client';
 import { useRouter } from 'next/navigation';
+import { HistoryClient } from '@/components/history-client';
+
 
 export default function HistoryPage() {
   const { user, loading: authLoading } = useAuth();
-  const [history, setHistory] = useState<Checkout[]>([]);
+  const [shipments, setShipments] = useState<Shipment[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect if not admin after loading is complete
     if (!authLoading && user?.role !== 'admin') {
       router.push('/shipments');
     }
 
     if (user?.role === 'admin') {
-      getCheckoutHistory().then(data => {
-        setHistory(data);
+      getShipments().then(data => {
+        setShipments(data.filter(s => s.status === 'Pengemasan'));
         setDataLoading(false);
       });
     }
   }, [user, authLoading, router]);
+
+  const handleSuccess = (processedIds: string[]) => {
+    setShipments(prev => prev.filter(s => !processedIds.includes(s.id)));
+    router.refresh();
+  };
 
   if (authLoading || (dataLoading && user?.role === 'admin')) {
       return (
@@ -64,13 +70,13 @@ export default function HistoryPage() {
     <div className="container mx-auto p-4 md:p-8">
       <Card>
         <CardHeader>
-          <CardTitle>Riwayat Pemrosesan</CardTitle>
+          <CardTitle>Riwayat Pengemasan</CardTitle>
           <CardDescription>
-            Lihat semua catatan pengiriman yang telah diproses.
+            Konfirmasi dan catat pengiriman yang sudah selesai dikemas dan siap untuk dikirim.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <HistoryClient initialHistory={history} />
+          <HistoryClient initialShipments={shipments} onSuccess={handleSuccess} />
         </CardContent>
       </Card>
     </div>

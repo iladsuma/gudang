@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import type { User, Shipment, Checkout, ProcessedShipmentSummary, Expedition, Product, Packaging } from '@/lib/types';
@@ -96,7 +97,7 @@ export async function getShipments(): Promise<Shipment[]> {
 }
 
 
-export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'totalItems' | 'totalAmount' | 'totalPackingCost' | 'totalProductCost'>): Promise<Shipment> {
+export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'totalItems' | 'totalAmount' | 'totalPackingCost' | 'totalProductCost' | 'status'>): Promise<Shipment> {
   await new Promise(resolve => setTimeout(resolve, 500));
   const shipments = await getShipments();
 
@@ -104,23 +105,10 @@ export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'tot
     throw new Error('ID Transaksi harus unik.');
   }
 
-  // Stock deduction is moved to processShipments
-  // const allProducts = await getProducts();
-  // for (const p of data.products) {
-  //   if (!p.productId) continue;
-  //   const productInDb = allProducts.find(dbP => dbP.id === p.productId);
-  //   if (productInDb && productInDb.stock < p.quantity) {
-  //       throw new Error(`Stok tidak mencukupi untuk produk "${p.name}". Sisa stok: ${productInDb.stock}.`);
-  //   }
-  //   if (productInDb) {
-  //       await updateProductStock(p.productId, productInDb.stock - p.quantity);
-  //   }
-  // }
-
   const totalItems = data.products.reduce((sum, p) => sum + p.quantity, 0);
   
   const totalProductCost = data.products.reduce((sum, p) => {
-    const subtotal = (p.price * p.quantity) - p.discount;
+    const subtotal = (p.price * p.quantity);
     return sum + subtotal;
   }, 0);
   
@@ -131,6 +119,7 @@ export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'tot
   const newShipment: Shipment = {
     ...data,
     id: `ship_${Date.now()}_${Math.random()}`,
+    status: 'Proses',
     createdAt: new Date().toISOString(),
     totalItems,
     totalProductCost,
@@ -157,24 +146,40 @@ export async function deleteShipment(shipmentId: string): Promise<void> {
     saveToStorage('shipments', updatedShipments);
 }
 
+export async function updateShipmentStatus(shipmentId: string, status: 'Proses' | 'Pengemasan' | 'Terkirim'): Promise<Shipment> {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const shipments = await getShipments();
+    const shipmentIndex = shipments.findIndex(s => s.id === shipmentId);
+
+    if (shipmentIndex === -1) {
+        throw new Error('Pengiriman tidak ditemukan.');
+    }
+
+    const updatedShipment = { ...shipments[shipmentIndex], status };
+    shipments[shipmentIndex] = updatedShipment;
+    
+    saveToStorage('shipments', shipments);
+    return updatedShipment;
+}
+
 // History/Checkout Functions
-export async function processShipments(shipmentIds: string[]): Promise<Checkout> {
+export async function processShipmentsToPackaging(shipmentIds: string[]): Promise<void> {
     await new Promise(resolve => setTimeout(resolve, 200));
 
     let shipments = await getShipments();
-    let checkoutHistory = await getCheckoutHistory();
-    const storedUser = getFromStorage<User | null>('user', null);
-    
     const shipmentsToProcess = shipments.filter(s => shipmentIds.includes(s.id));
     if (shipmentsToProcess.length === 0) {
         throw new Error("Tidak ada pengiriman yang valid untuk diproses.");
     }
+    
+    if (shipmentsToProcess.some(s => s.status !== 'Proses')) {
+        throw new Error("Hanya pengiriman dengan status 'Proses' yang bisa dibungkus.");
+    }
 
-    // --- New Stock Deduction Logic ---
+    // --- Stock Deduction Logic ---
     const allMasterProducts = await getProducts();
     const productStockUpdates: { [productId: string]: number } = {};
 
-    // First, check if all stocks are sufficient
     for (const shipment of shipmentsToProcess) {
         for (const product of shipment.products) {
             const masterProduct = allMasterProducts.find(p => p.id === product.productId);
@@ -192,27 +197,47 @@ export async function processShipments(shipmentIds: string[]): Promise<Checkout>
         }
     }
 
-    // If all stocks are sufficient, proceed to update them
     for (const productId in productStockUpdates) {
         await updateProductStock(productId, productStockUpdates[productId]);
     }
-    // --- End of New Stock Deduction Logic ---
+
+    for (const id of shipmentIds) {
+        await updateShipmentStatus(id, 'Pengemasan');
+    }
+}
 
 
-    const processedShipments: ProcessedShipmentSummary[] = shipmentsToProcess.map(s => ({
-        shipmentId: s.id, // Keep the original ID
+export async function processShipmentsToDelivered(shipmentIds: string[]): Promise<void> {
+    await new Promise(resolve => setTimeout(resolve, 200));
+
+    let shipments = await getShipments();
+    const shipmentsToProcess = shipments.filter(s => shipmentIds.includes(s.id));
+    if (shipmentsToProcess.length === 0) {
+        throw new Error("Tidak ada pengiriman yang valid untuk diproses.");
+    }
+     if (shipmentsToProcess.some(s => s.status !== 'Pengemasan')) {
+        throw new Error("Hanya pengiriman dengan status 'Pengemasan' yang bisa dikirim.");
+    }
+    
+    const storedUser = getFromStorage<User | null>('user', null);
+    
+    // Move to history
+    const checkoutHistory = await getCheckoutHistory();
+
+    const processedSummaries: ProcessedShipmentSummary[] = shipmentsToProcess.map(s => ({
+        shipmentId: s.id,
         transactionId: s.transactionId,
         totalAmount: s.totalAmount,
         totalItems: s.totalItems,
     }));
 
-    const totalBatchAmount = processedShipments.reduce((sum, s) => sum + s.totalAmount, 0);
-    const totalBatchItems = processedShipments.reduce((sum, s) => sum + s.totalItems, 0);
+     const totalBatchAmount = processedSummaries.reduce((sum, s) => sum + s.totalAmount, 0);
+    const totalBatchItems = processedSummaries.reduce((sum, s) => sum + s.totalItems, 0);
 
     const newBatchCheckout: Checkout = {
         id: `batch_${Date.now()}`,
         processorName: storedUser?.name || 'Unknown User',
-        processedShipments: processedShipments,
+        processedShipments: processedSummaries,
         totalBatchAmount: totalBatchAmount,
         totalBatchItems: totalBatchItems,
         createdAt: new Date().toISOString(),
@@ -221,11 +246,11 @@ export async function processShipments(shipmentIds: string[]): Promise<Checkout>
     const updatedHistory = [newBatchCheckout, ...checkoutHistory];
     saveToStorage('checkoutHistory', updatedHistory);
     
-    // Remove processed shipments from the main list
-    const remainingShipments = shipments.filter(s => !shipmentIds.includes(s.id));
-    saveToStorage('shipments', remainingShipments);
-    
-    return newBatchCheckout;
+
+    // Update status to 'Terkirim'
+    for (const id of shipmentIds) {
+        await updateShipmentStatus(id, 'Terkirim');
+    }
 }
 
 

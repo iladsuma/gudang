@@ -1,11 +1,11 @@
 
+
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import type { Shipment, Product, CartItem } from '@/lib/types';
+import type { Shipment, Product } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2, Loader2, FileText, Printer } from 'lucide-react';
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PlusCircle, Trash2, Loader2, FileText, Package } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -40,7 +40,7 @@ import { Checkbox } from './ui/checkbox';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { deleteShipment, processShipments, getProducts } from '@/lib/data';
+import { deleteShipment, getProducts, processShipmentsToPackaging } from '@/lib/data';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/context/auth-context';
@@ -58,7 +58,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
   const [isClient, setIsClient] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { cart, clearCart } = useCart();
+  const { cart } = useCart();
 
 
   useEffect(() => {
@@ -69,7 +69,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
 
 
   useEffect(() => {
-    setShipments(initialShipments);
+    setShipments(initialShipments.filter(s => s.status === 'Proses'));
   }, [initialShipments]);
 
   useEffect(() => {
@@ -88,10 +88,9 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
   const handleFormSuccess = useCallback((newShipment: Shipment) => {
     setShipments((prev) => [newShipment, ...prev]);
     setIsFormOpen(false);
-    clearCart();
     // Remove search param
     router.replace('/shipments', { scroll: false });
-  }, [clearCart, router]);
+  }, [router]);
   
   const handleFormCancel = useCallback(() => {
     setIsFormOpen(false);
@@ -141,12 +140,12 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
     }
   };
 
-  const handleProcessAndPrintReceipts = async () => {
+  const handleProcessToPackaging = async () => {
     if (selectedShipments.length === 0) {
         toast({
             variant: 'destructive',
-            title: 'Tidak Ada Resi Terpilih',
-            description: 'Pilih setidaknya satu resi untuk diproses.'
+            title: 'Tidak Ada Pengiriman Terpilih',
+            description: 'Pilih setidaknya satu pengiriman untuk diproses.'
         });
         return;
     }
@@ -154,72 +153,23 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
     setIsProcessing(true);
 
     try {
-        const shipmentsToProcess = selectedShipments
-            .map(id => shipments.find(s => s.id === id))
-            .filter((s): s is Shipment => !!s);
-        
-        await processShipments(selectedShipments);
-       
-        const mergedPdf = await PDFDocument.create();
-        const font = await mergedPdf.embedFont(StandardFonts.HelveticaBold);
-
-        for (const [index, shipment] of shipmentsToProcess.entries()) {
-            // Skip PDF merging if receipt doesn't exist
-            if (!shipment.receipt?.dataUrl) continue;
-            
-            const pdfDataUrl = shipment.receipt.dataUrl;
-            const base64 = pdfDataUrl.split(',')[1];
-            if (!base64) {
-                console.error('Invalid Data URL for PDF:', pdfDataUrl);
-                continue; 
-            }
-            const existingPdfBytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-            const pdfDoc = await PDFDocument.load(existingPdfBytes);
-            
-            const copiedPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
-
-            const { height } = copiedPages[0].getSize();
-            copiedPages[0].drawText(`resi-sel-${index + 1}`, {
-                x: 20,
-                y: height - 25,
-                font: font,
-                size: 14,
-                color: rgb(0.9, 0.1, 0.1),
-            });
-
-            copiedPages.forEach((page) => mergedPdf.addPage(page));
-        }
-        
-        // Only save and download if there are pages to merge
-        if (mergedPdf.getPageCount() > 0) {
-          const mergedPdfBytes = await mergedPdf.save();
-          const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
-          const url = URL.createObjectURL(blob);
-          
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `resi-terpilih-${new Date().toISOString().split('T')[0]}.pdf`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        }
+        await processShipmentsToPackaging(selectedShipments);
         
         toast({
             title: 'Sukses!',
-            description: 'Data terpilih berhasil diproses, stok diperbarui, dan dicatat di Riwayat.'
+            description: 'Data terpilih berhasil diproses, stok diperbarui, dan status diubah menjadi "Pengemasan".'
         });
-
         
-        // Optimistically remove from UI
+        // Optimistically remove from UI and move to history
         setShipments(prev => prev.filter(s => !selectedShipments.includes(s.id)));
         setSelectedShipments([]);
+        
         // update master product list to reflect new stock
         getProducts().then(setMasterProducts);
         router.refresh();
 
     } catch (error) {
-        console.error("Failed to process or merge PDFs", error);
+        console.error("Failed to process shipments", error);
         const message = error instanceof Error ? error.message : 'Terjadi kesalahan saat memproses data.';
         toast({
             variant: 'destructive',
@@ -254,13 +204,23 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
         setIsFormOpen(true);
     }
   };
+  
+  const getStatusVariant = (status: Shipment['status']) => {
+    switch (status) {
+        case 'Proses': return 'secondary';
+        case 'Pengemasan': return 'default';
+        case 'Terkirim': return 'outline';
+        default: return 'secondary';
+    }
+  };
+
 
   return (
     <div className="space-y-4">
       <div className="flex justify-end gap-2">
-        <Button onClick={handleProcessAndPrintReceipts} disabled={selectedShipments.length === 0 || isProcessing}>
-            {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
-            Proses & Cetak ({selectedShipments.length})
+        <Button onClick={handleProcessToPackaging} disabled={selectedShipments.length === 0 || isProcessing}>
+            {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Package className="mr-2 h-4 w-4" />}
+            Bungkus ({selectedShipments.length})
         </Button>
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
           <Button onClick={handleOpenForm}>
@@ -292,6 +252,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
               <TableHead>User</TableHead>
               <TableHead>No Transaksi</TableHead>
               <TableHead>Ekspedisi</TableHead>
+               <TableHead>Status</TableHead>
               <TableHead>Resi</TableHead>
               <TableHead>Produk</TableHead>
               <TableHead className="text-right">Total Item</TableHead>
@@ -317,6 +278,11 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
                   <TableCell className="font-medium">{shipment.user}</TableCell>
                   <TableCell>{shipment.transactionId}</TableCell>
                   <TableCell>{shipment.expedition}</TableCell>
+                  <TableCell>
+                    <Badge variant={getStatusVariant(shipment.status)}>
+                        {shipment.status}
+                    </Badge>
+                  </TableCell>
                   <TableCell>
                     {shipment.receipt ? (
                       <Button variant="link" className="p-0 h-auto" onClick={() => openPdf(shipment.receipt!.dataUrl)}>
@@ -404,13 +370,13 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={13} className="h-24 text-center">
-                  Tidak ada data pengiriman.
+                <TableCell colSpan={14} className="h-24 text-center">
+                  Tidak ada data pengiriman dalam status 'Proses'.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
-          <TableCaption>Daftar semua pengiriman barang masuk.</TableCaption>
+          <TableCaption>Daftar semua pengiriman barang masuk yang siap diproses.</TableCaption>
         </Table>
       </div>
         {shipments.length > 0 && (

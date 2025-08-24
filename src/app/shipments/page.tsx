@@ -64,7 +64,7 @@ function ShipmentsPageContent() {
         <CardHeader>
           <CardTitle>Rekapitulasi Pengiriman</CardTitle>
           <CardDescription>
-            Kelola semua data pengiriman barang masuk Anda di sini.
+            Kelola semua data pengiriman barang masuk Anda yang sedang dalam tahap 'Proses'.
           </CardDescription>
         </CardHeader>
         <CardContent>

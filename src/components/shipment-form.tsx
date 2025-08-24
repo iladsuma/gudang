@@ -1,11 +1,12 @@
 
+
 'use client';
 
 import * as React from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { Shipment, Expedition, Product, Packaging, CartItem } from '@/lib/types';
+import type { Shipment, Expedition, Packaging, CartItem } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
@@ -15,7 +16,7 @@ import { DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/co
 import { Loader2, PlusCircle, Trash2, Upload } from 'lucide-react';
 import { Card, CardContent, CardFooter } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import { addShipment, getExpeditions, getProducts, getPackagingOptions } from '@/lib/data';
+import { addShipment, getExpeditions, getPackagingOptions } from '@/lib/data';
 import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Label } from './ui/label';
@@ -26,7 +27,6 @@ const shipmentProductSchema = z.object({
   name: z.string(), // Will be populated
   quantity: z.coerce.number().int().min(1, 'Jumlah minimal 1'),
   price: z.coerce.number().min(0, 'Harga harus diisi'),
-  discount: z.coerce.number().min(0, 'Diskon tidak boleh negatif').default(0),
   packagingId: z.string().min(1, "Pilih kemasan"),
   packagingCost: z.coerce.number().min(0),
   imageUrl: z.string().nullable().default(null),
@@ -71,8 +71,7 @@ const Summary = ({ control }: { control: any }) => {
         const totalShopping = productsValue.reduce((sum: number, product: any) => {
             const price = product?.price || 0;
             const quantity = product?.quantity || 0;
-            const discount = product?.discount || 0;
-            const subtotal = (price * quantity) - discount;
+            const subtotal = price * quantity;
             return sum + (subtotal > 0 ? subtotal : 0);
         }, 0);
 
@@ -128,7 +127,6 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
         name: item.name,
         quantity: item.quantity,
         price: item.price,
-        discount: 0,
         packagingId: '',
         packagingCost: 0,
         imageUrl: item.imageUrl || null,
@@ -157,7 +155,6 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
             name: item.name,
             quantity: item.quantity,
             price: item.price,
-            discount: 0,
             packagingId: '',
             packagingCost: 0,
             imageUrl: item.imageUrl || null,
@@ -344,7 +341,6 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
                               <TableHead>Kode</TableHead>
                               <TableHead className="w-[100px]">Jumlah</TableHead>
                               <TableHead className="w-[150px]">Harga (Rp)</TableHead>
-                              <TableHead className="w-[170px]">Diskon (Rp)</TableHead>
                               <TableHead className="w-[170px]">Kemasan</TableHead>
                               <TableHead className="w-[150px] text-right">Subtotal</TableHead>
                               <TableHead className="w-[50px]"></TableHead>
@@ -355,8 +351,7 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
                               const productValues = form.getValues(`products.${index}`);
                               const quantity = form.watch(`products.${index}.quantity`) || 0;
                               const price = form.watch(`products.${index}.price`) || 0;
-                              const discount = form.watch(`products.${index}.discount`) || 0;
-                              const subtotal = (price * quantity) - discount;
+                              const subtotal = price * quantity;
                               const productInCart = initialProductsFromCart.find(p => p.id === productValues.productId);
 
                               return (
@@ -424,15 +419,6 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
                                       />
                                   </TableCell>
                                   <TableCell>
-                                      <FormField
-                                          control={form.control}
-                                          name={`products.${index}.discount`}
-                                          render={({ field: discountField }) => (
-                                              <FormItem><FormControl><Input type="number" min="0" placeholder="Rp" {...discountField} /></FormControl><FormMessage /></FormItem>
-                                          )}
-                                      />
-                                  </TableCell>
-                                  <TableCell>
                                         <FormField
                                             control={form.control}
                                             name={`products.${index}.packagingId`}
@@ -488,7 +474,6 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
                               name: '', 
                               quantity: 1,
                               price: 0,
-                              discount: 0,
                               packagingId: '',
                               packagingCost: 0,
                               imageUrl: null

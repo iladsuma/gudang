@@ -1,10 +1,11 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/auth-context';
-import { getCheckoutHistory } from '@/lib/data';
-import type { Checkout } from '@/lib/types';
+import { getShipments } from '@/lib/data';
+import type { Shipment } from '@/lib/types';
 import {
   Card,
   CardHeader,
@@ -18,20 +19,19 @@ import { useRouter } from 'next/navigation';
 
 export default function InvoicesPage() {
   const { user, loading: authLoading } = useAuth();
-  const [batches, setBatches] = useState<Checkout[]>([]);
+  const [shipments, setShipments] = useState<Shipment[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const router = useRouter();
 
 
   useEffect(() => {
-    // Redirect if not admin after loading is complete
     if (!authLoading && user?.role !== 'admin') {
       router.push('/shipments');
     }
     
     if (user?.role === 'admin') {
-      getCheckoutHistory().then(data => {
-        setBatches(data);
+      getShipments().then(data => {
+        setShipments(data.filter(s => s.status === 'Terkirim'));
         setDataLoading(false);
       });
     }
@@ -65,13 +65,13 @@ export default function InvoicesPage() {
     <div className="container mx-auto p-4 md:p-8">
       <Card>
         <CardHeader>
-          <CardTitle>Manajemen Faktur</CardTitle>
+          <CardTitle>Arsip Pengiriman Terkirim</CardTitle>
           <CardDescription>
-            Pilih satu atau beberapa item untuk membuat faktur gabungan.
+            Daftar semua pengiriman yang telah selesai dan berhasil dikirim.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <InvoicesClient batches={batches} />
+          <InvoicesClient shipments={shipments} />
         </CardContent>
       </Card>
     </div>
