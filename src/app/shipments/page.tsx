@@ -24,7 +24,7 @@ function ShipmentsPageContent() {
     if (user) {
         getShipments().then(data => {
             // User sees all shipments they created, regardless of status
-            setShipments(data.filter(s => s.user === user.name));
+            setShipments(data.filter(s => s.user === user.username));
             setPageTitle('Riwayat Pengiriman Saya');
             setPageDescription("Lacak semua pengiriman yang telah Anda buat dan statusnya saat ini. Pilih pengiriman berstatus 'Proses' untuk dibungkus.");
             

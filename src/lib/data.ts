@@ -45,8 +45,8 @@ export function getDummyUsers(): User[] {
     // This is now only used as a fallback for the local auth context check,
     // actual validation happens on the server.
     return [
-        { id: 'usr_1', username: 'admin', password: 'admin', name: 'Admin', role: 'admin' },
-        { id: 'usr_2', username: 'user', password: 'user', name: 'User Biasa', role: 'user' },
+        { id: 'usr_1', username: 'admin', password: 'admin', role: 'admin' },
+        { id: 'usr_2', username: 'user', password: 'user', role: 'user' },
     ];
 }
 

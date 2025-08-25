@@ -125,7 +125,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
 
   const generateTransactionId = React.useCallback(() => {
     if (!user) return '';
-    const userNamePart = user.name.split(' ')[0].toUpperCase();
+    const userNamePart = user.username.split(' ')[0].toUpperCase();
     const date = new Date();
     const datePart = `${String(date.getFullYear()).slice(-2)}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
     const randomPart = Math.random().toString(36).substring(2, 5).toUpperCase();
@@ -143,7 +143,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
         receipt: shipmentToEdit.receipt,
         products: shipmentToEdit.products.map(p => ({...p})) || [],
     } : {
-      user: user?.name || '',
+      user: user?.username || '',
       transactionId: '',
       expedition: '',
       packagingId: '',
@@ -180,7 +180,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
   
   React.useEffect(() => {
     if (user && !isEditMode) {
-      form.setValue('user', user.name);
+      form.setValue('user', user.username);
       form.setValue('transactionId', generateTransactionId());
     }
     getExpeditions().then(setExpeditions);

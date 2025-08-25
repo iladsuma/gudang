@@ -1,19 +1,22 @@
-
 {
   "users": [
     {
       "id": "usr_1",
       "username": "admin",
-      "name": "Admin",
       "role": "admin",
       "password": "admin"
     },
     {
       "id": "usr_2",
       "username": "user",
-      "name": "User Biasa",
       "role": "user",
       "password": "user"
+    },
+    {
+      "username": "onepiece746",
+      "role": "user",
+      "password": "user",
+      "id": "usr_1756108094133"
     }
   ],
   "products": [

@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Boxes, LogOut, ShoppingCart, LayoutDashboard } from 'lucide-react';
+import { Boxes, LogOut, ShoppingCart, LayoutDashboard, User as UserIcon } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { Button } from './ui/button';
 import { useRouter, usePathname } from 'next/navigation';
@@ -90,6 +90,7 @@ export function Header() {
                         <DropdownMenuItem onSelect={() => router.push('/settings/products')}>Produk</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => router.push('/settings/expeditions')}>Ekspedisi</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => router.push('/settings/packaging')}>Kemasan</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => router.push('/settings/users')}>Pengguna</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </>
@@ -117,7 +118,7 @@ export function Header() {
             {user ? (
               <>
                 <span className="text-sm text-muted-foreground">
-                  Halo, {user.name} ({user.role})
+                  Halo, {user.username} ({user.role})
                 </span>
                 <Button variant="ghost" size="icon" onClick={handleLogout}>
                   <LogOut className="h-4 w-4" />

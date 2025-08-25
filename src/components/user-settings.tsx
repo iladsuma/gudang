@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -52,7 +53,6 @@ import { useAuth } from '@/context/auth-context';
 
 
 const userFormSchema = z.object({
-  name: z.string().min(1, 'Nama harus diisi.'),
   username: z.string().min(1, 'Username harus diisi.'),
   role: z.enum(['admin', 'user'], { required_error: 'Peran harus dipilih.' }),
   password: z.string().optional(),
@@ -76,7 +76,7 @@ export function UserSettings() {
 
     const form = useForm<UserFormValues>({
         resolver: zodResolver(userFormSchema),
-        defaultValues: { name: '', username: '', role: 'user', password: '' },
+        defaultValues: { username: '', role: 'user', password: '' },
     });
 
     const fetchUsers = React.useCallback(async () => {
@@ -94,13 +94,12 @@ export function UserSettings() {
         setEditingUser(user);
         if (user) {
             form.reset({
-                name: user.name,
                 username: user.username,
                 role: user.role,
                 password: '', // Password is not fetched, so it's blank for editing
             });
         } else {
-            form.reset({ name: '', username: '', role: 'user', password: '' });
+            form.reset({ username: '', role: 'user', password: '' });
         }
         setIsFormOpen(true);
     };
@@ -171,9 +170,6 @@ export function UserSettings() {
                                     <DialogTitle>{editingUser ? 'Edit Pengguna' : 'Tambah Pengguna Baru'}</DialogTitle>
                                 </DialogHeader>
                                 <div className="grid gap-4 py-4">
-                                     <FormField control={form.control} name="name" render={({ field }) => (
-                                        <FormItem><FormLabel>Nama Lengkap</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                                    )} />
                                     <FormField control={form.control} name="username" render={({ field }) => (
                                         <FormItem><FormLabel>Username</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                                     )} />
@@ -218,7 +214,6 @@ export function UserSettings() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Nama Lengkap</TableHead>
                             <TableHead>Username</TableHead>
                             <TableHead>Peran</TableHead>
                             <TableHead className="text-right">Aksi</TableHead>
@@ -226,12 +221,11 @@ export function UserSettings() {
                     </TableHeader>
                     <TableBody>
                         {loading ? (
-                            <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
+                            <TableRow><TableCell colSpan={3} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
                         ) : users.length > 0 ? (
                             users.map((user) => (
                                 <TableRow key={user.id}>
-                                    <TableCell className="font-medium">{user.name}</TableCell>
-                                    <TableCell>{user.username}</TableCell>
+                                    <TableCell className="font-medium">{user.username}</TableCell>
                                     <TableCell><Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>{user.role}</Badge></TableCell>
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="icon" onClick={() => handleOpenForm(user)}><Pencil className="h-4 w-4" /></Button>
@@ -251,7 +245,7 @@ export function UserSettings() {
                                 </TableRow>
                             ))
                         ) : (
-                            <TableRow><TableCell colSpan={6} className="h-24 text-center">Belum ada data pengguna.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={3} className="h-24 text-center">Belum ada data pengguna.</TableCell></TableRow>
                         )}
                     </TableBody>
                 </Table>
