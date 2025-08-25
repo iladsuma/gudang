@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/context/auth-context';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Search, ShoppingCart } from 'lucide-react';
+import { Search, ShoppingCart } from 'lucide-react';
 import { useCart } from '@/hooks/use-cart';
 import { Input } from '@/components/ui/input';
 import {
@@ -87,13 +87,13 @@ export default function ProductsPage() {
     if (itemsAddedCount > 0) {
       toast({
         title: 'Sukses!',
-        description: `${itemsAddedCount} jenis produk telah ditambahkan ke keranjang. Lanjutkan ke keranjang untuk mengatur kuantitas.`,
+        description: `${itemsAddedCount} jenis produk telah ditambahkan. Lanjutkan untuk mengisi detail pengiriman.`,
       });
     }
 
-    // Reset selection after adding
+    // Reset selection and go directly to the shipment form
     setSelection({});
-    router.push('/cart');
+    router.push('/shipments?action=showForm');
   };
 
   const formatRupiah = (number: number) => {
@@ -136,7 +136,7 @@ export default function ProductsPage() {
         <CardHeader>
           <CardTitle className="text-3xl">Etalase Produk</CardTitle>
           <CardDescription>
-            Pilih produk yang akan direkap, lalu lanjutkan ke keranjang untuk mengisi kuantitas.
+            Pilih produk yang akan direkap, lalu lanjutkan untuk mengisi kuantitas di form rekapitulasi.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

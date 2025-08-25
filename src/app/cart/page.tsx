@@ -8,11 +8,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Loader2, Minus, Plus, Trash2, ArrowLeft } from 'lucide-react';
+import { Trash2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 export default function CartPage() {
-    const { cart, updateQuantity, removeFromCart, totalItems } = useCart();
+    const { cart, removeFromCart, totalItems } = useCart();
     const router = useRouter();
 
     const formatRupiah = (number: number) => {
@@ -24,11 +24,16 @@ export default function CartPage() {
     };
 
     const handleCheckout = () => {
+        if (cart.length === 0) {
+            alert("Keranjang kosong. Silakan tambahkan produk dari etalase.");
+            return;
+        }
         router.push('/shipments?action=showForm');
     };
 
     const subtotal = React.useMemo(() => {
-        return cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+        // Subtotal calculation ignores quantity, as it's determined in the next step.
+        return cart.reduce((acc, item) => acc + item.price, 0);
     }, [cart]);
 
     return (
@@ -55,9 +60,7 @@ export default function CartPage() {
                                 <TableRow>
                                     <TableHead className="w-[100px]">Produk</TableHead>
                                     <TableHead>Detail</TableHead>
-                                    <TableHead className="w-[150px]">Kuantitas</TableHead>
                                     <TableHead className="text-right w-[150px]">Harga Satuan</TableHead>
-                                    <TableHead className="text-right w-[150px]">Subtotal</TableHead>
                                     <TableHead className="w-[50px]"></TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -77,19 +80,7 @@ export default function CartPage() {
                                             <p className="font-medium">{item.name}</p>
                                             <p className="text-xs text-muted-foreground font-mono">{item.code}</p>
                                         </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-2">
-                                                <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => updateQuantity(item.id, item.quantity - 1)} disabled={item.quantity <= 1}>
-                                                    <Minus className="h-4 w-4" />
-                                                </Button>
-                                                <span className='font-medium text-center w-8'>{item.quantity}</span>
-                                                <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => updateQuantity(item.id, item.quantity + 1)} disabled={item.quantity >= item.stock}>
-                                                    <Plus className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        </TableCell>
                                         <TableCell className="text-right">{formatRupiah(item.price)}</TableCell>
-                                        <TableCell className="text-right font-medium">{formatRupiah(item.price * item.quantity)}</TableCell>
                                         <TableCell>
                                             <Button size="icon" variant="ghost" onClick={() => removeFromCart(item.id)}>
                                                 <Trash2 className="h-4 w-4 text-destructive" />
@@ -109,7 +100,7 @@ export default function CartPage() {
                 {cart.length > 0 && (
                     <CardFooter className="flex justify-end items-center gap-4 bg-muted/50 p-6">
                         <div className='text-right'>
-                           <p className='text-muted-foreground'>Total ({totalItems} item)</p>
+                           <p className='text-muted-foreground'>Total ({totalItems} jenis item)</p>
                            <p className='text-xl font-bold'>{formatRupiah(subtotal)}</p>
                         </div>
                         <Button size="lg" onClick={handleCheckout}>
