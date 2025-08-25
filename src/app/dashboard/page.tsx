@@ -98,7 +98,7 @@ export default function DashboardPage() {
                 const sortedPopularProducts = Object.entries(productMetrics)
                     .map(([productId, data]) => ({ productId, ...data }))
                     .sort((a, b) => chartFilter === 'count' ? b.count - a.count : b.value - a.value)
-                    .slice(0, 5);
+                    .slice(0, 10);
                 
                 setPopularProducts(sortedPopularProducts);
 
@@ -215,7 +215,7 @@ export default function DashboardPage() {
                     <CardHeader>
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                             <div>
-                                <CardTitle>Produk Terlaris (Rentang Terpilih)</CardTitle>
+                                <CardTitle>10 Produk Terlaris (Rentang Terpilih)</CardTitle>
                                 <CardDescription>Produk yang paling banyak dikirim dalam rentang tanggal yang dipilih.</CardDescription>
                             </div>
                             <RadioGroup
