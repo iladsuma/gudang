@@ -36,7 +36,7 @@ const shipmentProductSchema = z.object({
 
 const shipmentFormSchema = z.object({
   user: z.string().min(1, 'User harus diisi'),
-  transactionId: z.string(), // Will be generated automatically
+  transactionId: z.string().min(1, 'No. Transaksi harus diisi.'),
   expedition: z.string().min(1, 'Nama ekspedisi harus dipilih'),
   receipt: z.object({
       fileName: z.string().min(1, 'Nama file resi harus ada'),
@@ -124,6 +124,15 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
   const [expeditions, setExpeditions] = React.useState<Expedition[]>([]);
   const [packagingOptions, setPackagingOptions] = React.useState<Packaging[]>([]);
 
+  const generateTransactionId = React.useCallback(() => {
+    if (!user) return '';
+    const userNamePart = user.name.split(' ')[0].toUpperCase();
+    const date = new Date();
+    const datePart = `${String(date.getFullYear()).slice(-2)}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
+    const randomPart = Math.random().toString(36).substring(2, 5).toUpperCase();
+    return `${userNamePart}-${datePart}-${randomPart}`;
+  }, [user]);
+  
   const defaultProducts = initialProductsFromCart.map(item => ({
         productId: item.id,
         code: item.code,
@@ -169,10 +178,11 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
   React.useEffect(() => {
     if (user) {
       form.setValue('user', user.name);
+      form.setValue('transactionId', generateTransactionId());
     }
     getExpeditions().then(setExpeditions);
     getPackagingOptions().then(setPackagingOptions);
-  }, [user, form]);
+  }, [user, form, generateTransactionId]);
 
 
   const handlePdfFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -197,25 +207,15 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
     };
   };
 
-  const generateTransactionId = () => {
-    const userNamePart = user?.name.split(' ')[0].toUpperCase() || 'USER';
-    const date = new Date();
-    const datePart = `${String(date.getFullYear()).slice(-2)}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
-    const randomPart = Math.random().toString(36).substring(2, 5).toUpperCase();
-    return `${userNamePart}-${datePart}-${randomPart}`;
-  }
-
   const onSubmit = async (data: ShipmentFormValues) => {
     setIsSubmitting(true);
     try {
-        const transactionId = generateTransactionId();
-        const dataWithId = { ...data, transactionId };
-        const productsWithImage = dataWithId.products.map(p => ({...p, imageUrl: p.imageUrl || 'https://placehold.co/100x100.png' }));
-        const newShipment = await addShipment({...dataWithId, products: productsWithImage as any });
+        const productsWithImage = data.products.map(p => ({...p, imageUrl: p.imageUrl || 'https://placehold.co/100x100.png' }));
+        const newShipment = await addShipment({...data, products: productsWithImage as any });
         
         toast({
             title: 'Sukses!',
-            description: `Data pengiriman ${transactionId} berhasil ditambahkan.`,
+            description: `Data pengiriman ${data.transactionId} berhasil ditambahkan.`,
         });
 
         reduceCartQuantities(newShipment.products);
@@ -265,7 +265,7 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
       </DialogHeader>
     <Form {...form}>
         <form id="shipment-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormField
               control={form.control}
               name="user"
@@ -279,6 +279,19 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
                   </FormItem>
               )}
               />
+              <FormField
+                control={form.control}
+                name="transactionId"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>No. Transaksi</FormLabel>
+                    <FormControl>
+                        <Input placeholder="Akan dibuat otomatis" {...field} readOnly />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
                <FormField
                   control={form.control}
                   name="expedition"

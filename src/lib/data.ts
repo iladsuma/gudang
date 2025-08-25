@@ -101,7 +101,7 @@ export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'tot
   await new Promise(resolve => setTimeout(resolve, 500));
   const shipments = await getShipments();
 
-  // No longer needed due to automatic ID generation
+  // No longer needed as ID is auto-generated and highly unique
   // if (shipments.some(s => s.transactionId.toLowerCase() === data.transactionId.toLowerCase())) {
   //   throw new Error('ID Transaksi harus unik.');
   // }
