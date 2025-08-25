@@ -3,7 +3,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, PackageCheck, Settings } from 'lucide-react';
+import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, PackageCheck, Settings, Send } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { Button } from './ui/button';
 import { useRouter, usePathname } from 'next/navigation';
@@ -55,9 +55,9 @@ export function Header() {
                 )}
                  <Link
                   href="/shipments"
-                  className={cn("transition-colors hover:text-foreground/80", pathname.startsWith('/shipments') ? 'text-foreground' : 'text-foreground/60')}
+                  className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname.startsWith('/shipments') ? 'text-foreground' : 'text-foreground/60')}
                 >
-                  {user.role === 'admin' ? 'Antrian Proses' : 'Pengiriman Saya'}
+                   <Send className="h-4 w-4" /> {user.role === 'admin' ? 'Antrian Proses' : 'Pengiriman Saya'}
                 </Link>
                  <Link
                   href="/products"
@@ -67,12 +67,6 @@ export function Header() {
                 </Link>
                 {user.role === 'admin' && (
                   <>
-                    <Link
-                      href="/history"
-                      className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname === '/history' ? 'text-foreground' : 'text-foreground/60')}
-                    >
-                      <PackageCheck className="h-4 w-4" /> Antrian Kemas
-                    </Link>
                     <Link
                       href="/invoices"
                       className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname === '/invoices' ? 'text-foreground' : 'text-foreground/60')}

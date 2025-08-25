@@ -30,7 +30,6 @@ export default function InvoicesPage() {
     
     if (user?.role === 'admin') {
       getShipments().then(data => {
-        // This page now shows only 'Terkirim' (Shipped) shipments.
         setShipments(data.filter(s => s.status === 'Terkirim'));
         setDataLoading(false);
       });
@@ -67,7 +66,7 @@ export default function InvoicesPage() {
         <CardHeader>
           <CardTitle>Arsip Pengiriman Terkirim</CardTitle>
           <CardDescription>
-            Daftar semua pengiriman yang telah selesai dan statusnya 'Terkirim'.
+            Daftar semua pengiriman yang telah selesai diproses dan statusnya 'Terkirim'.
           </CardDescription>
         </CardHeader>
         <CardContent>

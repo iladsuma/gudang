@@ -9,7 +9,7 @@ import type { Product, Shipment, ShipmentProduct } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Boxes, Package, DollarSign, Truck, CheckCircle, Expand } from 'lucide-react';
+import { Boxes, Package, DollarSign, Truck, CheckCircle, Expand, Send } from 'lucide-react';
 import Link from 'next/link';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Brush } from 'recharts';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -34,8 +34,8 @@ export default function DashboardPage() {
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
     const [stats, setStats] = React.useState({
-        totalValueInPackaging: 0,
-        shipmentsInPackaging: 0,
+        totalValueInProcess: 0,
+        shipmentsInProcess: 0,
         totalProducts: 0,
         shipmentsDeliveredInRange: 0,
     });
@@ -74,15 +74,15 @@ export default function DashboardPage() {
                 });
                 
                 // Stats that are NOT date-range dependent
-                const inPackaging = shipments.filter(s => s.status === 'Pengemasan');
-                const totalValueInPackaging = inPackaging.reduce((sum, s) => sum + s.totalAmount, 0);
+                const inProcess = shipments.filter(s => s.status === 'Proses');
+                const totalValueInProcess = inProcess.reduce((sum, s) => sum + s.totalAmount, 0);
 
                 // Stats that ARE date-range dependent
                 const deliveredInRange = shipmentsInRange.filter(s => s.status === 'Terkirim');
 
                 setStats({
-                    totalValueInPackaging,
-                    shipmentsInPackaging: inPackaging.length,
+                    totalValueInProcess,
+                    shipmentsInProcess: inProcess.length,
                     totalProducts: products.length,
                     shipmentsDeliveredInRange: deliveredInRange.length,
                 });
@@ -110,7 +110,6 @@ export default function DashboardPage() {
 
                 // Recent activity is not strictly date-range dependent, but shows most recent overall
                 const recentActivityShipments = [...shipments]
-                    .filter(s => s.status === 'Pengemasan' || s.status === 'Terkirim')
                     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                     .slice(0, 5);
                 setRecentActivity(recentActivityShipments);
@@ -173,6 +172,13 @@ export default function DashboardPage() {
             </BarChart>
         </ResponsiveContainer>
     );
+     const getStatusVariant = (status: Shipment['status']) => {
+        switch (status) {
+            case 'Proses': return 'secondary';
+            case 'Terkirim': return 'outline';
+            default: return 'secondary';
+        }
+    };
 
     if (authLoading || (loadingData && user?.role === 'admin' && !dateRange)) {
         return (
@@ -215,22 +221,22 @@ export default function DashboardPage() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Nilai (Antrian Kemas)</CardTitle>
+                        <CardTitle className="text-sm font-medium">Total Nilai (Antrian Proses)</CardTitle>
                         <DollarSign className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{formatRupiah(stats.totalValueInPackaging)}</div>
-                        <p className="text-xs text-muted-foreground">Total nilai dari semua pengiriman yang sedang dikemas.</p>
+                        <div className="text-2xl font-bold">{formatRupiah(stats.totalValueInProcess)}</div>
+                        <p className="text-xs text-muted-foreground">Total nilai dari semua pengiriman yang sedang diproses.</p>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Menunggu Dikemas</CardTitle>
-                        <Package className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-sm font-medium">Menunggu Diproses</CardTitle>
+                        <Send className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.shipmentsInPackaging}</div>
-                        <p className="text-xs text-muted-foreground">Jumlah pengiriman yang sedang dalam tahap pengemasan.</p>
+                        <div className="text-2xl font-bold">{stats.shipmentsInProcess}</div>
+                        <p className="text-xs text-muted-foreground">Jumlah pengiriman dalam antrian proses.</p>
                     </CardContent>
                 </Card>
                  <Card>
@@ -329,7 +335,7 @@ export default function DashboardPage() {
                                 <Link href="/shipments">Antrian Proses</Link>
                             </Button>
                             <Button asChild variant="secondary">
-                                <Link href="/history">Antrian Kemas</Link>
+                                <Link href="/invoices">Arsip Terkirim</Link>
                             </Button>
                              <Button asChild variant="secondary">
                                 <Link href="/settings/products">Kelola Produk</Link>
@@ -352,7 +358,7 @@ export default function DashboardPage() {
                                     {recentActivity.map(s => (
                                         <TableRow key={s.id}>
                                             <TableCell className='font-medium'>{s.transactionId}</TableCell>
-                                            <TableCell><Badge variant={s.status === 'Proses' ? 'secondary' : s.status === 'Pengemasan' ? 'default' : 'outline'}>{s.status}</Badge></TableCell>
+                                            <TableCell><Badge variant={getStatusVariant(s.status)}>{s.status}</Badge></TableCell>
                                             <TableCell className='text-xs text-muted-foreground'>{format(new Date(s.createdAt), 'dd/MM/yy')}</TableCell>
                                         </TableRow>
                                     ))}

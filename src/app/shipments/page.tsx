@@ -18,7 +18,7 @@ function ShipmentsPageContent() {
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [pageTitle, setPageTitle] = useState('Rekapitulasi Pengiriman');
-  const [pageDescription, setPageDescription] = useState("Kelola semua data pengiriman barang masuk Anda yang sedang dalam tahap 'Proses'.");
+  const [pageDescription, setPageDescription] = useState("Kelola semua data pengiriman barang masuk Anda.");
 
   const fetchAndSetData = async () => {
     if (!user) return;
@@ -27,7 +27,7 @@ function ShipmentsPageContent() {
       if(user?.role === 'admin') {
           setShipments(data.filter(s => s.status === 'Proses'));
           setPageTitle('Antrian Proses Pengiriman');
-          setPageDescription("Pilih pengiriman yang akan diproses ke tahap pengemasan. Stok akan dikurangi saat proses ini dijalankan.");
+          setPageDescription("Pilih pengiriman yang akan diproses. Stok akan dikurangi dan status akan diubah menjadi 'Terkirim'.");
       } else if (user) {
           setShipments(data.filter(s => s.user === user.username));
           setPageTitle('Riwayat Pengiriman Saya');

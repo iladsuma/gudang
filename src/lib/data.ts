@@ -222,13 +222,15 @@ export async function deleteShipment(shipmentId: string): Promise<void> {
 
 
 // --- History/Checkout Functions ---
-export async function processShipmentsToPackaging(shipmentIds: string[]): Promise<void> {
+export async function processShipmentsToDelivered(shipmentIds: string[]): Promise<void> {
   const shipmentsToProcess = db.shipments.filter(s => shipmentIds.includes(s.id));
+  
   if (shipmentsToProcess.length === 0) {
     throw new Error("Tidak ada pengiriman yang valid untuk diproses.");
   }
+  
   if (shipmentsToProcess.some(s => s.status !== 'Proses')) {
-      throw new Error("Hanya pengiriman dengan status 'Proses' yang bisa dibungkus.");
+      throw new Error("Hanya pengiriman dengan status 'Proses' yang bisa dikirim.");
   }
 
   // Stock Deduction Logic
@@ -260,7 +262,7 @@ export async function processShipmentsToPackaging(shipmentIds: string[]): Promis
 
   db.shipments.forEach((s, index) => {
     if (shipmentIds.includes(s.id)) {
-      db.shipments[index].status = 'Pengemasan';
+      db.shipments[index].status = 'Terkirim';
     }
   });
   
@@ -268,46 +270,6 @@ export async function processShipmentsToPackaging(shipmentIds: string[]): Promis
   return Promise.resolve();
 }
 
-export async function processShipmentsToDelivered(shipmentIds: string[], processorName: string): Promise<void> {
-  const shipmentsToProcess = db.shipments.filter(s => shipmentIds.includes(s.id));
-  if (shipmentsToProcess.length === 0) {
-    throw new Error("Tidak ada pengiriman yang valid untuk diproses.");
-  }
-  if (shipmentsToProcess.some(s => s.status !== 'Pengemasan')) {
-    throw new Error("Hanya pengiriman dengan status 'Pengemasan' yang bisa dikirim.");
-  }
-
-  const processedSummaries = shipmentsToProcess.map(s => ({
-    shipmentId: s.id,
-    transactionId: s.transactionId,
-    totalAmount: s.totalAmount,
-    totalItems: s.totalItems,
-  }));
-
-  const totalBatchAmount = processedSummaries.reduce((sum, s) => sum + s.totalAmount, 0);
-  const totalBatchItems = processedSummaries.reduce((sum, s) => sum + s.totalItems, 0);
-
-  const newBatchCheckout: Checkout = {
-    id: `batch_${Date.now()}`,
-    processorName,
-    processedShipments: processedSummaries,
-    totalBatchItems: totalBatchItems,
-    totalBatchAmount: totalBatchAmount,
-    createdAt: new Date().toISOString(),
-  };
-
-  db.checkoutHistory.unshift(newBatchCheckout);
-
-  // Update status to 'Terkirim'
-  db.shipments.forEach((s, index) => {
-    if (shipmentIds.includes(s.id)) {
-      db.shipments[index].status = 'Terkirim';
-    }
-  });
-
-  persistDb();
-  return Promise.resolve();
-}
 
 export async function getCheckoutHistory(): Promise<Checkout[]> {
     const sorted = [...db.checkoutHistory].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
