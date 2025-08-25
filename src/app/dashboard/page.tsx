@@ -18,9 +18,14 @@ import { format, subDays } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import type { DateRange } from 'react-day-picker';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
-interface PopularProduct extends ShipmentProduct {
+interface PopularProduct {
+    productId: string;
+    name: string;
     count: number;
+    value: number;
 }
 
 export default function DashboardPage() {
@@ -39,6 +44,7 @@ export default function DashboardPage() {
         from: subDays(new Date(), 29),
         to: new Date(),
     });
+    const [chartFilter, setChartFilter] = React.useState<'count' | 'value'>('count');
 
 
     React.useEffect(() => {
@@ -78,22 +84,23 @@ export default function DashboardPage() {
                 });
 
                 // Calculate popular products from delivered shipments WITHIN DATE RANGE
-                const productCounts: { [productId: string]: { name: string, count: number } } = {};
+                const productMetrics: { [productId: string]: { name: string, count: number, value: number } } = {};
                 deliveredInRange.forEach(shipment => {
                     shipment.products.forEach(product => {
-                        if (!productCounts[product.productId]) {
-                            productCounts[product.productId] = { name: product.name, count: 0 };
+                        if (!productMetrics[product.productId]) {
+                            productMetrics[product.productId] = { name: product.name, count: 0, value: 0 };
                         }
-                        productCounts[product.productId].count += product.quantity;
+                        productMetrics[product.productId].count += product.quantity;
+                        productMetrics[product.productId].value += product.quantity * product.price;
                     });
                 });
 
-                const sortedPopularProducts = Object.entries(productCounts)
+                const sortedPopularProducts = Object.entries(productMetrics)
                     .map(([productId, data]) => ({ productId, ...data }))
-                    .sort((a, b) => b.count - a.count)
+                    .sort((a, b) => chartFilter === 'count' ? b.count - a.count : b.value - a.value)
                     .slice(0, 5);
                 
-                setPopularProducts(sortedPopularProducts as any);
+                setPopularProducts(sortedPopularProducts);
 
                 // Recent activity is not strictly date-range dependent, but shows most recent overall
                 const recentActivityShipments = [...shipments]
@@ -107,7 +114,7 @@ export default function DashboardPage() {
 
             fetchData();
         }
-    }, [user, authLoading, router, dateRange]);
+    }, [user, authLoading, router, dateRange, chartFilter]);
 
     const formatRupiah = (number: number) => {
         return new Intl.NumberFormat('id-ID', {
@@ -206,8 +213,26 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <Card className="lg:col-span-2">
                     <CardHeader>
-                        <CardTitle>5 Produk Terlaris (Rentang Terpilih)</CardTitle>
-                        <CardDescription>Produk yang paling banyak dikirim dalam rentang tanggal yang dipilih.</CardDescription>
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div>
+                                <CardTitle>Produk Terlaris (Rentang Terpilih)</CardTitle>
+                                <CardDescription>Produk yang paling banyak dikirim dalam rentang tanggal yang dipilih.</CardDescription>
+                            </div>
+                            <RadioGroup
+                                defaultValue={chartFilter}
+                                onValueChange={(value) => setChartFilter(value as 'count' | 'value')}
+                                className="flex items-center space-x-4"
+                            >
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="count" id="count" />
+                                    <Label htmlFor="count">Jumlah Unit</Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="value" id="value" />
+                                    <Label htmlFor="value">Nilai (Rp)</Label>
+                                </div>
+                            </RadioGroup>
+                        </div>
                     </CardHeader>
                     <CardContent className="pl-2">
                         {loadingData ? <Skeleton className="w-full h-[350px]" /> :
@@ -215,9 +240,23 @@ export default function DashboardPage() {
                             <BarChart data={popularProducts}>
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
-                                <Tooltip cursor={{fill: 'hsl(var(--muted))'}} contentStyle={{backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))'}} formatter={(value) => [`${value} unit`, 'Jumlah Terkirim']}/>
-                                <Bar dataKey="count" name="Jumlah Terkirim" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                                <YAxis 
+                                    stroke="#888888" 
+                                    fontSize={12} 
+                                    tickLine={false} 
+                                    axisLine={false} 
+                                    tickFormatter={(value) => chartFilter === 'count' ? `${value}` : `${Intl.NumberFormat('id-ID', { notation: 'compact' }).format(value as number)}`}
+                                />
+                                <Tooltip 
+                                    cursor={{fill: 'hsl(var(--muted))'}} 
+                                    contentStyle={{backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))'}} 
+                                    formatter={(value, name, props) => {
+                                        const label = chartFilter === 'count' ? 'Jumlah Terkirim' : 'Total Nilai';
+                                        const formattedValue = chartFilter === 'count' ? `${value} unit` : formatRupiah(value as number);
+                                        return [formattedValue, label];
+                                    }}
+                                />
+                                <Bar dataKey={chartFilter} name={chartFilter === 'count' ? 'Jumlah Terkirim' : 'Total Nilai'} fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                         }
