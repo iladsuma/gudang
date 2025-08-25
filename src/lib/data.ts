@@ -41,7 +41,8 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
 
 // User Functions
 export function getDummyUsers(): User[] {
-    // This can remain client-side for the login simulation
+    // This is now only used as a fallback for the local auth context check,
+    // actual validation happens on the server.
     return [
         { id: 'usr_1', username: 'admin', name: 'Admin', role: 'admin' },
         { id: 'usr_2', username: 'user', name: 'User Biasa', role: 'user' },
@@ -49,14 +50,14 @@ export function getDummyUsers(): User[] {
 }
 
 export async function login(username: string, password: string): Promise<User> {
-    // Login logic remains client-side for this demo since there's no real auth
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const user = getDummyUsers().find(u => u.username === username);
-    if (user && user.username === password) { 
-        return user;
-    }
-    throw new Error('Username atau password salah.');
+    // Note: The actual login logic is now on the server.
+    // This function just calls the API endpoint.
+    return fetchApi<User>('/login', {
+        method: 'POST',
+        body: JSON.stringify({ username, password }),
+    });
 }
+
 
 // Shipment Functions
 export async function getShipments(): Promise<Shipment[]> {
