@@ -56,7 +56,7 @@ export function Header() {
                   href="/shipments"
                   className={cn("transition-colors hover:text-foreground/80", pathname.startsWith('/shipments') ? 'text-foreground' : 'text-foreground/60')}
                 >
-                  {user.role === 'admin' ? 'Antrian' : 'Pengiriman Saya'}
+                  {user.role === 'admin' ? 'Antrian Kirim' : 'Pengiriman Saya'}
                 </Link>
                  <Link
                   href="/products"
@@ -70,7 +70,7 @@ export function Header() {
                       href="/history"
                       className={cn("transition-colors hover:text-foreground/80", pathname === '/history' ? 'text-foreground' : 'text-foreground/60')}
                     >
-                      Pengemasan
+                      Antrian Kemas
                     </Link>
                     <Link
                       href="/invoices"

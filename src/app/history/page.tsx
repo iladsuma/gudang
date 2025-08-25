@@ -69,7 +69,7 @@ export default function HistoryPage() {
     <div className="container mx-auto p-4 md:p-8">
       <Card>
         <CardHeader>
-          <CardTitle>Antrian Pengemasan</CardTitle>
+          <CardTitle>Antrian Kemas</CardTitle>
           <CardDescription>
             Konfirmasi dan catat pengiriman yang sudah selesai dikemas dan siap untuk dikirim.
           </CardDescription>
