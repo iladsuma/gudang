@@ -97,7 +97,7 @@ export async function getShipments(): Promise<Shipment[]> {
 }
 
 
-export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'totalItems' | 'totalAmount' | 'totalProductCost' | 'status'>): Promise<Shipment> {
+export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'totalItems' | 'totalAmount' | 'totalProductCost' | 'status' | 'totalPackingCost'> & { packagingCost: number }): Promise<Shipment> {
   await new Promise(resolve => setTimeout(resolve, 500));
   const shipments = await getShipments();
 
@@ -108,7 +108,8 @@ export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'tot
     return sum + subtotal;
   }, 0);
   
-  const grandTotal = totalProductCost + data.totalPackingCost;
+  const totalPackingCost = data.packagingCost || 0;
+  const grandTotal = totalProductCost + totalPackingCost;
 
   const newShipment: Shipment = {
     ...data,
@@ -117,6 +118,7 @@ export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'tot
     createdAt: new Date().toISOString(),
     totalItems,
     totalProductCost,
+    totalPackingCost,
     totalAmount: grandTotal,
     products: data.products.map(p => ({ ...p }))
   };
@@ -127,7 +129,7 @@ export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'tot
   return newShipment;
 }
 
-export async function updateShipment(shipmentId: string, data: Omit<Shipment, 'id' | 'createdAt' | 'status'>): Promise<Shipment> {
+export async function updateShipment(shipmentId: string, data: Omit<Shipment, 'id' | 'createdAt' | 'status' | 'totalItems' | 'totalAmount' | 'totalProductCost' | 'totalPackingCost'> & { packagingCost: number }): Promise<Shipment> {
     await new Promise(resolve => setTimeout(resolve, 500));
     const shipments = await getShipments();
     const shipmentIndex = shipments.findIndex(s => s.id === shipmentId);
@@ -144,13 +146,15 @@ export async function updateShipment(shipmentId: string, data: Omit<Shipment, 'i
     // Recalculate totals
     const totalItems = data.products.reduce((sum, p) => sum + p.quantity, 0);
     const totalProductCost = data.products.reduce((sum, p) => sum + (p.price * p.quantity), 0);
-    const grandTotal = totalProductCost + data.totalPackingCost;
+    const totalPackingCost = data.packagingCost || 0;
+    const grandTotal = totalProductCost + totalPackingCost;
     
     const updatedShipment: Shipment = {
         ...originalShipment,
         ...data,
         totalItems,
         totalProductCost,
+        totalPackingCost,
         totalAmount: grandTotal,
         products: data.products.map(p => ({ ...p }))
     };
