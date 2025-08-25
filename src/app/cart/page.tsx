@@ -16,7 +16,7 @@ import type { Shipment } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
 export default function CartPage() {
-    const { cart, removeFromCart, clearCart, totalItems } = useCart();
+    const { cart, removeFromCart, totalItems } = useCart();
     const router = useRouter();
     const { toast } = useToast();
     const [isFormOpen, setIsFormOpen] = React.useState(false);
@@ -43,14 +43,14 @@ export default function CartPage() {
     };
     
     const handleFormSuccess = React.useCallback((newShipment: Shipment) => {
-        clearCart();
+        // clearCart(); // <-- Perubahan di sini: fungsi ini dihapus
         setIsFormOpen(false);
         toast({
             title: "Pengiriman Dibuat!",
             description: `Data pengiriman ${newShipment.transactionId} berhasil disimpan.`,
         });
         router.push('/shipments');
-    }, [clearCart, router, toast]);
+    }, [router, toast]);
 
     const handleFormCancel = React.useCallback(() => {
         setIsFormOpen(false);

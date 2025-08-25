@@ -111,21 +111,8 @@ export const useCart = () => {
   };
   
   const reduceCartQuantities = (shippedProducts: ShipmentProduct[]) => {
-    setCart(prevCart => {
-        let tempCart = [...prevCart];
-        
-        shippedProducts.forEach(shippedProduct => {
-            const index = tempCart.findIndex(item => item.id === shippedProduct.productId);
-            if (index !== -1) {
-                // In a selection-based cart, we just remove the item entirely after use.
-                tempCart.splice(index, 1);
-            }
-        });
-        
-        saveCartToLocalStorage(tempCart);
-        return tempCart;
-    });
-};
+    // Do nothing, as per user request to not clear/reduce cart items automatically.
+  };
 
 
   const removeFromCart = (productId: string) => {
