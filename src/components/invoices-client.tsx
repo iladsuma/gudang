@@ -21,11 +21,26 @@ import {
 } from "@/components/ui/accordion"
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, FileDown, Loader2 } from 'lucide-react';
 import { Badge } from './ui/badge';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import { useToast } from '@/hooks/use-toast';
+import { Button } from './ui/button';
+import { Checkbox } from './ui/checkbox';
+
+
+// Extend jsPDF with autoTable, which is a plugin.
+interface jsPDFWithAutoTable extends jsPDF {
+  autoTable: (options: any) => jsPDF;
+}
+
 
 export function InvoicesClient({ shipments: initialShipments }: { shipments: Shipment[] }) {
   const [shipments, setShipments] = React.useState(initialShipments);
+  const [selectedShipments, setSelectedShipments] = React.useState<string[]>([]);
+  const [isPrinting, setIsPrinting] = React.useState(false);
+  const { toast } = useToast();
 
   React.useEffect(() => {
     setShipments(initialShipments);
@@ -47,13 +62,162 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
         default: return 'secondary';
     }
   };
+
+  const handleSelectAll = (checked: boolean) => {
+    if(checked) {
+        setSelectedShipments(shipments.map(s => s.id));
+    } else {
+        setSelectedShipments([]);
+    }
+  }
+
+  const handleSelectSingle = (shipmentId: string, checked: boolean) => {
+    if(checked) {
+        setSelectedShipments(prev => [...prev, shipmentId]);
+    } else {
+        setSelectedShipments(prev => prev.filter(id => id !== shipmentId));
+    }
+  }
+
+  const handlePrintInvoices = () => {
+    if (selectedShipments.length === 0) {
+        toast({
+            variant: 'destructive',
+            title: "Tidak ada data terpilih",
+            description: "Silakan pilih setidaknya satu pengiriman untuk dicetak."
+        });
+        return;
+    }
+    
+    setIsPrinting(true);
+
+    try {
+        const doc = new jsPDF() as jsPDFWithAutoTable;
+        const shipmentsToPrint = shipments.filter(s => selectedShipments.includes(s.id));
+
+        shipmentsToPrint.forEach((shipment, index) => {
+            if (index > 0) {
+                doc.addPage();
+            }
+
+            // Header
+            doc.setFontSize(16);
+            doc.setFont('helvetica', 'bold');
+            doc.text('FAKTUR PENJUALAN', 14, 20);
+
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.text("Fam's Warehouse", 14, 26);
+            doc.text("Srengat", 14, 30);
+            
+            // Right-side info
+            const tgl = format(new Date(shipment.createdAt), 'dd/MM/yyyy HH:mm');
+            doc.text(`No Transaksi: ${shipment.transactionId}`, 140, 20);
+            doc.text(`Tgl: ${tgl}`, 140, 30);
+            doc.text(`Kasir: ${shipment.user}`, 140, 35);
+            
+
+            // Table
+            const tableColumn = ["No.", "Nama Item", "Jml", "Satuan", "Harga", "Total"];
+            const tableRows: any[] = [];
+
+            shipment.products.forEach((product, i) => {
+                const productData = [
+                    i + 1,
+                    product.name,
+                    product.quantity,
+                    'PCS',
+                    product.price.toLocaleString('id-ID'),
+                    (product.quantity * product.price).toLocaleString('id-ID'),
+                ];
+                tableRows.push(productData);
+            });
+
+            doc.autoTable({
+                startY: 45,
+                head: [tableColumn],
+                body: tableRows,
+                theme: 'plain',
+                headStyles: {
+                    fillColor: [255, 255, 255],
+                    textColor: [0, 0, 0],
+                    fontStyle: 'bold',
+                    lineWidth: { bottom: 0.5 },
+                    lineColor: [0, 0, 0]
+                },
+                styles: {
+                    cellPadding: { top: 1, right: 2, bottom: 1, left: 2 },
+                    fontSize: 9,
+                },
+                 columnStyles: {
+                    0: { cellWidth: 10, halign: 'center' }, // No.
+                    1: { cellWidth: 70 }, // Nama Item
+                    2: { cellWidth: 15, halign: 'center' }, // Jml
+                    3: { cellWidth: 15, halign: 'center' }, // Satuan
+                    4: { cellWidth: 30, halign: 'right' }, // Harga
+                    5: { cellWidth: 30, halign: 'right' }, // Total
+                },
+            });
+
+            // Summary below table
+            const finalY = doc.autoTable.previous.finalY;
+            doc.setFontSize(10);
+
+            let summaryY = finalY + 10;
+            const rightAlignX = 190;
+
+            doc.text('Sub Total', 140, summaryY);
+            doc.text(shipment.totalProductCost.toLocaleString('id-ID'), rightAlignX, summaryY, { align: 'right' });
+            
+            summaryY += 6;
+            doc.text('Biaya Pengemasan', 140, summaryY);
+            doc.text(shipment.totalPackingCost.toLocaleString('id-ID'), rightAlignX, summaryY, { align: 'right' });
+
+            summaryY += 6;
+            doc.setFont('helvetica', 'bold');
+            doc.text('Total Akhir', 140, summaryY);
+            doc.text(shipment.totalAmount.toLocaleString('id-ID'), rightAlignX, summaryY, { align: 'right' });
+
+        });
+
+        const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
+        doc.save(`faktur_${timestamp}.pdf`);
+
+        toast({
+            title: 'Sukses!',
+            description: 'Faktur berhasil dibuat dan diunduh.'
+        });
+
+    } catch (err) {
+        console.error("Error creating PDF", err);
+        toast({
+            variant: 'destructive',
+            title: "Gagal membuat PDF",
+            description: "Terjadi kesalahan saat membuat file faktur."
+        });
+    } finally {
+        setIsPrinting(false);
+    }
+  };
   
   return (
     <div className='space-y-4'>
+        <div className="flex justify-end">
+            <Button onClick={handlePrintInvoices} disabled={selectedShipments.length === 0 || isPrinting}>
+                {isPrinting ? <Loader2 className='mr-2' /> : <FileDown className='mr-2' />}
+                Cetak Faktur Terpilih ({selectedShipments.length})
+            </Button>
+        </div>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className='w-[50px]'>
+                  <Checkbox
+                      checked={shipments.length > 0 && selectedShipments.length === shipments.length}
+                      onCheckedChange={handleSelectAll}
+                  />
+              </TableHead>
               <TableHead>No. Transaksi</TableHead>
               <TableHead>User Pemroses</TableHead>
               <TableHead>Detail Pengiriman</TableHead>
@@ -65,7 +229,13 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
           <TableBody>
             {shipments.length > 0 ? (
               shipments.map((shipment) => (
-                <TableRow key={shipment.id}>
+                <TableRow key={shipment.id} data-state={selectedShipments.includes(shipment.id) ? "selected" : ""}>
+                    <TableCell>
+                        <Checkbox
+                            checked={selectedShipments.includes(shipment.id)}
+                            onCheckedChange={(checked) => handleSelectSingle(shipment.id, !!checked)}
+                        />
+                    </TableCell>
                   <TableCell className='font-medium'>{shipment.transactionId}</TableCell>
                   <TableCell>{shipment.user}</TableCell>
                   <TableCell className="font-medium">
@@ -98,7 +268,7 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={7} className="h-24 text-center">
                   Belum ada pengiriman yang diproses.
                 </TableCell>
               </TableRow>
