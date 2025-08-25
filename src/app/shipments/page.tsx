@@ -17,11 +17,23 @@ function ShipmentsPageContent() {
   const { user, loading: authLoading } = useAuth();
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pageTitle, setPageTitle] = useState('Rekapitulasi Pengiriman');
+  const [pageDescription, setPageDescription] = useState("Kelola semua data pengiriman barang masuk Anda yang sedang dalam tahap 'Proses'.");
 
   useEffect(() => {
     if (user) {
         getShipments().then(data => {
-            setShipments(data);
+            if (user.role === 'admin') {
+                // Admin sees all shipments with 'Proses' status
+                setShipments(data.filter(s => s.status === 'Proses'));
+                setPageTitle('Antrian Pengiriman (Admin)');
+                setPageDescription("Kelola semua pengiriman dari semua user yang siap untuk dibungkus.");
+            } else {
+                // User sees all shipments they created, regardless of status
+                setShipments(data.filter(s => s.user === user.name));
+                setPageTitle('Riwayat Pengiriman Saya');
+                setPageDescription("Lacak semua pengiriman yang telah Anda buat dan statusnya saat ini.");
+            }
             setLoading(false);
         });
     } else if (!authLoading) {
@@ -62,9 +74,9 @@ function ShipmentsPageContent() {
     <div className="container mx-auto p-4 md:p-8">
       <Card>
         <CardHeader>
-          <CardTitle>Rekapitulasi Pengiriman</CardTitle>
+          <CardTitle>{pageTitle}</CardTitle>
           <CardDescription>
-            Kelola semua data pengiriman barang masuk Anda yang sedang dalam tahap 'Proses'.
+            {pageDescription}
           </CardDescription>
         </CardHeader>
         <CardContent>
