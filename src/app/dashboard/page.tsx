@@ -9,9 +9,9 @@ import type { Product, Shipment, ShipmentProduct } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Boxes, Package, DollarSign, Truck, CheckCircle } from 'lucide-react';
+import { Boxes, Package, DollarSign, Truck, CheckCircle, Expand } from 'lucide-react';
 import Link from 'next/link';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Brush } from 'recharts';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { format, subDays } from 'date-fns';
@@ -21,6 +21,7 @@ import type { DateRange } from 'react-day-picker';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 interface PopularProduct {
     productId: string;
@@ -47,6 +48,7 @@ export default function DashboardPage() {
     });
     const [chartFilter, setChartFilter] = React.useState<'count' | 'value'>('count');
     const [productLimit, setProductLimit] = React.useState<string>('10');
+    const [isChartDialogOpen, setIsChartDialogOpen] = React.useState(false);
 
 
     React.useEffect(() => {
@@ -133,7 +135,44 @@ export default function DashboardPage() {
                      : format(dateRange.from, "d LLL, y")
     ) : "30 hari terakhir";
     
-    const chartTitle = `${productLimit === 'all' ? 'Semua' : productLimit} Produk Terlaris (Rentang Terpilih)`;
+    const chartTitle = `${productLimit === 'all' ? 'Semua' : `Top ${productLimit}`} Produk Terlaris`;
+
+    const ChartComponent = ({ height, withBrush }: { height: number, withBrush?: boolean }) => (
+        <ResponsiveContainer width="100%" height={height}>
+            <BarChart data={popularProducts} margin={{ top: 5, right: 20, left: -10, bottom: withBrush ? 0 : 75 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                    dataKey="name" 
+                    stroke="#888888" 
+                    fontSize={12} 
+                    tickLine={false} 
+                    axisLine={false} 
+                    angle={-45}
+                    textAnchor="end"
+                    height={100}
+                    interval={0}
+                />
+                <YAxis 
+                    stroke="#888888" 
+                    fontSize={12} 
+                    tickLine={false} 
+                    axisLine={false} 
+                    tickFormatter={(value) => chartFilter === 'count' ? `${value}` : `${Intl.NumberFormat('id-ID', { notation: 'compact' }).format(value as number)}`}
+                />
+                <Tooltip 
+                    cursor={{fill: 'hsl(var(--muted))'}} 
+                    contentStyle={{backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))'}} 
+                    formatter={(value, name, props) => {
+                        const label = chartFilter === 'count' ? 'Jumlah Terkirim' : 'Total Nilai';
+                        const formattedValue = chartFilter === 'count' ? `${value} unit` : formatRupiah(value as number);
+                        return [formattedValue, label];
+                    }}
+                />
+                <Bar dataKey={chartFilter} name={chartFilter === 'count' ? 'Jumlah Terkirim' : 'Total Nilai'} fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                {withBrush && <Brush dataKey="name" height={30} stroke="hsl(var(--primary))" />}
+            </BarChart>
+        </ResponsiveContainer>
+    );
 
     if (authLoading || (loadingData && user?.role === 'admin' && !dateRange)) {
         return (
@@ -220,11 +259,30 @@ export default function DashboardPage() {
                 <Card className="lg:col-span-2">
                     <CardHeader>
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                            <div>
+                            <div className="flex-1">
                                 <CardTitle>{chartTitle}</CardTitle>
                                 <CardDescription>Produk yang paling banyak dikirim dalam rentang tanggal yang dipilih.</CardDescription>
                             </div>
                             <div className="flex items-center gap-4">
+                                <Dialog open={isChartDialogOpen} onOpenChange={setIsChartDialogOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button variant="outline" size="icon">
+                                            <Expand className="h-4 w-4" />
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="sm:max-w-6xl h-5/6 flex flex-col">
+                                        <DialogHeader>
+                                            <DialogTitle>{chartTitle}</DialogTitle>
+                                            <DialogDescription>
+                                                Gunakan penggeser di bawah grafik untuk zoom dan navigasi.
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <div className="flex-1 -mx-6 -mb-6">
+                                            <ChartComponent height={500} withBrush={true} />
+                                        </div>
+                                    </DialogContent>
+                                </Dialog>
+
                                 <RadioGroup
                                     defaultValue={chartFilter}
                                     onValueChange={(value) => setChartFilter(value as 'count' | 'value')}
@@ -247,6 +305,7 @@ export default function DashboardPage() {
                                         <SelectItem value="5">Top 5</SelectItem>
                                         <SelectItem value="10">Top 10</SelectItem>
                                         <SelectItem value="20">Top 20</SelectItem>
+                                        <SelectItem value="50">Top 50</SelectItem>
                                         <SelectItem value="all">Semua</SelectItem>
                                     </SelectContent>
                                 </Select>
@@ -255,29 +314,7 @@ export default function DashboardPage() {
                     </CardHeader>
                     <CardContent className="pl-2">
                         {loadingData ? <Skeleton className="w-full h-[350px]" /> :
-                        <ResponsiveContainer width="100%" height={350}>
-                            <BarChart data={popularProducts}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                                <YAxis 
-                                    stroke="#888888" 
-                                    fontSize={12} 
-                                    tickLine={false} 
-                                    axisLine={false} 
-                                    tickFormatter={(value) => chartFilter === 'count' ? `${value}` : `${Intl.NumberFormat('id-ID', { notation: 'compact' }).format(value as number)}`}
-                                />
-                                <Tooltip 
-                                    cursor={{fill: 'hsl(var(--muted))'}} 
-                                    contentStyle={{backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))'}} 
-                                    formatter={(value, name, props) => {
-                                        const label = chartFilter === 'count' ? 'Jumlah Terkirim' : 'Total Nilai';
-                                        const formattedValue = chartFilter === 'count' ? `${value} unit` : formatRupiah(value as number);
-                                        return [formattedValue, label];
-                                    }}
-                                />
-                                <Bar dataKey={chartFilter} name={chartFilter === 'count' ? 'Jumlah Terkirim' : 'Total Nilai'} fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
+                           <ChartComponent height={350} />
                         }
                     </CardContent>
                 </Card>
