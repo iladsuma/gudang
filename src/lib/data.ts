@@ -2,7 +2,7 @@
 
 'use client';
 
-import type { User, Shipment, Checkout, ProcessedShipmentSummary, Expedition, Product, Packaging } from '@/lib/types';
+import type { User, Shipment, Checkout, ProcessedShipmentSummary, Expedition, Product, Packaging, ShipmentProduct } from '@/lib/types';
 
 // =================================================================
 // Helper functions to interact with localStorage
@@ -97,14 +97,9 @@ export async function getShipments(): Promise<Shipment[]> {
 }
 
 
-export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'totalItems' | 'totalAmount' | 'totalPackingCost' | 'totalProductCost' | 'status'>): Promise<Shipment> {
+export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'totalItems' | 'totalAmount' | 'totalProductCost' | 'status'>): Promise<Shipment> {
   await new Promise(resolve => setTimeout(resolve, 500));
   const shipments = await getShipments();
-
-  // No longer needed as ID is auto-generated and highly unique
-  // if (shipments.some(s => s.transactionId.toLowerCase() === data.transactionId.toLowerCase())) {
-  //   throw new Error('ID Transaksi harus unik.');
-  // }
 
   const totalItems = data.products.reduce((sum, p) => sum + p.quantity, 0);
   
@@ -113,9 +108,7 @@ export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'tot
     return sum + subtotal;
   }, 0);
   
-  const totalPackingCost = data.products.reduce((sum, p) => sum + (p.packagingCost * p.quantity), 0);
-
-  const grandTotal = totalProductCost + totalPackingCost;
+  const grandTotal = totalProductCost + data.totalPackingCost;
 
   const newShipment: Shipment = {
     ...data,
@@ -124,7 +117,6 @@ export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'tot
     createdAt: new Date().toISOString(),
     totalItems,
     totalProductCost,
-    totalPackingCost,
     totalAmount: grandTotal,
     products: data.products.map(p => ({ ...p }))
   };
@@ -133,6 +125,40 @@ export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'tot
   saveToStorage('shipments', updatedShipments);
 
   return newShipment;
+}
+
+export async function updateShipment(shipmentId: string, data: Omit<Shipment, 'id' | 'createdAt' | 'status'>): Promise<Shipment> {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    const shipments = await getShipments();
+    const shipmentIndex = shipments.findIndex(s => s.id === shipmentId);
+
+    if (shipmentIndex === -1) {
+        throw new Error('Pengiriman tidak ditemukan.');
+    }
+
+    const originalShipment = shipments[shipmentIndex];
+    if (originalShipment.status !== 'Proses') {
+        throw new Error('Hanya pengiriman dengan status "Proses" yang bisa diubah.');
+    }
+
+    // Recalculate totals
+    const totalItems = data.products.reduce((sum, p) => sum + p.quantity, 0);
+    const totalProductCost = data.products.reduce((sum, p) => sum + (p.price * p.quantity), 0);
+    const grandTotal = totalProductCost + data.totalPackingCost;
+    
+    const updatedShipment: Shipment = {
+        ...originalShipment,
+        ...data,
+        totalItems,
+        totalProductCost,
+        totalAmount: grandTotal,
+        products: data.products.map(p => ({ ...p }))
+    };
+
+    shipments[shipmentIndex] = updatedShipment;
+    saveToStorage('shipments', shipments);
+
+    return updatedShipment;
 }
 
 export async function deleteShipment(shipmentId: string): Promise<void> {
@@ -187,9 +213,9 @@ export async function processShipmentsToPackaging(shipmentIds: string[]): Promis
             if (!masterProduct) {
                 throw new Error(`Produk dengan kode "${product.code}" tidak ditemukan di database.`);
             }
-            const currentStock = masterProduct.stock;
+            const currentStock = (productStockUpdates[product.productId] !== undefined) ? productStockUpdates[product.productId] : masterProduct.stock;
             const stockNeeded = product.quantity;
-            const stockAfterThisTx = (productStockUpdates[product.productId] ?? currentStock) - stockNeeded;
+            const stockAfterThisTx = currentStock - stockNeeded;
 
             if (stockAfterThisTx < 0) {
                 throw new Error(`Stok tidak mencukupi untuk produk "${product.name}". Stok sisa: ${currentStock}, dibutuhkan: ${stockNeeded}.`);

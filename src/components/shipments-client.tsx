@@ -5,7 +5,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { Shipment, Product } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2, Loader2, FileText, Package } from 'lucide-react';
+import { PlusCircle, Trash2, Loader2, FileText, Package, Pencil } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -18,9 +18,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { ShipmentForm } from './shipment-form';
 import { useToast } from '@/hooks/use-toast';
@@ -36,11 +33,10 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Badge } from './ui/badge';
-import { Checkbox } from './ui/checkbox';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { deleteShipment, getProducts, processShipmentsToPackaging } from '@/lib/data';
+import { deleteShipment, getProducts } from '@/lib/data';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/context/auth-context';
@@ -49,16 +45,14 @@ import { useCart } from '@/hooks/use-cart';
 export function ShipmentsClient({ shipments: initialShipments }: { shipments: Shipment[] }) {
   const { user } = useAuth();
   const [shipments, setShipments] = useState(initialShipments);
-  const [masterProducts, setMasterProducts] = useState<Product[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [selectedShipments, setSelectedShipments] = useState<string[]>([]);
+  const [editingShipment, setEditingShipment] = useState<Shipment | undefined>(undefined);
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { cart, clearCart } = useCart();
+  const { cart } = useCart();
 
 
   useEffect(() => {
@@ -69,18 +63,12 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
 
 
   useEffect(() => {
-    // This logic might need adjustment based on the new flow
-    // For now, let's assume it shows 'Proses' for admin, and all for user.
-    if(user?.role === 'admin') {
-      setShipments(initialShipments.filter(s => s.status === 'Proses'));
-    } else {
-      setShipments(initialShipments);
-    }
-  }, [initialShipments, user]);
+     setShipments(initialShipments);
+  }, [initialShipments]);
 
   useEffect(() => {
     setIsClient(true);
-    getProducts().then(setMasterProducts);
+    getProducts();
   }, []);
   
   const formatRupiah = (number: number) => {
@@ -91,15 +79,22 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
     }).format(number);
   };
 
-  const handleFormSuccess = useCallback((newShipment: Shipment) => {
-    setShipments((prev) => [newShipment, ...prev]);
+  const handleFormSuccess = useCallback((newOrUpdatedShipment: Shipment) => {
+    if (editingShipment) {
+      // Replace the old shipment with the updated one
+      setShipments(prev => prev.map(s => s.id === newOrUpdatedShipment.id ? newOrUpdatedShipment : s));
+    } else {
+      // Add the new shipment to the top of the list
+      setShipments(prev => [newOrUpdatedShipment, ...prev]);
+    }
     setIsFormOpen(false);
-    // Remove search param
+    setEditingShipment(undefined);
     router.replace('/shipments', { scroll: false });
-  }, [router]);
+  }, [editingShipment, router]);
   
   const handleFormCancel = useCallback(() => {
     setIsFormOpen(false);
+    setEditingShipment(undefined);
     router.replace('/shipments', { scroll: false });
   }, [router]);
   
@@ -108,7 +103,6 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
     try {
         await deleteShipment(shipmentId);
         setShipments((prev) => prev.filter((s) => s.id !== shipmentId));
-        setSelectedShipments((prev) => prev.filter((id) => id !== shipmentId));
         toast({
             title: 'Sukses!',
             description: 'Data pengiriman berhasil dihapus.',
@@ -130,75 +124,6 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
     pdfWindow?.document.write(`<iframe width='100%' height='100%' src='${dataUrl}' title='pratinjau-pdf'></iframe>`);
   };
 
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedShipments(shipments.map((s) => s.id));
-    } else {
-      setSelectedShipments([]);
-    }
-  };
-
-  const handleSelectSingle = (shipmentId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedShipments((prev) => [...prev, shipmentId]);
-    } else {
-      setSelectedShipments((prev) => prev.filter((id) => id !== shipmentId));
-    }
-  };
-
-  const handleProcessToPackaging = async () => {
-    if (selectedShipments.length === 0) {
-        toast({
-            variant: 'destructive',
-            title: 'Tidak Ada Pengiriman Terpilih',
-            description: 'Pilih setidaknya satu pengiriman untuk diproses.'
-        });
-        return;
-    }
-
-    setIsProcessing(true);
-
-    try {
-        await processShipmentsToPackaging(selectedShipments);
-        
-        toast({
-            title: 'Sukses!',
-            description: 'Data terpilih berhasil diproses, stok diperbarui, dan status diubah menjadi "Pengemasan".'
-        });
-        
-        // Optimistically remove from UI and move to history
-        setShipments(prev => prev.filter(s => !selectedShipments.includes(s.id)));
-        setSelectedShipments([]);
-        
-        // update master product list to reflect new stock
-        getProducts().then(setMasterProducts);
-        router.refresh();
-
-    } catch (error) {
-        console.error("Failed to process shipments", error);
-        const message = error instanceof Error ? error.message : 'Terjadi kesalahan saat memproses data.';
-        toast({
-            variant: 'destructive',
-            title: 'Gagal Memproses',
-            description: message
-        });
-    } finally {
-        setIsProcessing(false);
-    }
-  };
-
-  const tableTotals = useMemo(() => {
-    return shipments.reduce(
-        (acc, shipment) => {
-            acc.totalItems += shipment.totalItems;
-            acc.totalPackingCost += shipment.totalPackingCost;
-            acc.totalAmount += shipment.totalAmount;
-            return acc;
-        },
-        { totalItems: 0, totalPackingCost: 0, totalAmount: 0 }
-    );
-  }, [shipments]);
-
   const handleOpenForm = () => {
     if (cart.length === 0) {
         toast({
@@ -207,9 +132,15 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
             description: 'Silakan tambahkan produk dari etalase terlebih dahulu.',
         });
     } else {
+        setEditingShipment(undefined);
         setIsFormOpen(true);
     }
   };
+
+  const handleEdit = (shipment: Shipment) => {
+    setEditingShipment(shipment);
+    setIsFormOpen(true);
+  }
   
   const getStatusVariant = (status: Shipment['status']) => {
     switch (status) {
@@ -224,21 +155,15 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
   return (
     <div className="space-y-4">
       <div className="flex justify-end gap-2">
-       {user?.role === 'admin' && (
-        <Button onClick={handleProcessToPackaging} disabled={selectedShipments.length === 0 || isProcessing}>
-            {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Package className="mr-2 h-4 w-4" />}
-            Bungkus ({selectedShipments.length})
-        </Button>
-       )}
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <DialogTrigger asChild>
             <Button onClick={handleOpenForm}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Tambah Pengiriman
             </Button>
-          </DialogTrigger>
           <DialogContent className="sm:max-w-4xl">
             <ShipmentForm
+              key={editingShipment ? editingShipment.id : 'new'}
+              shipmentToEdit={editingShipment}
               onSuccess={handleFormSuccess}
               onCancel={handleFormCancel}
               initialProductsFromCart={cart}
@@ -251,15 +176,6 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
         <Table>
           <TableHeader>
             <TableRow>
-             {user?.role === 'admin' && (
-              <TableHead className="w-[50px]">
-                <Checkbox
-                    checked={shipments.length > 0 && selectedShipments.length === shipments.length}
-                    onCheckedChange={handleSelectAll}
-                    aria-label="Pilih semua"
-                />
-              </TableHead>
-             )}
               <TableHead>No.</TableHead>
               <TableHead>User</TableHead>
               <TableHead>No Transaksi</TableHead>
@@ -278,16 +194,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
           <TableBody>
             {shipments.length > 0 ? (
               shipments.map((shipment, index) => (
-                <TableRow key={shipment.id} data-state={selectedShipments.includes(shipment.id) ? "selected" : undefined}>
-                   {user?.role === 'admin' && (
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedShipments.includes(shipment.id)}
-                        onCheckedChange={(checked) => handleSelectSingle(shipment.id, !!checked)}
-                        aria-label={`Pilih pengiriman ${shipment.transactionId}`}
-                      />
-                    </TableCell>
-                   )}
+                <TableRow key={shipment.id}>
                   <TableCell>{index + 1}</TableCell>
                   <TableCell className="font-medium">{shipment.user}</TableCell>
                   <TableCell>{shipment.transactionId}</TableCell>
@@ -355,6 +262,11 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
                     )}
                   </TableCell>
                   <TableCell className="text-right">
+                     {shipment.status === 'Proses' && (
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(shipment)}>
+                            <Pencil className="h-4 w-4" />
+                        </Button>
+                     )}
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="ghost" size="icon" disabled={!!isDeleting}>
@@ -385,33 +297,14 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
             ) : (
               <TableRow>
                 <TableCell colSpan={14} className="h-24 text-center">
-                  Tidak ada data pengiriman dalam status 'Proses'.
+                  Tidak ada data pengiriman.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
-          {shipments.length > 0 && <TableCaption>Daftar semua pengiriman barang masuk yang siap diproses.</TableCaption>}
+          {shipments.length > 0 && <TableCaption>Daftar semua pengiriman barang masuk yang Anda buat.</TableCaption>}
         </Table>
       </div>
-        {shipments.length > 0 && (
-            <div className="flex justify-end pt-4">
-                <div className="w-full max-w-sm space-y-2 rounded-md border p-4">
-                    <h3 className="text-lg font-medium">Ringkasan Total</h3>
-                    <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Total Item</span>
-                        <span className="font-medium">{tableTotals.totalItems} pcs</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Total Pengemasan</span>
-                        <span className="font-medium">{formatRupiah(tableTotals.totalPackingCost)}</span>
-                    </div>
-                    <div className="flex justify-between text-lg font-bold border-t pt-2 mt-2">
-                        <span>Total Keseluruhan</span>
-                        <span>{formatRupiah(tableTotals.totalAmount)}</span>
-                    </div>
-                </div>
-            </div>
-        )}
     </div>
   );
 }

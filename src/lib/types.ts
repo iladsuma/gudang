@@ -15,8 +15,6 @@ export interface ShipmentProduct {
     name: string;
     quantity: number;
     price: number; // Can be overridden from master product's price
-    packagingId: string;
-    packagingCost: number;
     imageUrl: string | null;
 }
 
@@ -25,6 +23,7 @@ export interface Shipment {
     user: string;
     transactionId: string;
     expedition: string;
+    packagingId: string; // The selected packaging for the whole shipment
     status: 'Proses' | 'Pengemasan' | 'Terkirim';
     receipt?: { // Receipt is now optional
         fileName: string;
@@ -32,7 +31,7 @@ export interface Shipment {
     };
     products: ShipmentProduct[];
     totalItems: number;
-    totalProductCost: number; // Total price of products after discount
+    totalProductCost: number; // Total price of products
     totalPackingCost: number; // Total of all packing fees
     totalAmount: number; // Grand total (totalProductCost + totalPackingCost)
     createdAt: string; // ISO String for when it was added

@@ -16,7 +16,7 @@ import { DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/co
 import { Loader2, PlusCircle, Trash2, Upload } from 'lucide-react';
 import { Card, CardContent, CardFooter } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import { addShipment, getExpeditions, getPackagingOptions } from '@/lib/data';
+import { addShipment, getExpeditions, getPackagingOptions, updateShipment } from '@/lib/data';
 import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Label } from './ui/label';
@@ -29,8 +29,6 @@ const shipmentProductSchema = z.object({
   name: z.string(), // Will be populated
   quantity: z.coerce.number().int().min(1, 'Jumlah minimal 1'),
   price: z.coerce.number().min(0, 'Harga harus diisi'),
-  packagingId: z.string().min(1, "Pilih kemasan"),
-  packagingCost: z.coerce.number().min(0),
   imageUrl: z.string().nullable().default(null),
 });
 
@@ -38,6 +36,8 @@ const shipmentFormSchema = z.object({
   user: z.string().min(1, 'User harus diisi'),
   transactionId: z.string().min(1, 'No. Transaksi harus diisi.'),
   expedition: z.string().min(1, 'Nama ekspedisi harus dipilih'),
+  packagingId: z.string().min(1, "Pilih kemasan"),
+  packagingCost: z.coerce.number().min(0),
   receipt: z.object({
       fileName: z.string().min(1, 'Nama file resi harus ada'),
       dataUrl: z.string().min(1, 'Data resi harus ada').refine(val => val.startsWith('data:application/pdf;base64,'), { message: 'File harus berupa PDF.' }),
@@ -48,7 +48,8 @@ const shipmentFormSchema = z.object({
 type ShipmentFormValues = z.infer<typeof shipmentFormSchema>;
 
 interface ShipmentFormProps {
-  onSuccess: (newShipment: Shipment) => void;
+  shipmentToEdit?: Shipment;
+  onSuccess: (newOrUpdatedShipment: Shipment) => void;
   onCancel: () => void;
   initialProductsFromCart?: CartItem[];
 }
@@ -64,6 +65,7 @@ const formatRupiah = (number: number) => {
 
 const Summary = ({ control }: { control: any }) => {
     const productsValue = useWatch({ control, name: 'products' });
+    const packagingCost = useWatch({ control, name: 'packagingCost' }) || 0;
     
     const summary = React.useMemo(() => {
         if (!productsValue) return { totalItems: 0, totalShopping: 0, totalPacking: 0, grandTotal: 0 };
@@ -76,17 +78,12 @@ const Summary = ({ control }: { control: any }) => {
             const subtotal = price * quantity;
             return sum + (subtotal > 0 ? subtotal : 0);
         }, 0);
-
-        const totalPacking = productsValue.reduce((sum: number, product: any) => {
-            const packingCost = product?.packagingCost || 0;
-            const quantity = product?.quantity || 0;
-            return sum + (packingCost * quantity);
-        }, 0);
-
+        
+        const totalPacking = packagingCost;
         const grandTotal = totalShopping + totalPacking;
         
         return { totalItems, totalShopping, totalPacking, grandTotal };
-    }, [productsValue]);
+    }, [productsValue, packagingCost]);
   
     return (
       <CardFooter className="flex flex-col items-end bg-slate-50 dark:bg-slate-900 p-4 gap-2">
@@ -100,7 +97,7 @@ const Summary = ({ control }: { control: any }) => {
             <span className="font-medium">{formatRupiah(summary.totalShopping)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Total Biaya Pengemasan</span>
+            <span className="text-muted-foreground">Biaya Pengemasan</span>
             <span className="font-medium">{formatRupiah(summary.totalPacking)}</span>
           </div>
         </div>
@@ -115,7 +112,7 @@ const Summary = ({ control }: { control: any }) => {
 };
 
 
-export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = [] }: ShipmentFormProps) {
+export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProductsFromCart = [] }: ShipmentFormProps) {
   const { toast } = useToast();
   const pdfFileInputRef = React.useRef<HTMLInputElement>(null);
   const { user } = useAuth();
@@ -123,6 +120,8 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [expeditions, setExpeditions] = React.useState<Expedition[]>([]);
   const [packagingOptions, setPackagingOptions] = React.useState<Packaging[]>([]);
+
+  const isEditMode = !!shipmentToEdit;
 
   const generateTransactionId = React.useCallback(() => {
     if (!user) return '';
@@ -133,24 +132,30 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
     return `${userNamePart}-${datePart}-${randomPart}`;
   }, [user]);
   
-  const defaultProducts = initialProductsFromCart.map(item => ({
-        productId: item.id,
-        code: item.code,
-        name: item.name,
-        quantity: item.quantity,
-        price: item.price,
-        packagingId: '',
-        packagingCost: 0,
-        imageUrl: item.imageUrl || null,
-  }));
-  
   const form = useForm<ShipmentFormValues>({
     resolver: zodResolver(shipmentFormSchema),
-    defaultValues: {
+    defaultValues: isEditMode ? {
+        user: shipmentToEdit.user,
+        transactionId: shipmentToEdit.transactionId,
+        expedition: shipmentToEdit.expedition,
+        packagingId: shipmentToEdit.packagingId || '',
+        packagingCost: shipmentToEdit.totalPackingCost || 0,
+        receipt: shipmentToEdit.receipt,
+        products: shipmentToEdit.products.map(p => ({...p})) || [],
+    } : {
       user: user?.name || '',
       transactionId: '',
       expedition: '',
-      products: defaultProducts.length > 0 ? defaultProducts : [],
+      packagingId: '',
+      packagingCost: 0,
+      products: initialProductsFromCart.map(item => ({
+            productId: item.id,
+            code: item.code,
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            imageUrl: item.imageUrl || null,
+      })),
     },
   });
   
@@ -160,29 +165,27 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
   });
 
   React.useEffect(() => {
-    if (initialProductsFromCart.length > 0) {
+    if (!isEditMode && initialProductsFromCart.length > 0) {
         const cartProducts = initialProductsFromCart.map(item => ({
             productId: item.id,
             code: item.code,
             name: item.name,
             quantity: item.quantity,
             price: item.price,
-            packagingId: '',
-            packagingCost: 0,
             imageUrl: item.imageUrl || null,
         }));
         replace(cartProducts);
     }
-  }, [initialProductsFromCart, replace]);
+  }, [isEditMode, initialProductsFromCart, replace]);
   
   React.useEffect(() => {
-    if (user) {
+    if (user && !isEditMode) {
       form.setValue('user', user.name);
       form.setValue('transactionId', generateTransactionId());
     }
     getExpeditions().then(setExpeditions);
     getPackagingOptions().then(setPackagingOptions);
-  }, [user, form, generateTransactionId]);
+  }, [user, form, generateTransactionId, isEditMode]);
 
 
   const handlePdfFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -211,16 +214,24 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
     setIsSubmitting(true);
     try {
         const productsWithImage = data.products.map(p => ({...p, imageUrl: p.imageUrl || 'https://placehold.co/100x100.png' }));
-        const newShipment = await addShipment({...data, products: productsWithImage as any });
-        
-        toast({
-            title: 'Sukses!',
-            description: `Data pengiriman ${data.transactionId} berhasil ditambahkan.`,
-        });
+        const payload = { ...data, products: productsWithImage as any };
 
-        reduceCartQuantities(newShipment.products);
-        onSuccess(newShipment);
-        
+        if (isEditMode) {
+            const updated = await updateShipment(shipmentToEdit.id, payload);
+            toast({
+                title: 'Sukses!',
+                description: `Data pengiriman ${data.transactionId} berhasil diperbarui.`,
+            });
+            onSuccess(updated);
+        } else {
+            const newShipment = await addShipment(payload);
+            toast({
+                title: 'Sukses!',
+                description: `Data pengiriman ${data.transactionId} berhasil ditambahkan.`,
+            });
+            reduceCartQuantities(newShipment.products);
+            onSuccess(newShipment);
+        }
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Terjadi kesalahan yang tidak diketahui.';
         toast({
@@ -246,10 +257,11 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
       }
   };
   
-  const handlePackagingChange = (packagingId: string, index: number) => {
+  const handlePackagingChange = (packagingId: string) => {
     const packaging = packagingOptions.find(p => p.id === packagingId);
     if (packaging) {
-        form.setValue(`products.${index}.packagingCost`, packaging.cost, { shouldValidate: true });
+        form.setValue('packagingCost', packaging.cost, { shouldValidate: true });
+        form.setValue('packagingId', packaging.id, { shouldValidate: true });
     }
   }
 
@@ -258,14 +270,14 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Tambah Data Pengiriman Baru</DialogTitle>
+        <DialogTitle>{isEditMode ? 'Edit Data Pengiriman' : 'Tambah Data Pengiriman Baru'}</DialogTitle>
         <DialogDescription>
-          Isi detail untuk data pengiriman baru berdasarkan item di keranjang.
+          {isEditMode ? `Perbarui detail untuk pengiriman ${shipmentToEdit.transactionId}` : 'Isi detail untuk data pengiriman baru berdasarkan item di keranjang.'}
         </DialogDescription>
       </DialogHeader>
     <Form {...form}>
         <form id="shipment-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <FormField
               control={form.control}
               name="user"
@@ -314,6 +326,36 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
                       </FormItem>
                   )}
               />
+               <FormField
+                    control={form.control}
+                    name="packagingId"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Tipe Kemasan</FormLabel>
+                            <FormControl>
+                                <Select
+                                    onValueChange={(value) => {
+                                        field.onChange(value);
+                                        handlePackagingChange(value);
+                                    }}
+                                    defaultValue={field.value}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Pilih Kemasan" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {packagingOptions.map(opt => (
+                                            <SelectItem key={opt.id} value={opt.id}>
+                                                {opt.name} ({formatRupiah(opt.cost)})
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
           </div>
           
 
@@ -358,7 +400,6 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
                               <TableHead>Kode</TableHead>
                               <TableHead className="w-[100px]">Jumlah</TableHead>
                               <TableHead className="w-[150px]">Harga (Rp)</TableHead>
-                              <TableHead className="w-[170px]">Kemasan</TableHead>
                               <TableHead className="w-[150px] text-right">Subtotal</TableHead>
                               <TableHead className="w-[50px]"></TableHead>
                           </TableRow>
@@ -396,6 +437,7 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
                                                               handleProductSelectionChange(value, index);
                                                           }}
                                                           defaultValue={productField.value}
+                                                          disabled={isEditMode}
                                                       >
                                                           <SelectTrigger>
                                                               <SelectValue placeholder="Pilih Produk dari Keranjang" />
@@ -431,40 +473,9 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
                                           control={form.control}
                                           name={`products.${index}.price`}
                                           render={({ field: priceField }) => (
-                                              <FormItem><FormControl><Input type="number" placeholder="Rp" {...priceField} readOnly /></FormControl><FormMessage /></FormItem>
+                                              <FormItem><FormControl><Input type="number" placeholder="Rp" {...priceField} readOnly={isEditMode} /></FormControl><FormMessage /></FormItem>
                                           )}
                                       />
-                                  </TableCell>
-                                  <TableCell>
-                                        <FormField
-                                            control={form.control}
-                                            name={`products.${index}.packagingId`}
-                                            render={({ field: packagingField }) => (
-                                                <FormItem>
-                                                    <FormControl>
-                                                        <Select
-                                                            onValueChange={(value) => {
-                                                                packagingField.onChange(value);
-                                                                handlePackagingChange(value, index);
-                                                            }}
-                                                            defaultValue={packagingField.value}
-                                                        >
-                                                            <SelectTrigger>
-                                                                <SelectValue placeholder="Pilih Kemasan" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {packagingOptions.map(opt => (
-                                                                    <SelectItem key={opt.id} value={opt.id}>
-                                                                        {opt.name} ({formatRupiah(opt.cost)})
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
                                   </TableCell>
                                   <TableCell className="text-right font-medium">
                                       {formatRupiah(subtotal > 0 ? subtotal : 0)}
@@ -479,27 +490,27 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
                       </TableBody>
                   </Table>
                   </div>
-                  <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="mt-4"
-                      onClick={() => {
-                          append({ 
-                              productId: '',
-                              code: '',
-                              name: '', 
-                              quantity: 1,
-                              price: 0,
-                              packagingId: '',
-                              packagingCost: 0,
-                              imageUrl: null
-                          });
-                      }}
-                      >
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Tambah Produk dari Keranjang
-                  </Button>
+                   {!isEditMode && (
+                     <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="mt-4"
+                        onClick={() => {
+                            append({ 
+                                productId: '',
+                                code: '',
+                                name: '', 
+                                quantity: 1,
+                                price: 0,
+                                imageUrl: null
+                            });
+                        }}
+                        >
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Tambah Produk dari Keranjang
+                    </Button>
+                   )}
                   <FormMessage>{form.formState.errors.products?.root?.message}</FormMessage>
                   <FormMessage>{form.formState.errors.products?.[0]?.productId?.message}</FormMessage>
               </CardContent>
@@ -513,7 +524,7 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
         </Button>
         <Button type="submit" form="shipment-form" disabled={isSubmitting}>
           {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Simpan Pengiriman
+          {isEditMode ? 'Simpan Perubahan' : 'Simpan Pengiriman'}
         </Button>
       </DialogFooter>
     </>
