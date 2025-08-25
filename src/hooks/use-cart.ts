@@ -42,35 +42,34 @@ export const useCart = () => {
     }
   }, [CART_STORAGE_KEY]);
 
-  const addToCart = (product: Product, quantity: number = 1) => {
+  const addToCart = (products: Product[], quantity: number = 1, silent: boolean = false): CartItem[] | undefined => {
     if (!user) {
-        toast({ variant: 'destructive', title: 'Harus Login', description: 'Anda harus login untuk menambah item ke keranjang.' });
+        if (!silent) toast({ variant: 'destructive', title: 'Harus Login', description: 'Anda harus login untuk menambah item ke keranjang.' });
         return;
     }
     
-    let updatedCart;
-    const existingItem = cart.find(item => item.id === product.id);
+    let updatedCart = [...cart];
+    let itemsAddedCount = 0;
 
-    if (existingItem) {
-        const newQuantity = existingItem.quantity + quantity;
-        if (newQuantity > product.stock) {
-            toast({ variant: 'destructive', title: 'Stok tidak cukup', description: `Sisa stok untuk ${product.name} hanya ${product.stock}.` });
-            return;
+    products.forEach(product => {
+        const existingItem = updatedCart.find(item => item.id === product.id);
+        if (!existingItem) {
+            updatedCart.push({ ...product, quantity });
+            itemsAddedCount++;
         }
-        updatedCart = cart.map(item =>
-            item.id === product.id ? { ...item, quantity: newQuantity } : item
-        );
-    } else {
-        if (quantity > product.stock) {
-            toast({ variant: 'destructive', title: 'Stok tidak cukup', description: `Sisa stok untuk ${product.name} hanya ${product.stock}.` });
-            return;
-        }
-        updatedCart = [...cart, { ...product, quantity }];
+    });
+
+    if (itemsAddedCount > 0 && !silent) {
+        toast({ title: 'Ditambahkan', description: `${itemsAddedCount} jenis produk masuk ke keranjang.`});
+    }
+
+    if (silent) {
+      return updatedCart;
     }
     
-    toast({ title: 'Ditambahkan', description: `${product.name} masuk ke keranjang.`});
     setCart(updatedCart);
     saveCartToLocalStorage(updatedCart);
+    return;
   };
 
   const updateQuantity = (productId: string, quantity: number) => {
@@ -104,12 +103,8 @@ export const useCart = () => {
         shippedProducts.forEach(shippedProduct => {
             const index = tempCart.findIndex(item => item.id === shippedProduct.productId);
             if (index !== -1) {
-                const newQuantity = tempCart[index].quantity - shippedProduct.quantity;
-                if (newQuantity > 0) {
-                    tempCart[index] = { ...tempCart[index], quantity: newQuantity };
-                } else {
-                    tempCart.splice(index, 1); // Remove item if quantity is 0 or less
-                }
+                // In a selection-based cart, we just remove the item entirely after use.
+                tempCart.splice(index, 1);
             }
         });
         
@@ -134,7 +129,7 @@ export const useCart = () => {
     }
   };
   
-  const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
+  const totalItems = cart.length;
 
-  return { cart, addToCart, updateQuantity, removeFromCart, clearCart, totalItems, reduceCartQuantities };
+  return { cart, addToCart, updateQuantity, removeFromCart, clearCart, totalItems, reduceCartQuantities, saveCartToLocalStorage };
 };

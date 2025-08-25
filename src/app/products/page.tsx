@@ -36,7 +36,7 @@ export default function ProductsPage() {
   const [dataLoading, setDataLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selection, setSelection] = useState<ProductSelection>({});
-  const { addToCart } = useCart();
+  const { addToCart, saveCartToLocalStorage, cart } = useCart();
   const { toast } = useToast();
   const router = useRouter();
 
@@ -77,23 +77,23 @@ export default function ProductsPage() {
 
     const itemsToAdd = products.filter(p => selectedProductIds.includes(p.id));
 
-    let itemsAddedCount = 0;
-    itemsToAdd.forEach(product => {
-      // Add to cart with default quantity of 1
-      addToCart(product, 1);
-      itemsAddedCount++;
-    });
+    // We pass the current cart to addToCart which returns the updated cart state
+    // without performing the state update itself.
+    const updatedCart = addToCart(itemsToAdd, 1, true);
 
-    if (itemsAddedCount > 0) {
-      toast({
-        title: 'Sukses!',
-        description: `${itemsAddedCount} jenis produk telah ditambahkan. Lanjutkan untuk mengisi detail pengiriman.`,
-      });
+    if (updatedCart) {
+        // Now, we manually save to localStorage to ensure it's done before redirecting.
+        saveCartToLocalStorage(updatedCart);
+
+        toast({
+            title: 'Sukses!',
+            description: `${itemsToAdd.length} jenis produk telah ditambahkan. Lanjutkan untuk mengisi detail pengiriman.`,
+        });
+
+        // Reset selection and go directly to the shipment form
+        setSelection({});
+        router.push('/shipments?action=showForm');
     }
-
-    // Reset selection and go directly to the shipment form
-    setSelection({});
-    router.push('/shipments?action=showForm');
   };
 
   const formatRupiah = (number: number) => {
