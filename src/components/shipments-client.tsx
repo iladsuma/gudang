@@ -18,9 +18,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { ShipmentForm } from './shipment-form';
 import { useToast } from '@/hooks/use-toast';
@@ -46,7 +43,7 @@ import { useAuth } from '@/context/auth-context';
 import { useCart } from '@/hooks/use-cart';
 import { Checkbox } from './ui/checkbox';
 
-export function ShipmentsClient({ shipments: initialShipments }: { shipments: Shipment[] }) {
+export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shipments: Shipment[], onUpdate: () => void; }) {
   const { user } = useAuth();
   const [shipments, setShipments] = useState(initialShipments);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -77,14 +74,10 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
   };
 
   const handleFormSuccess = useCallback((newOrUpdatedShipment: Shipment) => {
-    if (editingShipment) {
-      setShipments(prev => prev.map(s => s.id === newOrUpdatedShipment.id ? newOrUpdatedShipment : s));
-    } else {
-      setShipments(prev => [newOrUpdatedShipment, ...prev]);
-    }
+    onUpdate(); // Re-fetch data on parent component
     setIsFormOpen(false);
     setEditingShipment(undefined);
-  }, [editingShipment]);
+  }, [onUpdate]);
   
   const handleFormCancel = useCallback(() => {
     setIsFormOpen(false);
@@ -95,7 +88,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
     setIsDeleting(shipmentId);
     try {
         await deleteShipment(shipmentId);
-        setShipments((prev) => prev.filter((s) => s.id !== shipmentId));
+        onUpdate(); // Re-fetch data on parent component
         toast({
             title: 'Sukses!',
             description: 'Data pengiriman berhasil dihapus.',
@@ -169,7 +162,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
     try {
         await processShipmentsToPackaging(selectedShipments);
         toast({ title: 'Sukses!', description: `${selectedShipments.length} pengiriman telah dipindahkan ke tahap pengemasan.` });
-        setShipments(prev => prev.map(s => selectedShipments.includes(s.id) ? { ...s, status: 'Pengemasan' } : s));
+        onUpdate();
         setSelectedShipments([]);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Gagal memproses.';
@@ -180,14 +173,15 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
   };
 
   const shipmentsInProcess = shipments.filter(s => s.status === 'Proses');
+  const isAdminView = user?.role === 'admin';
 
   return (
     <div className="space-y-4">
       <div className="flex justify-end gap-2">
-         {(user?.role === 'user' || user?.role === 'admin') && (
+         {isAdminView && (
             <Button onClick={handleProcessToPackaging} disabled={selectedShipments.length === 0 || isProcessing}>
                 {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Package className="mr-2 h-4 w-4" />}
-                Bungkus Paket ({selectedShipments.length})
+                Proses ke Pengemasan ({selectedShipments.length})
             </Button>
          )}
         <Button onClick={() => router.push('/products')}>
@@ -200,8 +194,8 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[50px]">
-                {(user?.role === 'user' || user?.role === 'admin') && (
+               <TableHead className="w-[50px]">
+                {isAdminView && (
                     <Checkbox 
                         onCheckedChange={handleSelectAll}
                         checked={shipmentsInProcess.length > 0 && selectedShipments.length === shipmentsInProcess.length}
@@ -227,7 +221,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
               shipments.map((shipment) => (
                 <TableRow key={shipment.id} data-state={selectedShipments.includes(shipment.id) ? 'selected' : ''}>
                   <TableCell>
-                    {shipment.status === 'Proses' && (user?.role === 'user' || user?.role === 'admin') && (
+                    {shipment.status === 'Proses' && isAdminView && (
                         <Checkbox
                             checked={selectedShipments.includes(shipment.id)}
                             onCheckedChange={(checked) => handleSelectSingle(shipment.id, !!checked)}
@@ -256,31 +250,13 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
                     <div className="flex flex-col gap-2">
                       {shipment.products.map((p, index) => (
                         <div key={index} className="flex items-center gap-2">
-                           <Dialog>
-                            <DialogTrigger asChild>
-                               <Image
-                                src={p.imageUrl || 'https://placehold.co/100x100.png'}
-                                alt={p.name}
-                                width={32}
-                                height={32}
-                                className="rounded-md object-cover h-8 w-8 cursor-pointer"
-                                data-ai-hint="product image"
-                               />
-                            </DialogTrigger>
-                            <DialogContent className="max-w-md">
-                                <DialogHeader>
-                                    <DialogTitle>{p.name || 'Pratinjau Gambar'}</DialogTitle>
-                                </DialogHeader>
-                                <Image
-                                src={p.imageUrl || 'https://placehold.co/600x400.png'}
-                                alt={p.name}
-                                width={600}
-                                height={400}
-                                className="rounded-md object-contain"
-                                data-ai-hint="product image preview"
-                                />
-                            </DialogContent>
-                           </Dialog>
+                           <Image
+                            src={p.imageUrl || 'https://placehold.co/100x100.png'}
+                            alt={p.name}
+                            width={32}
+                            height={32}
+                            className="rounded-md object-cover h-8 w-8"
+                           />
                           <Badge variant="secondary">
                             {p.name} (x{p.quantity})
                           </Badge>
@@ -334,7 +310,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={13} className="h-24 text-center">
+                <TableCell colSpan={12} className="h-24 text-center">
                   Tidak ada data pengiriman.
                 </TableCell>
               </TableRow>

@@ -30,6 +30,7 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import Image from 'next/image';
+import { useAuth } from '@/context/auth-context';
 
 interface HistoryClientProps {
     initialShipments: Shipment[];
@@ -37,6 +38,7 @@ interface HistoryClientProps {
 }
 
 export function HistoryClient({ initialShipments, onSuccess }: HistoryClientProps) {
+    const { user } = useAuth();
     const { toast } = useToast();
     const [isClient, setIsClient] = React.useState(false);
     const [shipments, setShipments] = React.useState(initialShipments);
@@ -82,10 +84,14 @@ export function HistoryClient({ initialShipments, onSuccess }: HistoryClientProp
             });
             return;
         }
+        if (!user) {
+             toast({ variant: 'destructive', title: 'Error', description: 'User not found.' });
+             return;
+        }
 
         setIsProcessing(true);
         try {
-            await processShipmentsToDelivered(selectedShipments);
+            await processShipmentsToDelivered(selectedShipments, user.username);
             toast({
                 title: 'Sukses!',
                 description: 'Data terpilih berhasil diproses dan status diubah menjadi "Terkirim".'

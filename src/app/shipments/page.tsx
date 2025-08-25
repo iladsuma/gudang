@@ -21,23 +21,30 @@ function ShipmentsPageContent() {
   const [pageDescription, setPageDescription] = useState("Kelola semua data pengiriman barang masuk Anda yang sedang dalam tahap 'Proses'.");
 
   useEffect(() => {
-    if (user) {
-        getShipments().then(data => {
-            // User sees all shipments they created, regardless of status
+    const fetchAndSetData = async () => {
+        setLoading(true);
+        const data = await getShipments();
+        if(user?.role === 'admin') {
+            setShipments(data.filter(s => s.status === 'Proses'));
+            setPageTitle('Antrian Proses Pengiriman');
+            setPageDescription("Pilih pengiriman yang akan diproses ke tahap pengemasan. Stok akan dikurangi saat proses ini dijalankan.");
+        } else if (user) {
             setShipments(data.filter(s => s.user === user.username));
             setPageTitle('Riwayat Pengiriman Saya');
-            setPageDescription("Lacak semua pengiriman yang telah Anda buat dan statusnya saat ini. Pilih pengiriman berstatus 'Proses' untuk dibungkus.");
-            
-            setLoading(false);
-        });
+            setPageDescription("Lacak semua pengiriman yang telah Anda buat dan statusnya saat ini.");
+        }
+        setLoading(false);
+    }
+    
+    if (user) {
+        fetchAndSetData();
     } else if (!authLoading) {
-        // If auth is done and there's no user, stop data loading.
         setLoading(false);
     }
   }, [user, authLoading]);
 
   // Show skeleton while either auth or data is loading.
-  if (authLoading || loading) {
+  if (authLoading || (loading && user)) {
       return (
           <div className="container mx-auto p-4 md:p-8">
               <Card>
@@ -63,6 +70,16 @@ function ShipmentsPageContent() {
       );
   }
 
+  const handleUpdate = () => {
+     getShipments().then(data => {
+        if(user?.role === 'admin') {
+            setShipments(data.filter(s => s.status === 'Proses'));
+        } else if (user) {
+            setShipments(data.filter(s => s.user === user.username));
+        }
+    });
+  }
+
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -74,7 +91,7 @@ function ShipmentsPageContent() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ShipmentsClient shipments={shipments} />
+          <ShipmentsClient shipments={shipments} onUpdate={handleUpdate} />
         </CardContent>
       </Card>
     </div>

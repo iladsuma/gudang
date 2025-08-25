@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -23,19 +24,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      const storedUser = localStorage.getItem('user');
+      const storedUser = localStorage.getItem('gudangcheckout_user');
       if (storedUser) {
         const parsedUser = JSON.parse(storedUser);
         const dummyUsers = getDummyUsers();
-        if(dummyUsers.find(u => u.username === parsedUser.username)){
+        if(dummyUsers.find(u => u.username === parsedUser.username && u.password === parsedUser.password)){
             setUser(parsedUser);
         } else {
-            localStorage.removeItem('user');
+            localStorage.removeItem('gudangcheckout_user');
         }
       }
     } catch (error) {
       console.error("Failed to parse user from localStorage", error);
-      localStorage.removeItem('user');
+      localStorage.removeItem('gudangcheckout_user');
     } finally {
       setLoading(false);
     }
@@ -57,7 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (username: string, password: string) => {
     const loggedInUser = await apiLogin(username, password);
     setUser(loggedInUser);
-    localStorage.setItem('user', JSON.stringify(loggedInUser));
+    localStorage.setItem('gudangcheckout_user', JSON.stringify(loggedInUser));
     
     // Clear cart from previous user session if any
     const allKeys = Object.keys(localStorage);
@@ -76,7 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('user');
+    localStorage.removeItem('gudangcheckout_user');
     // We don't clear the cart on logout, it's tied to the user ID
     router.push('/login');
   };
