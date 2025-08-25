@@ -1,8 +1,9 @@
 
+
 'use client';
 
 import Link from 'next/link';
-import { Boxes, LogOut, ShoppingCart, LayoutDashboard, User as UserIcon } from 'lucide-react';
+import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, PackageCheck, Settings } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { Button } from './ui/button';
 import { useRouter, usePathname } from 'next/navigation';
@@ -43,7 +44,7 @@ export function Header() {
               </span>
             </Link>
             {user && (
-              <nav className="flex items-center gap-4 text-sm">
+              <nav className="hidden items-center gap-4 text-sm md:flex">
                 {user.role === 'admin' && (
                     <Link
                         href="/dashboard"
@@ -56,7 +57,7 @@ export function Header() {
                   href="/shipments"
                   className={cn("transition-colors hover:text-foreground/80", pathname.startsWith('/shipments') ? 'text-foreground' : 'text-foreground/60')}
                 >
-                  Pengiriman Saya
+                  {user.role === 'admin' ? 'Antrian Proses' : 'Pengiriman Saya'}
                 </Link>
                  <Link
                   href="/products"
@@ -68,20 +69,20 @@ export function Header() {
                   <>
                     <Link
                       href="/history"
-                      className={cn("transition-colors hover:text-foreground/80", pathname === '/history' ? 'text-foreground' : 'text-foreground/60')}
+                      className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname === '/history' ? 'text-foreground' : 'text-foreground/60')}
                     >
-                      Antrian Kemas
+                      <PackageCheck className="h-4 w-4" /> Antrian Kemas
                     </Link>
                     <Link
                       href="/invoices"
-                      className={cn("transition-colors hover:text-foreground/80", pathname === '/invoices' ? 'text-foreground' : 'text-foreground/60')}
+                      className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname === '/invoices' ? 'text-foreground' : 'text-foreground/60')}
                     >
-                      Arsip Terkirim
+                      <Archive className="h-4 w-4" /> Arsip Terkirim
                     </Link>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className={cn("gap-1 px-2 h-auto text-sm transition-colors hover:text-foreground/80", isSettingsPage ? 'text-foreground' : 'text-foreground/60')}>
-                            Pengaturan
+                            <Settings className="h-4 w-4" /> Pengaturan
                             <ChevronDown className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -117,7 +118,7 @@ export function Header() {
              )}
             {user ? (
               <>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-sm text-muted-foreground hidden sm:inline">
                   Halo, {user.username} ({user.role})
                 </span>
                 <Button variant="ghost" size="icon" onClick={handleLogout}>

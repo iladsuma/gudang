@@ -20,22 +20,23 @@ function ShipmentsPageContent() {
   const [pageTitle, setPageTitle] = useState('Rekapitulasi Pengiriman');
   const [pageDescription, setPageDescription] = useState("Kelola semua data pengiriman barang masuk Anda yang sedang dalam tahap 'Proses'.");
 
+  const fetchAndSetData = async () => {
+    if (!user) return;
+      setLoading(true);
+      const data = await getShipments();
+      if(user?.role === 'admin') {
+          setShipments(data.filter(s => s.status === 'Proses'));
+          setPageTitle('Antrian Proses Pengiriman');
+          setPageDescription("Pilih pengiriman yang akan diproses ke tahap pengemasan. Stok akan dikurangi saat proses ini dijalankan.");
+      } else if (user) {
+          setShipments(data.filter(s => s.user === user.username));
+          setPageTitle('Riwayat Pengiriman Saya');
+          setPageDescription("Lacak semua pengiriman yang telah Anda buat dan statusnya saat ini.");
+      }
+      setLoading(false);
+  }
+
   useEffect(() => {
-    const fetchAndSetData = async () => {
-        setLoading(true);
-        const data = await getShipments();
-        if(user?.role === 'admin') {
-            setShipments(data.filter(s => s.status === 'Proses'));
-            setPageTitle('Antrian Proses Pengiriman');
-            setPageDescription("Pilih pengiriman yang akan diproses ke tahap pengemasan. Stok akan dikurangi saat proses ini dijalankan.");
-        } else if (user) {
-            setShipments(data.filter(s => s.user === user.username));
-            setPageTitle('Riwayat Pengiriman Saya');
-            setPageDescription("Lacak semua pengiriman yang telah Anda buat dan statusnya saat ini.");
-        }
-        setLoading(false);
-    }
-    
     if (user) {
         fetchAndSetData();
     } else if (!authLoading) {
@@ -70,17 +71,6 @@ function ShipmentsPageContent() {
       );
   }
 
-  const handleUpdate = () => {
-     getShipments().then(data => {
-        if(user?.role === 'admin') {
-            setShipments(data.filter(s => s.status === 'Proses'));
-        } else if (user) {
-            setShipments(data.filter(s => s.user === user.username));
-        }
-    });
-  }
-
-
   return (
     <div className="container mx-auto p-4 md:p-8">
       <Card>
@@ -91,7 +81,7 @@ function ShipmentsPageContent() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ShipmentsClient shipments={shipments} onUpdate={handleUpdate} />
+          <ShipmentsClient shipments={shipments} onUpdate={fetchAndSetData} />
         </CardContent>
       </Card>
     </div>

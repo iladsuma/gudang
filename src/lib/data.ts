@@ -91,9 +91,8 @@ export function getDummyUsers(): User[] {
 export async function login(username: string, password: string): Promise<User> {
   return new Promise((resolve, reject) => {
     const user = db.users.find(u => u.username === username);
-    // In a real app, you would hash and compare passwords. Here, we do a simple check.
     if (user && user.password === password) {
-      const { ...userToReturn } = user;
+      const { password, ...userToReturn } = user;
       resolve(userToReturn);
     } else {
       reject(new Error('Username atau password salah.'));
@@ -102,7 +101,10 @@ export async function login(username: string, password: string): Promise<User> {
 }
 
 export async function getUsers(): Promise<User[]> {
-    return Promise.resolve(db.users);
+    return Promise.resolve(db.users.map(u => {
+        const { password, ...user } = u;
+        return user;
+    }));
 }
 
 export async function addUser(data: Omit<User, 'id'>): Promise<User> {
@@ -111,7 +113,7 @@ export async function addUser(data: Omit<User, 'id'>): Promise<User> {
     }
     const newUser: User = {
         ...data,
-        id: `usr_${Date.now()}`,
+        id: `usr_${Date.now()}_${Math.random()}`,
     };
     db.users.push(newUser);
     persistDb();

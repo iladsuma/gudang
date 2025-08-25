@@ -59,6 +59,8 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
 
   useEffect(() => {
      setShipments(initialShipments);
+     // Deselect shipments that are no longer in the list
+     setSelectedShipments(prev => prev.filter(id => initialShipments.some(s => s.id === id)));
   }, [initialShipments]);
 
   useEffect(() => {
@@ -88,7 +90,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
     setIsDeleting(shipmentId);
     try {
         await deleteShipment(shipmentId);
-        onUpdate(); // Re-fetch data on parent component
+        onUpdate();
         toast({
             title: 'Sukses!',
             description: 'Data pengiriman berhasil dihapus.',
@@ -111,12 +113,13 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
   };
 
   const handleOpenForm = () => {
-    if (cart.length === 0) {
+    if (user?.role !== 'admin' && cart.length === 0) {
         toast({
             variant: 'destructive',
             title: 'Keranjang Kosong',
             description: 'Silakan tambahkan produk dari etalase terlebih dahulu.',
         });
+        router.push('/products');
     } else {
         setEditingShipment(undefined);
         setIsFormOpen(true);
@@ -184,10 +187,12 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
                 Proses ke Pengemasan ({selectedShipments.length})
             </Button>
          )}
-        <Button onClick={() => router.push('/products')}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Tambah Pengiriman
-        </Button>
+         {!isAdminView && (
+            <Button onClick={handleOpenForm}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Tambah Pengiriman
+            </Button>
+         )}
       </div>
 
       <div className="rounded-md border">

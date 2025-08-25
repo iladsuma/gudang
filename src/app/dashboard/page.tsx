@@ -326,7 +326,7 @@ export default function DashboardPage() {
                     <CardContent className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                              <Button asChild>
-                                <Link href="/shipments">Pengiriman Saya</Link>
+                                <Link href="/shipments">Antrian Proses</Link>
                             </Button>
                             <Button asChild variant="secondary">
                                 <Link href="/history">Antrian Kemas</Link>

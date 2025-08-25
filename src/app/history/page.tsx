@@ -40,8 +40,6 @@ export default function HistoryPage() {
   const handleSuccess = (processedIds: string[]) => {
     // When successful, filter out the processed shipments from the current view
     setShipments(prev => prev.filter(s => !processedIds.includes(s.id)));
-    // Optionally, you can refresh the router if you need to sync other components,
-    // but optimistic UI update is generally faster.
     router.refresh(); 
   };
 
