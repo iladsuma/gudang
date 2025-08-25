@@ -105,6 +105,14 @@ export default function ProductsPage() {
   };
   
   const selectedCount = Object.values(selection).filter(Boolean).length;
+  
+  const handleSelectAll = (checked: boolean) => {
+    const newSelection: ProductSelection = {};
+    if(checked) {
+      filteredProducts.forEach(p => newSelection[p.id] = true);
+    }
+    setSelection(newSelection);
+  };
 
   if (authLoading || (dataLoading && user)) {
     return (
@@ -162,13 +170,7 @@ export default function ProductsPage() {
                 <TableRow>
                   <TableHead className="w-[50px]"><Checkbox
                     checked={filteredProducts.length > 0 && selectedCount === filteredProducts.length}
-                    onCheckedChange={(checked) => {
-                      const newSelection: ProductSelection = {};
-                      if(checked) {
-                        filteredProducts.forEach(p => newSelection[p.id] = true);
-                      }
-                      setSelection(newSelection);
-                    }}
+                    onCheckedChange={handleSelectAll}
                   /></TableHead>
                   <TableHead className="w-[80px]">Gambar</TableHead>
                   <TableHead>Nama Produk</TableHead>
@@ -186,8 +188,13 @@ export default function ProductsPage() {
                   </TableRow>
                 ) : filteredProducts.length > 0 ? (
                   filteredProducts.map(product => (
-                    <TableRow key={product.id} data-state={selection[product.id] ? 'selected' : ''}>
-                      <TableCell>
+                    <TableRow 
+                      key={product.id} 
+                      data-state={selection[product.id] ? 'selected' : ''}
+                      onClick={() => handleSelectionChange(product.id, !selection[product.id])}
+                      className="cursor-pointer"
+                    >
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={selection[product.id] || false}
                           onCheckedChange={(checked) => handleSelectionChange(product.id, !!checked)}
