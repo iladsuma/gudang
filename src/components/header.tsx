@@ -56,7 +56,7 @@ export function Header() {
                   href="/shipments"
                   className={cn("transition-colors hover:text-foreground/80", pathname.startsWith('/shipments') ? 'text-foreground' : 'text-foreground/60')}
                 >
-                  {user.role === 'admin' ? 'Antrian Kirim' : 'Pengiriman Saya'}
+                  Pengiriman Saya
                 </Link>
                  <Link
                   href="/products"

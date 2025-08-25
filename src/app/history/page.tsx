@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/auth-context';
-import { getShipments, processShipmentsToDelivered } from '@/lib/data';
+import { getShipments } from '@/lib/data';
 import type { Shipment } from '@/lib/types';
 import {
   Card,
@@ -30,15 +30,19 @@ export default function HistoryPage() {
 
     if (user?.role === 'admin') {
       getShipments().then(data => {
-        setShipments(data.filter(s => s.status === 'Pengemasan'));
+        // Admin now sees 'Proses' shipments here to be processed into 'Pengemasan'
+        setShipments(data.filter(s => s.status === 'Proses'));
         setDataLoading(false);
       });
     }
   }, [user, authLoading, router]);
 
   const handleSuccess = (processedIds: string[]) => {
+    // When successful, filter out the processed shipments from the current view
     setShipments(prev => prev.filter(s => !processedIds.includes(s.id)));
-    router.refresh();
+    // Optionally, you can refresh the router if you need to sync other components,
+    // but optimistic UI update is generally faster.
+    router.refresh(); 
   };
 
   if (authLoading || (dataLoading && user?.role === 'admin')) {
@@ -71,7 +75,7 @@ export default function HistoryPage() {
         <CardHeader>
           <CardTitle>Antrian Kemas</CardTitle>
           <CardDescription>
-            Konfirmasi dan catat pengiriman yang sudah selesai dikemas dan siap untuk dikirim.
+            Pilih pengiriman yang siap untuk dikemas. Stok akan diperbarui dan status akan diubah menjadi 'Pengemasan'.
           </CardDescription>
         </CardHeader>
         <CardContent>

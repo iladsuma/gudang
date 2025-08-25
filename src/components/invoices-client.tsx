@@ -39,6 +39,15 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
     }).format(number);
   };
   
+  const getStatusVariant = (status: Shipment['status']) => {
+    switch (status) {
+        case 'Proses': return 'secondary';
+        case 'Pengemasan': return 'default';
+        case 'Terkirim': return 'outline';
+        default: return 'secondary';
+    }
+  };
+  
   return (
     <div className='space-y-4'>
       <div className="rounded-md border">
@@ -48,6 +57,7 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
               <TableHead>No. Transaksi</TableHead>
               <TableHead>User Pemroses</TableHead>
               <TableHead>Detail Pengiriman</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead>Tanggal Diproses</TableHead>
               <TableHead className="text-right">Total Nilai</TableHead>
             </TableRow>
@@ -77,19 +87,24 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
                           </AccordionItem>
                       </Accordion>
                   </TableCell>
+                  <TableCell>
+                      <Badge variant={getStatusVariant(shipment.status)}>
+                          {shipment.status}
+                      </Badge>
+                  </TableCell>
                   <TableCell>{format(new Date(shipment.createdAt), 'PPpp', { locale: id })}</TableCell>
                   <TableCell className="text-right font-medium">{formatRupiah(shipment.totalAmount)}</TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
-                  Belum ada pengiriman yang selesai.
+                <TableCell colSpan={6} className="h-24 text-center">
+                  Belum ada pengiriman yang diproses.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
-          {shipments.length > 0 && <TableCaption>Daftar semua pengiriman yang sudah terkirim.</TableCaption>}
+          {shipments.length > 0 && <TableCaption>Daftar semua pengiriman yang sudah diproses.</TableCaption>}
         </Table>
       </div>
     </div>

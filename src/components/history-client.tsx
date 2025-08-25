@@ -19,8 +19,8 @@ import { id } from 'date-fns/locale';
 import type { Shipment } from '@/lib/types';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
-import { Loader2, Send } from 'lucide-react';
-import { processShipmentsToDelivered } from '@/lib/data';
+import { Loader2, Package } from 'lucide-react';
+import { processShipmentsToPackaging } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import {
     Dialog,
@@ -73,22 +73,22 @@ export function HistoryClient({ initialShipments, onSuccess }: HistoryClientProp
         }
     };
 
-    const handleProcessToDelivered = async () => {
+    const handleProcessToPackaging = async () => {
         if (selectedShipments.length === 0) {
             toast({
                 variant: 'destructive',
                 title: 'Tidak Ada Pengiriman Terpilih',
-                description: 'Pilih setidaknya satu pengiriman untuk dikirim.'
+                description: 'Pilih setidaknya satu pengiriman untuk dibungkus.'
             });
             return;
         }
 
         setIsProcessing(true);
         try {
-            await processShipmentsToDelivered(selectedShipments);
+            await processShipmentsToPackaging(selectedShipments);
             toast({
                 title: 'Sukses!',
-                description: 'Data terpilih berhasil dicatat dan status diubah menjadi "Terkirim".'
+                description: 'Data terpilih berhasil diproses dan status diubah menjadi "Pengemasan".'
             });
             onSuccess(selectedShipments);
             setSelectedShipments([]);
@@ -107,9 +107,9 @@ export function HistoryClient({ initialShipments, onSuccess }: HistoryClientProp
     return (
         <div className='space-y-4'>
             <div className="flex justify-end gap-2">
-                <Button onClick={handleProcessToDelivered} disabled={selectedShipments.length === 0 || isProcessing}>
-                    {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                    Kirim & Catat ({selectedShipments.length})
+                <Button onClick={handleProcessToPackaging} disabled={selectedShipments.length === 0 || isProcessing}>
+                    {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Package className="mr-2 h-4 w-4" />}
+                    Bungkus ({selectedShipments.length})
                 </Button>
             </div>
             <div className="rounded-md border">
@@ -125,10 +125,10 @@ export function HistoryClient({ initialShipments, onSuccess }: HistoryClientProp
                             </TableHead>
                             <TableHead>No. Transaksi</TableHead>
                             <TableHead>Ekspedisi</TableHead>
-                            <TableHead>User Pemroses</TableHead>
+                            <TableHead>User Pembuat</TableHead>
                             <TableHead>Produk</TableHead>
                             <TableHead className="text-right">Total Nilai</TableHead>
-                            <TableHead>Tanggal Pengemasan</TableHead>
+                            <TableHead>Tanggal Dibuat</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -194,13 +194,13 @@ export function HistoryClient({ initialShipments, onSuccess }: HistoryClientProp
                         ) : (
                             <TableRow>
                                 <TableCell colSpan={7} className="h-24 text-center">
-                                    Tidak ada pengiriman yang perlu dikonfirmasi.
+                                    Tidak ada pengiriman baru yang perlu dikemas.
                                 </TableCell>
                             </TableRow>
                         )}
                     </TableBody>
                     {shipments.length > 0 && (
-                        <TableCaption>Daftar semua pengiriman yang telah selesai dikemas.</TableCaption>
+                        <TableCaption>Daftar semua pengiriman yang siap untuk dikemas.</TableCaption>
                     )}
                 </Table>
             </div>
