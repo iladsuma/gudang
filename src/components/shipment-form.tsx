@@ -20,6 +20,8 @@ import { addShipment, getExpeditions, getPackagingOptions } from '@/lib/data';
 import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Label } from './ui/label';
+import { useCart } from '@/hooks/use-cart';
+
 
 const shipmentProductSchema = z.object({
   productId: z.string().min(1, 'Produk harus dipilih.'),
@@ -34,7 +36,7 @@ const shipmentProductSchema = z.object({
 
 const shipmentFormSchema = z.object({
   user: z.string().min(1, 'User harus diisi'),
-  transactionId: z.string().min(1, 'No. Transaksi harus diisi'),
+  transactionId: z.string(), // Will be generated automatically
   expedition: z.string().min(1, 'Nama ekspedisi harus dipilih'),
   receipt: z.object({
       fileName: z.string().min(1, 'Nama file resi harus ada'),
@@ -117,6 +119,7 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
   const { toast } = useToast();
   const pdfFileInputRef = React.useRef<HTMLInputElement>(null);
   const { user } = useAuth();
+  const { reduceCartQuantities } = useCart();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [expeditions, setExpeditions] = React.useState<Expedition[]>([]);
   const [packagingOptions, setPackagingOptions] = React.useState<Packaging[]>([]);
@@ -194,16 +197,30 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
     };
   };
 
+  const generateTransactionId = () => {
+    const userNamePart = user?.name.split(' ')[0].toUpperCase() || 'USER';
+    const date = new Date();
+    const datePart = `${String(date.getFullYear()).slice(-2)}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
+    const randomPart = Math.random().toString(36).substring(2, 5).toUpperCase();
+    return `${userNamePart}-${datePart}-${randomPart}`;
+  }
+
   const onSubmit = async (data: ShipmentFormValues) => {
     setIsSubmitting(true);
     try {
-        const productsWithImage = data.products.map(p => ({...p, imageUrl: p.imageUrl || 'https://placehold.co/100x100.png' }));
-        const newShipment = await addShipment({...data, products: productsWithImage as any });
+        const transactionId = generateTransactionId();
+        const dataWithId = { ...data, transactionId };
+        const productsWithImage = dataWithId.products.map(p => ({...p, imageUrl: p.imageUrl || 'https://placehold.co/100x100.png' }));
+        const newShipment = await addShipment({...dataWithId, products: productsWithImage as any });
+        
         toast({
             title: 'Sukses!',
-            description: 'Data pengiriman berhasil ditambahkan.',
+            description: `Data pengiriman ${transactionId} berhasil ditambahkan.`,
         });
+
+        reduceCartQuantities(newShipment.products);
         onSuccess(newShipment);
+        
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Terjadi kesalahan yang tidak diketahui.';
         toast({
@@ -262,43 +279,30 @@ export function ShipmentForm({ onSuccess, onCancel, initialProductsFromCart = []
                   </FormItem>
               )}
               />
-              <FormField
-              control={form.control}
-              name="transactionId"
-              render={({ field }) => (
-                  <FormItem>
-                  <FormLabel>No. Transaksi</FormLabel>
-                  <FormControl>
-                      <Input placeholder="cth. A-1" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                  </FormItem>
-              )}
+               <FormField
+                  control={form.control}
+                  name="expedition"
+                  render={({ field }) => (
+                      <FormItem>
+                      <FormLabel>Nama Ekspedisi</FormLabel>
+                      <FormControl>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <SelectTrigger>
+                                  <SelectValue placeholder="Pilih ekspedisi" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  {expeditions.map(exp => (
+                                      <SelectItem key={exp.id} value={exp.name}>{exp.name}</SelectItem>
+                                  ))}
+                              </SelectContent>
+                          </Select>
+                      </FormControl>
+                      <FormMessage />
+                      </FormItem>
+                  )}
               />
           </div>
           
-          <FormField
-              control={form.control}
-              name="expedition"
-              render={({ field }) => (
-                  <FormItem>
-                  <FormLabel>Nama Ekspedisi</FormLabel>
-                  <FormControl>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <SelectTrigger>
-                              <SelectValue placeholder="Pilih ekspedisi" />
-                          </SelectTrigger>
-                          <SelectContent>
-                              {expeditions.map(exp => (
-                                  <SelectItem key={exp.id} value={exp.name}>{exp.name}</SelectItem>
-                              ))}
-                          </SelectContent>
-                      </Select>
-                  </FormControl>
-                  <FormMessage />
-                  </FormItem>
-              )}
-          />
 
           <FormField
               control={form.control}

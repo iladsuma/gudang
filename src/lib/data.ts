@@ -101,9 +101,10 @@ export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'tot
   await new Promise(resolve => setTimeout(resolve, 500));
   const shipments = await getShipments();
 
-  if (shipments.some(s => s.transactionId.toLowerCase() === data.transactionId.toLowerCase())) {
-    throw new Error('ID Transaksi harus unik.');
-  }
+  // No longer needed due to automatic ID generation
+  // if (shipments.some(s => s.transactionId.toLowerCase() === data.transactionId.toLowerCase())) {
+  //   throw new Error('ID Transaksi harus unik.');
+  // }
 
   const totalItems = data.products.reduce((sum, p) => sum + p.quantity, 0);
   

@@ -58,7 +58,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
   const [isClient, setIsClient] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { cart } = useCart();
+  const { cart, clearCart } = useCart();
 
 
   useEffect(() => {
@@ -69,8 +69,14 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
 
 
   useEffect(() => {
-    setShipments(initialShipments.filter(s => s.status === 'Proses'));
-  }, [initialShipments]);
+    // This logic might need adjustment based on the new flow
+    // For now, let's assume it shows 'Proses' for admin, and all for user.
+    if(user?.role === 'admin') {
+      setShipments(initialShipments.filter(s => s.status === 'Proses'));
+    } else {
+      setShipments(initialShipments);
+    }
+  }, [initialShipments, user]);
 
   useEffect(() => {
     setIsClient(true);
@@ -218,15 +224,19 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
   return (
     <div className="space-y-4">
       <div className="flex justify-end gap-2">
+       {user?.role === 'admin' && (
         <Button onClick={handleProcessToPackaging} disabled={selectedShipments.length === 0 || isProcessing}>
             {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Package className="mr-2 h-4 w-4" />}
             Bungkus ({selectedShipments.length})
         </Button>
+       )}
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <Button onClick={handleOpenForm}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Tambah Pengiriman
-          </Button>
+          <DialogTrigger asChild>
+            <Button onClick={handleOpenForm}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Tambah Pengiriman
+            </Button>
+          </DialogTrigger>
           <DialogContent className="sm:max-w-4xl">
             <ShipmentForm
               onSuccess={handleFormSuccess}
@@ -241,6 +251,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
         <Table>
           <TableHeader>
             <TableRow>
+             {user?.role === 'admin' && (
               <TableHead className="w-[50px]">
                 <Checkbox
                     checked={shipments.length > 0 && selectedShipments.length === shipments.length}
@@ -248,6 +259,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
                     aria-label="Pilih semua"
                 />
               </TableHead>
+             )}
               <TableHead>No.</TableHead>
               <TableHead>User</TableHead>
               <TableHead>No Transaksi</TableHead>
@@ -267,13 +279,15 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
             {shipments.length > 0 ? (
               shipments.map((shipment, index) => (
                 <TableRow key={shipment.id} data-state={selectedShipments.includes(shipment.id) ? "selected" : undefined}>
-                   <TableCell>
-                    <Checkbox
-                      checked={selectedShipments.includes(shipment.id)}
-                      onCheckedChange={(checked) => handleSelectSingle(shipment.id, !!checked)}
-                      aria-label={`Pilih pengiriman ${shipment.transactionId}`}
-                    />
-                  </TableCell>
+                   {user?.role === 'admin' && (
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedShipments.includes(shipment.id)}
+                        onCheckedChange={(checked) => handleSelectSingle(shipment.id, !!checked)}
+                        aria-label={`Pilih pengiriman ${shipment.transactionId}`}
+                      />
+                    </TableCell>
+                   )}
                   <TableCell>{index + 1}</TableCell>
                   <TableCell className="font-medium">{shipment.user}</TableCell>
                   <TableCell>{shipment.transactionId}</TableCell>
@@ -376,7 +390,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
               </TableRow>
             )}
           </TableBody>
-          <TableCaption>Daftar semua pengiriman barang masuk yang siap diproses.</TableCaption>
+          {shipments.length > 0 && <TableCaption>Daftar semua pengiriman barang masuk yang siap diproses.</TableCaption>}
         </Table>
       </div>
         {shipments.length > 0 && (

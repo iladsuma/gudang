@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { CartItem, Product } from '@/lib/types';
+import type { CartItem, Product, ShipmentProduct } from '@/lib/types';
 import { useToast } from './use-toast';
 import { useAuth } from '@/context/auth-context';
 
@@ -11,7 +11,6 @@ export const useCart = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const { toast } = useToast();
   
-  // Create a dynamic storage key based on the user ID
   const CART_STORAGE_KEY = user ? `shipping_cart_${user.id}` : null;
 
   useEffect(() => {
@@ -21,7 +20,7 @@ export const useCart = () => {
           if (storedCart) {
             setCart(JSON.parse(storedCart));
           } else {
-            setCart([]); // If no cart for this user, initialize empty
+            setCart([]); 
           }
         } catch (error) {
             console.error("Gagal mengambil keranjang dari localStorage", error);
@@ -29,7 +28,6 @@ export const useCart = () => {
             setCart([]);
         }
     } else {
-        // If no user, clear the cart
         setCart([]);
     }
   }, [CART_STORAGE_KEY]);
@@ -84,10 +82,10 @@ export const useCart = () => {
       if (quantity <= 0) {
           updatedCart = prevCart.filter(item => item.id !== productId);
       } else if (quantity > itemToUpdate.stock) {
-          toast({ variant: 'destructive', title: 'Stok tidak cukup', description: `Sisa stok hanya ${itemToUpdate.stock}.` });
           updatedCart = prevCart.map(item =>
               item.id === productId ? { ...item, quantity: item.stock } : item
           );
+           toast({ variant: 'destructive', title: 'Stok tidak cukup', description: `Sisa stok hanya ${itemToUpdate.stock}.` });
       } else {
           updatedCart = prevCart.map(item =>
               item.id === productId ? { ...item, quantity } : item
@@ -98,6 +96,28 @@ export const useCart = () => {
       return updatedCart;
     });
   };
+  
+  const reduceCartQuantities = (shippedProducts: ShipmentProduct[]) => {
+    setCart(prevCart => {
+        let tempCart = [...prevCart];
+        
+        shippedProducts.forEach(shippedProduct => {
+            const index = tempCart.findIndex(item => item.id === shippedProduct.productId);
+            if (index !== -1) {
+                const newQuantity = tempCart[index].quantity - shippedProduct.quantity;
+                if (newQuantity > 0) {
+                    tempCart[index] = { ...tempCart[index], quantity: newQuantity };
+                } else {
+                    tempCart.splice(index, 1); // Remove item if quantity is 0 or less
+                }
+            }
+        });
+        
+        saveCartToLocalStorage(tempCart);
+        return tempCart;
+    });
+};
+
 
   const removeFromCart = (productId: string) => {
     setCart(prevCart => {
@@ -116,5 +136,5 @@ export const useCart = () => {
   
   const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
 
-  return { cart, addToCart, updateQuantity, removeFromCart, clearCart, totalItems };
+  return { cart, addToCart, updateQuantity, removeFromCart, clearCart, totalItems, reduceCartQuantities };
 };
