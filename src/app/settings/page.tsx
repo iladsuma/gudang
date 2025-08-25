@@ -10,6 +10,7 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
+  CardFooter
 } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
@@ -57,7 +58,7 @@ export default function SettingsPage() {
                 <p className="text-muted-foreground">Kelola konfigurasi dan data master aplikasi Anda di sini.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <Card className="flex flex-col">
                     <CardHeader>
                         <CardTitle>Manajemen Produk</CardTitle>
@@ -68,13 +69,13 @@ export default function SettingsPage() {
                     <CardContent className="flex-grow">
                        <p className="text-sm text-muted-foreground">Atur kode, nama, harga jual, dan stok awal untuk setiap item.</p>
                     </CardContent>
-                    <div className="p-6 pt-0">
+                    <CardFooter>
                        <Button asChild>
                            <Link href="/settings/products">
                                 Kelola Produk <ChevronRight className="ml-2 h-4 w-4" />
                            </Link>
                        </Button>
-                    </div>
+                    </CardFooter>
                 </Card>
                 <Card className="flex flex-col">
                     <CardHeader>
@@ -86,13 +87,13 @@ export default function SettingsPage() {
                     <CardContent className="flex-grow">
                        <p className="text-sm text-muted-foreground">Tambah, hapus, atau edit daftar ekspedisi.</p>
                     </CardContent>
-                    <div className="p-6 pt-0">
+                    <CardFooter>
                        <Button asChild>
                            <Link href="/settings/expeditions">
                                 Kelola Ekspedisi <ChevronRight className="ml-2 h-4 w-4" />
                            </Link>
                        </Button>
-                    </div>
+                    </CardFooter>
                 </Card>
                  <Card className="flex flex-col">
                     <CardHeader>
@@ -104,13 +105,31 @@ export default function SettingsPage() {
                     <CardContent className="flex-grow">
                        <p className="text-sm text-muted-foreground">Tambah, hapus, atau edit tipe kemasan dan biayanya.</p>
                     </CardContent>
-                    <div className="p-6 pt-0">
+                    <CardFooter>
                        <Button asChild>
                            <Link href="/settings/packaging">
                                 Kelola Kemasan <ChevronRight className="ml-2 h-4 w-4" />
                            </Link>
                        </Button>
-                    </div>
+                    </CardFooter>
+                </Card>
+                <Card className="flex flex-col">
+                    <CardHeader>
+                        <CardTitle>Manajemen Pengguna</CardTitle>
+                        <CardDescription>
+                            Kelola akun yang dapat mengakses aplikasi. Tambah, edit, dan hapus pengguna.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-grow">
+                       <p className="text-sm text-muted-foreground">Atur username, password, dan peran (admin/user) untuk setiap akun.</p>
+                    </CardContent>
+                    <CardFooter>
+                       <Button asChild>
+                           <Link href="/settings/users">
+                                Kelola Pengguna <ChevronRight className="ml-2 h-4 w-4" />
+                           </Link>
+                       </Button>
+                    </CardFooter>
                 </Card>
             </div>
         </div>

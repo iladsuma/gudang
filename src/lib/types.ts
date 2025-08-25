@@ -42,6 +42,7 @@ export interface User {
     username: string;
     name: string;
     role: 'admin' | 'user';
+    password?: string;
 }
 
 export interface CheckoutItem {

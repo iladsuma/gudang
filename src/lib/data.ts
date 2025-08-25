@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import type { User, Shipment, Checkout, Expedition, Product, Packaging } from '@/lib/types';
@@ -44,8 +45,8 @@ export function getDummyUsers(): User[] {
     // This is now only used as a fallback for the local auth context check,
     // actual validation happens on the server.
     return [
-        { id: 'usr_1', username: 'admin', name: 'Admin', role: 'admin' },
-        { id: 'usr_2', username: 'user', name: 'User Biasa', role: 'user' },
+        { id: 'usr_1', username: 'admin', password: 'admin', name: 'Admin', role: 'admin' },
+        { id: 'usr_2', username: 'user', password: 'user', name: 'User Biasa', role: 'user' },
     ];
 }
 
@@ -55,6 +56,30 @@ export async function login(username: string, password: string): Promise<User> {
     return fetchApi<User>('/login', {
         method: 'POST',
         body: JSON.stringify({ username, password }),
+    });
+}
+
+export async function getUsers(): Promise<User[]> {
+    return fetchApi<User[]>('/users');
+}
+
+export async function addUser(data: Omit<User, 'id'>): Promise<User> {
+    return fetchApi<User>('/users', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+}
+
+export async function updateUser(id: string, data: Omit<User, 'id'>): Promise<User> {
+    return fetchApi<User>(`/users/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+    });
+}
+
+export async function deleteUser(id: string): Promise<void> {
+    await fetchApi(`/users/${id}`, {
+        method: 'DELETE',
     });
 }
 
