@@ -23,17 +23,11 @@ function ShipmentsPageContent() {
   useEffect(() => {
     if (user) {
         getShipments().then(data => {
-            if (user.role === 'admin') {
-                // Admin sees all shipments with 'Proses' status to be packed
-                setShipments(data.filter(s => s.status === 'Proses'));
-                setPageTitle('Antrian Kemas');
-                setPageDescription("Pilih pengiriman yang siap untuk dikemas. Stok akan diperbarui dan status diubah menjadi 'Pengemasan'.");
-            } else {
-                // User sees all shipments they created, regardless of status
-                setShipments(data.filter(s => s.user === user.name));
-                setPageTitle('Riwayat Pengiriman Saya');
-                setPageDescription("Lacak semua pengiriman yang telah Anda buat dan statusnya saat ini. Pilih pengiriman berstatus 'Proses' untuk dibungkus.");
-            }
+            // User sees all shipments they created, regardless of status
+            setShipments(data.filter(s => s.user === user.name));
+            setPageTitle('Riwayat Pengiriman Saya');
+            setPageDescription("Lacak semua pengiriman yang telah Anda buat dan statusnya saat ini. Pilih pengiriman berstatus 'Proses' untuk dibungkus.");
+            
             setLoading(false);
         });
     } else if (!authLoading) {

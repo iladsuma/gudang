@@ -18,7 +18,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogTrigger,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -40,7 +39,7 @@ import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { deleteShipment, processShipmentsToPackaging } from '@/lib/data';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/context/auth-context';
 import { useCart } from '@/hooks/use-cart';
@@ -55,17 +54,9 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { cart } = useCart();
   const [selectedShipments, setSelectedShipments] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-
-
-  useEffect(() => {
-    if (searchParams.get('action') === 'showForm') {
-      handleOpenForm();
-    }
-  }, [searchParams]);
 
 
   useEffect(() => {
@@ -92,14 +83,12 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
     }
     setIsFormOpen(false);
     setEditingShipment(undefined);
-    router.replace('/shipments', { scroll: false });
-  }, [editingShipment, router]);
+  }, [editingShipment]);
   
   const handleFormCancel = useCallback(() => {
     setIsFormOpen(false);
     setEditingShipment(undefined);
-    router.replace('/shipments', { scroll: false });
-  }, [router]);
+  }, []);
   
   const onDelete = async (shipmentId: string) => {
     setIsDeleting(shipmentId);
@@ -194,30 +183,16 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
   return (
     <div className="space-y-4">
       <div className="flex justify-end gap-2">
-         {user?.role === 'user' && (
+         {(user?.role === 'user' || user?.role === 'admin') && (
             <Button onClick={handleProcessToPackaging} disabled={selectedShipments.length === 0 || isProcessing}>
                 {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Package className="mr-2 h-4 w-4" />}
                 Bungkus Paket ({selectedShipments.length})
             </Button>
          )}
-        <Dialog open={isFormOpen} onOpenChange={(open) => {
-          if(!open) handleFormCancel();
-          setIsFormOpen(open);
-        }}>
-            <Button onClick={handleOpenForm}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Tambah Pengiriman
-            </Button>
-          <DialogContent className="sm:max-w-4xl">
-            <ShipmentForm
-              key={editingShipment ? editingShipment.id : 'new'}
-              shipmentToEdit={editingShipment}
-              onSuccess={handleFormSuccess}
-              onCancel={handleFormCancel}
-              initialProductsFromCart={cart}
-            />
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => router.push('/products')}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Tambah Pengiriman
+        </Button>
       </div>
 
       <div className="rounded-md border">
@@ -225,7 +200,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
           <TableHeader>
             <TableRow>
               <TableHead className="w-[50px]">
-                {user?.role === 'user' && (
+                {(user?.role === 'user' || user?.role === 'admin') && (
                     <Checkbox 
                         onCheckedChange={handleSelectAll}
                         checked={shipmentsInProcess.length > 0 && selectedShipments.length === shipmentsInProcess.length}
@@ -251,7 +226,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
               shipments.map((shipment) => (
                 <TableRow key={shipment.id} data-state={selectedShipments.includes(shipment.id) ? 'selected' : ''}>
                   <TableCell>
-                    {shipment.status === 'Proses' && user?.role === 'user' && (
+                    {shipment.status === 'Proses' && (user?.role === 'user' || user?.role === 'admin') && (
                         <Checkbox
                             checked={selectedShipments.includes(shipment.id)}
                             onCheckedChange={(checked) => handleSelectSingle(shipment.id, !!checked)}
@@ -367,6 +342,21 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
           {shipments.length > 0 && <TableCaption>Daftar semua pengiriman barang masuk yang Anda buat.</TableCaption>}
         </Table>
       </div>
+
+       <Dialog open={isFormOpen} onOpenChange={(open) => {
+          if(!open) handleFormCancel();
+          setIsFormOpen(open);
+        }}>
+          <DialogContent className="sm:max-w-4xl">
+            <ShipmentForm
+              key={editingShipment ? editingShipment.id : 'new'}
+              shipmentToEdit={editingShipment}
+              onSuccess={handleFormSuccess}
+              onCancel={handleFormCancel}
+              initialProductsFromCart={cart}
+            />
+          </DialogContent>
+        </Dialog>
     </div>
   );
 }

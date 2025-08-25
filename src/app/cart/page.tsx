@@ -10,10 +10,17 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Trash2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { ShipmentForm } from '@/components/shipment-form';
+import type { Shipment } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 
 export default function CartPage() {
-    const { cart, removeFromCart, totalItems } = useCart();
+    const { cart, removeFromCart, clearCart, totalItems } = useCart();
     const router = useRouter();
+    const { toast } = useToast();
+    const [isFormOpen, setIsFormOpen] = React.useState(false);
+
 
     const formatRupiah = (number: number) => {
         return new Intl.NumberFormat('id-ID', {
@@ -25,11 +32,30 @@ export default function CartPage() {
 
     const handleCheckout = () => {
         if (cart.length === 0) {
-            alert("Keranjang kosong. Silakan tambahkan produk dari etalase.");
+            toast({
+                variant: 'destructive',
+                title: "Keranjang kosong",
+                description: "Silakan tambahkan produk dari etalase."
+            });
             return;
         }
-        router.push('/shipments?action=showForm');
+        setIsFormOpen(true);
     };
+    
+    const handleFormSuccess = React.useCallback((newShipment: Shipment) => {
+        clearCart();
+        setIsFormOpen(false);
+        toast({
+            title: "Pengiriman Dibuat!",
+            description: `Data pengiriman ${newShipment.transactionId} berhasil disimpan.`,
+        });
+        router.push('/shipments');
+    }, [clearCart, router, toast]);
+
+    const handleFormCancel = React.useCallback(() => {
+        setIsFormOpen(false);
+    }, []);
+
 
     const subtotal = React.useMemo(() => {
         // Subtotal calculation ignores quantity, as it's determined in the next step.
@@ -37,6 +63,7 @@ export default function CartPage() {
     }, [cart]);
 
     return (
+        <>
         <div className="container mx-auto p-4 md:p-8">
             <div className="mb-6">
                 <Button asChild variant="outline" size="sm">
@@ -110,5 +137,16 @@ export default function CartPage() {
                 )}
             </Card>
         </div>
+        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+            <DialogContent className="sm:max-w-4xl">
+                 <ShipmentForm
+                    key="new-shipment-from-cart"
+                    onSuccess={handleFormSuccess}
+                    onCancel={handleFormCancel}
+                    initialProductsFromCart={cart}
+                />
+            </DialogContent>
+        </Dialog>
+        </>
     );
 }
