@@ -24,15 +24,15 @@ function ShipmentsPageContent() {
     if (user) {
         getShipments().then(data => {
             if (user.role === 'admin') {
-                // Admin sees all shipments with 'Proses' status
+                // Admin sees all shipments with 'Proses' status to be packed
                 setShipments(data.filter(s => s.status === 'Proses'));
-                setPageTitle('Antrian Pengiriman (Admin)');
-                setPageDescription("Kelola semua pengiriman dari semua user yang siap untuk dibungkus.");
+                setPageTitle('Antrian Kemas');
+                setPageDescription("Pilih pengiriman yang siap untuk dikemas. Stok akan diperbarui dan status diubah menjadi 'Pengemasan'.");
             } else {
                 // User sees all shipments they created, regardless of status
                 setShipments(data.filter(s => s.user === user.name));
                 setPageTitle('Riwayat Pengiriman Saya');
-                setPageDescription("Lacak semua pengiriman yang telah Anda buat dan statusnya saat ini.");
+                setPageDescription("Lacak semua pengiriman yang telah Anda buat dan statusnya saat ini. Pilih pengiriman berstatus 'Proses' untuk dibungkus.");
             }
             setLoading(false);
         });

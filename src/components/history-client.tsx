@@ -134,7 +134,7 @@ export function HistoryClient({ initialShipments, onSuccess }: HistoryClientProp
                     <TableBody>
                         {shipments.length > 0 ? (
                             shipments.map((shipment) => (
-                                <TableRow key={shipment.id}>
+                                <TableRow key={shipment.id} data-state={selectedShipments.includes(shipment.id) ? 'selected' : ''}>
                                     <TableCell>
                                         <Checkbox
                                             checked={selectedShipments.includes(shipment.id)}

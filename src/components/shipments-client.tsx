@@ -2,8 +2,8 @@
 
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import type { Shipment, Product } from '@/lib/types';
+import { useState, useEffect, useCallback } from 'react';
+import type { Shipment } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Trash2, Loader2, FileText, Package, Pencil } from 'lucide-react';
 import {
@@ -18,9 +18,9 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogTrigger,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { ShipmentForm } from './shipment-form';
 import { useToast } from '@/hooks/use-toast';
@@ -39,11 +39,12 @@ import { Badge } from './ui/badge';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { deleteShipment, getProducts } from '@/lib/data';
+import { deleteShipment, processShipmentsToPackaging } from '@/lib/data';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/context/auth-context';
 import { useCart } from '@/hooks/use-cart';
+import { Checkbox } from './ui/checkbox';
 
 export function ShipmentsClient({ shipments: initialShipments }: { shipments: Shipment[] }) {
   const { user } = useAuth();
@@ -56,11 +57,13 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
   const router = useRouter();
   const searchParams = useSearchParams();
   const { cart } = useCart();
+  const [selectedShipments, setSelectedShipments] = useState<string[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
 
 
   useEffect(() => {
     if (searchParams.get('action') === 'showForm') {
-      setIsFormOpen(true);
+      handleOpenForm();
     }
   }, [searchParams]);
 
@@ -71,7 +74,6 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
 
   useEffect(() => {
     setIsClient(true);
-    getProducts();
   }, []);
   
   const formatRupiah = (number: number) => {
@@ -84,10 +86,8 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
 
   const handleFormSuccess = useCallback((newOrUpdatedShipment: Shipment) => {
     if (editingShipment) {
-      // Replace the old shipment with the updated one
       setShipments(prev => prev.map(s => s.id === newOrUpdatedShipment.id ? newOrUpdatedShipment : s));
     } else {
-      // Add the new shipment to the top of the list
       setShipments(prev => [newOrUpdatedShipment, ...prev]);
     }
     setIsFormOpen(false);
@@ -154,11 +154,56 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
     }
   };
 
+  const handleSelectAll = (checked: boolean) => {
+      if(checked) {
+          setSelectedShipments(shipments.filter(s => s.status === 'Proses').map(s => s.id));
+      } else {
+          setSelectedShipments([]);
+      }
+  }
+
+  const handleSelectSingle = (shipmentId: string, checked: boolean) => {
+      if(checked) {
+          setSelectedShipments(prev => [...prev, shipmentId]);
+      } else {
+          setSelectedShipments(prev => prev.filter(id => id !== shipmentId));
+      }
+  }
+
+  const handleProcessToPackaging = async () => {
+    if (selectedShipments.length === 0) {
+        toast({ variant: 'destructive', title: 'Tidak Ada Terpilih', description: 'Pilih setidaknya satu pengiriman untuk dibungkus.' });
+        return;
+    }
+    setIsProcessing(true);
+    try {
+        await processShipmentsToPackaging(selectedShipments);
+        toast({ title: 'Sukses!', description: `${selectedShipments.length} pengiriman telah dipindahkan ke tahap pengemasan.` });
+        setShipments(prev => prev.map(s => selectedShipments.includes(s.id) ? { ...s, status: 'Pengemasan' } : s));
+        setSelectedShipments([]);
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Gagal memproses.';
+        toast({ variant: 'destructive', title: 'Gagal Memproses', description: message });
+    } finally {
+        setIsProcessing(false);
+    }
+  };
+
+  const shipmentsInProcess = shipments.filter(s => s.status === 'Proses');
 
   return (
     <div className="space-y-4">
       <div className="flex justify-end gap-2">
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+         {user?.role === 'user' && (
+            <Button onClick={handleProcessToPackaging} disabled={selectedShipments.length === 0 || isProcessing}>
+                {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Package className="mr-2 h-4 w-4" />}
+                Bungkus Paket ({selectedShipments.length})
+            </Button>
+         )}
+        <Dialog open={isFormOpen} onOpenChange={(open) => {
+          if(!open) handleFormCancel();
+          setIsFormOpen(open);
+        }}>
             <Button onClick={handleOpenForm}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Tambah Pengiriman
@@ -179,9 +224,16 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>No.</TableHead>
-              <TableHead>User</TableHead>
-              <TableHead>No Transaksi</TableHead>
+              <TableHead className="w-[50px]">
+                {user?.role === 'user' && (
+                    <Checkbox 
+                        onCheckedChange={handleSelectAll}
+                        checked={shipmentsInProcess.length > 0 && selectedShipments.length === shipmentsInProcess.length}
+                        aria-label="Pilih semua"
+                    />
+                )}
+              </TableHead>
+              <TableHead>No. Transaksi</TableHead>
               <TableHead>Ekspedisi</TableHead>
                <TableHead>Status</TableHead>
               <TableHead>Resi</TableHead>
@@ -196,10 +248,17 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
           </TableHeader>
           <TableBody>
             {shipments.length > 0 ? (
-              shipments.map((shipment, index) => (
-                <TableRow key={shipment.id}>
-                  <TableCell>{index + 1}</TableCell>
-                  <TableCell className="font-medium">{shipment.user}</TableCell>
+              shipments.map((shipment) => (
+                <TableRow key={shipment.id} data-state={selectedShipments.includes(shipment.id) ? 'selected' : ''}>
+                  <TableCell>
+                    {shipment.status === 'Proses' && user?.role === 'user' && (
+                        <Checkbox
+                            checked={selectedShipments.includes(shipment.id)}
+                            onCheckedChange={(checked) => handleSelectSingle(shipment.id, !!checked)}
+                            aria-label={`Pilih pengiriman ${shipment.transactionId}`}
+                        />
+                    )}
+                  </TableCell>
                   <TableCell>{shipment.transactionId}</TableCell>
                   <TableCell>{shipment.expedition}</TableCell>
                   <TableCell>
@@ -299,7 +358,7 @@ export function ShipmentsClient({ shipments: initialShipments }: { shipments: Sh
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={14} className="h-24 text-center">
+                <TableCell colSpan={13} className="h-24 text-center">
                   Tidak ada data pengiriman.
                 </TableCell>
               </TableRow>

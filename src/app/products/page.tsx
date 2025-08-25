@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { getProducts } from '@/lib/data';
-import type { Product } from '@/lib/types';
+import type { Product, ProductSelection } from '@/lib/types';
 import {
   Card,
   CardContent,
@@ -27,23 +27,23 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-
-interface ProductWithQuantity extends Product {
-  inputQuantity: number;
-}
+import { Checkbox } from '@/components/ui/checkbox';
+import { useRouter } from 'next/navigation';
 
 export default function ProductsPage() {
   const { user, loading: authLoading } = useAuth();
-  const [products, setProducts] = useState<ProductWithQuantity[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selection, setSelection] = useState<ProductSelection>({});
   const { addToCart } = useCart();
   const { toast } = useToast();
+  const router = useRouter();
 
   useEffect(() => {
     if (user) {
       getProducts().then(data => {
-        setProducts(data.map(p => ({ ...p, inputQuantity: 0 })));
+        setProducts(data);
         setDataLoading(false);
       });
     } else if (!authLoading) {
@@ -59,42 +59,41 @@ export default function ProductsPage() {
     );
   }, [products, searchTerm]);
 
-  const handleQuantityChange = (productId: string, quantity: number) => {
-    setProducts(prevProducts =>
-      prevProducts.map(p =>
-        p.id === productId ? { ...p, inputQuantity: quantity >= 0 ? quantity : 0 } : p
-      )
-    );
+  const handleSelectionChange = (productId: string, checked: boolean) => {
+    setSelection(prev => ({ ...prev, [productId]: checked }));
   };
-  
+
   const handleBulkAddToCart = () => {
-    const itemsToAdd = products.filter(p => p.inputQuantity > 0);
-    if (itemsToAdd.length === 0) {
-        toast({
-            variant: 'destructive',
-            title: 'Tidak ada produk dipilih',
-            description: 'Silakan isi kuantitas pada produk yang ingin ditambahkan.',
-        });
-        return;
+    const selectedProductIds = Object.keys(selection).filter(id => selection[id]);
+
+    if (selectedProductIds.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Tidak ada produk dipilih',
+        description: 'Silakan centang produk yang ingin ditambahkan.',
+      });
+      return;
     }
+
+    const itemsToAdd = products.filter(p => selectedProductIds.includes(p.id));
 
     let itemsAddedCount = 0;
     itemsToAdd.forEach(product => {
-        addToCart(product, product.inputQuantity);
-        itemsAddedCount++;
+      // Add to cart with default quantity of 1
+      addToCart(product, 1);
+      itemsAddedCount++;
     });
 
-    if(itemsAddedCount > 0){
-        toast({
-            title: 'Sukses!',
-            description: `${itemsAddedCount} jenis produk telah ditambahkan ke keranjang.`,
-        });
+    if (itemsAddedCount > 0) {
+      toast({
+        title: 'Sukses!',
+        description: `${itemsAddedCount} jenis produk telah ditambahkan ke keranjang. Lanjutkan ke keranjang untuk mengatur kuantitas.`,
+      });
     }
 
-    // Reset input quantities after adding
-    setProducts(prevProducts =>
-      prevProducts.map(p => ({ ...p, inputQuantity: 0 }))
-    );
+    // Reset selection after adding
+    setSelection({});
+    router.push('/cart');
   };
 
   const formatRupiah = (number: number) => {
@@ -104,18 +103,20 @@ export default function ProductsPage() {
       minimumFractionDigits: 0,
     }).format(number);
   };
+  
+  const selectedCount = Object.values(selection).filter(Boolean).length;
 
   if (authLoading || (dataLoading && user)) {
     return (
       <div className="container mx-auto p-4 md:p-8">
-         <Card>
-            <CardHeader>
-                <Skeleton className="h-9 w-1/3" />
-                <Skeleton className="h-5 w-2/3 mt-2" />
-            </CardHeader>
-            <CardContent>
-                <Skeleton className="h-96 w-full" />
-            </CardContent>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-9 w-1/3" />
+            <Skeleton className="h-5 w-2/3 mt-2" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-96 w-full" />
+          </CardContent>
         </Card>
       </div>
     );
@@ -135,23 +136,23 @@ export default function ProductsPage() {
         <CardHeader>
           <CardTitle className="text-3xl">Etalase Produk</CardTitle>
           <CardDescription>
-            Pilih produk dan masukkan kuantitas untuk ditambahkan ke keranjang secara massal.
+            Pilih produk yang akan direkap, lalu lanjutkan ke keranjang untuk mengisi kuantitas.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex justify-between items-center gap-4">
             <div className="relative w-full max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                    placeholder="Cari nama atau kode produk..."
-                    className="pl-9"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Cari nama atau kode produk..."
+                className="pl-9"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
-            <Button onClick={handleBulkAddToCart}>
+            <Button onClick={handleBulkAddToCart} disabled={selectedCount === 0}>
               <ShoppingCart className="mr-2 h-4 w-4" />
-              Tambah ke Keranjang
+              Lanjut ke Rekap ({selectedCount})
             </Button>
           </div>
 
@@ -159,12 +160,21 @@ export default function ProductsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[50px]"><Checkbox
+                    checked={filteredProducts.length > 0 && selectedCount === filteredProducts.length}
+                    onCheckedChange={(checked) => {
+                      const newSelection: ProductSelection = {};
+                      if(checked) {
+                        filteredProducts.forEach(p => newSelection[p.id] = true);
+                      }
+                      setSelection(newSelection);
+                    }}
+                  /></TableHead>
                   <TableHead className="w-[80px]">Gambar</TableHead>
                   <TableHead>Nama Produk</TableHead>
                   <TableHead>Kode</TableHead>
                   <TableHead>Harga</TableHead>
                   <TableHead className="w-[100px]">Stok</TableHead>
-                  <TableHead className="w-[150px]">Kuantitas</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -176,7 +186,13 @@ export default function ProductsPage() {
                   </TableRow>
                 ) : filteredProducts.length > 0 ? (
                   filteredProducts.map(product => (
-                    <TableRow key={product.id}>
+                    <TableRow key={product.id} data-state={selection[product.id] ? 'selected' : ''}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selection[product.id] || false}
+                          onCheckedChange={(checked) => handleSelectionChange(product.id, !!checked)}
+                        />
+                      </TableCell>
                       <TableCell>
                         <Image
                           src={product.imageUrl || 'https://placehold.co/100x100.png'}
@@ -190,17 +206,6 @@ export default function ProductsPage() {
                       <TableCell className="font-mono text-muted-foreground">{product.code}</TableCell>
                       <TableCell>{formatRupiah(product.price)}</TableCell>
                       <TableCell>{product.stock}</TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min="0"
-                          max={product.stock}
-                          value={product.inputQuantity}
-                          onChange={(e) => handleQuantityChange(product.id, parseInt(e.target.value, 10) || 0)}
-                          className="w-24"
-                          disabled={product.stock === 0}
-                        />
-                      </TableCell>
                     </TableRow>
                   ))
                 ) : (

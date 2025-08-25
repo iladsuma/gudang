@@ -86,3 +86,8 @@ export interface Packaging {
 export interface CartItem extends Product {
     quantity: number;
 }
+
+// Interface for what is selected on the products page
+export interface ProductSelection {
+    [productId: string]: boolean;
+}
