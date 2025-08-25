@@ -30,8 +30,8 @@ export default function InvoicesPage() {
     
     if (user?.role === 'admin') {
       getShipments().then(data => {
-        // This page now shows all processed shipments: 'Pengemasan' and 'Terkirim'
-        setShipments(data.filter(s => s.status === 'Pengemasan' || s.status === 'Terkirim'));
+        // This page now shows only 'Terkirim' (Shipped) shipments.
+        setShipments(data.filter(s => s.status === 'Terkirim'));
         setDataLoading(false);
       });
     }
@@ -65,9 +65,9 @@ export default function InvoicesPage() {
     <div className="container mx-auto p-4 md:p-8">
       <Card>
         <CardHeader>
-          <CardTitle>Arsip Pengiriman</CardTitle>
+          <CardTitle>Arsip Pengiriman Terkirim</CardTitle>
           <CardDescription>
-            Daftar semua pengiriman yang telah diproses (status 'Pengemasan' atau 'Terkirim').
+            Daftar semua pengiriman yang telah selesai dan statusnya 'Terkirim'.
           </CardDescription>
         </CardHeader>
         <CardContent>

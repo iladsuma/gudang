@@ -30,8 +30,8 @@ export default function HistoryPage() {
 
     if (user?.role === 'admin') {
       getShipments().then(data => {
-        // Admin now sees 'Proses' shipments here to be processed into 'Pengemasan'
-        setShipments(data.filter(s => s.status === 'Proses'));
+        // Admin now sees 'Pengemasan' shipments here to be processed into 'Terkirim'
+        setShipments(data.filter(s => s.status === 'Pengemasan'));
         setDataLoading(false);
       });
     }
@@ -73,9 +73,9 @@ export default function HistoryPage() {
     <div className="container mx-auto p-4 md:p-8">
       <Card>
         <CardHeader>
-          <CardTitle>Antrian Kemas</CardTitle>
+          <CardTitle>Antrian Kemas & Kirim</CardTitle>
           <CardDescription>
-            Pilih pengiriman yang siap untuk dikemas. Stok akan diperbarui dan status akan diubah menjadi 'Pengemasan'.
+            Pilih pengiriman yang sudah selesai dikemas dan siap untuk dikirim. Stok sudah diperbarui di tahap sebelumnya.
           </CardDescription>
         </CardHeader>
         <CardContent>

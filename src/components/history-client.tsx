@@ -19,8 +19,8 @@ import { id } from 'date-fns/locale';
 import type { Shipment } from '@/lib/types';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
-import { Loader2, Package } from 'lucide-react';
-import { processShipmentsToPackaging } from '@/lib/data';
+import { Loader2, Send } from 'lucide-react';
+import { processShipmentsToDelivered } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import {
     Dialog,
@@ -73,22 +73,22 @@ export function HistoryClient({ initialShipments, onSuccess }: HistoryClientProp
         }
     };
 
-    const handleProcessToPackaging = async () => {
+    const handleProcessToDelivered = async () => {
         if (selectedShipments.length === 0) {
             toast({
                 variant: 'destructive',
                 title: 'Tidak Ada Pengiriman Terpilih',
-                description: 'Pilih setidaknya satu pengiriman untuk dibungkus.'
+                description: 'Pilih setidaknya satu pengiriman untuk diproses.'
             });
             return;
         }
 
         setIsProcessing(true);
         try {
-            await processShipmentsToPackaging(selectedShipments);
+            await processShipmentsToDelivered(selectedShipments);
             toast({
                 title: 'Sukses!',
-                description: 'Data terpilih berhasil diproses dan status diubah menjadi "Pengemasan".'
+                description: 'Data terpilih berhasil diproses dan status diubah menjadi "Terkirim".'
             });
             onSuccess(selectedShipments);
             setSelectedShipments([]);
@@ -103,13 +103,22 @@ export function HistoryClient({ initialShipments, onSuccess }: HistoryClientProp
             setIsProcessing(false);
         }
     };
+    
+     const getStatusVariant = (status: Shipment['status']) => {
+        switch (status) {
+            case 'Proses': return 'secondary';
+            case 'Pengemasan': return 'default';
+            case 'Terkirim': return 'outline';
+            default: return 'secondary';
+        }
+    };
 
     return (
         <div className='space-y-4'>
             <div className="flex justify-end gap-2">
-                <Button onClick={handleProcessToPackaging} disabled={selectedShipments.length === 0 || isProcessing}>
-                    {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Package className="mr-2 h-4 w-4" />}
-                    Bungkus ({selectedShipments.length})
+                <Button onClick={handleProcessToDelivered} disabled={selectedShipments.length === 0 || isProcessing}>
+                    {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                    Proses & Kirim ({selectedShipments.length})
                 </Button>
             </div>
             <div className="rounded-md border">
@@ -125,6 +134,7 @@ export function HistoryClient({ initialShipments, onSuccess }: HistoryClientProp
                             </TableHead>
                             <TableHead>No. Transaksi</TableHead>
                             <TableHead>Ekspedisi</TableHead>
+                            <TableHead>Status</TableHead>
                             <TableHead>User Pembuat</TableHead>
                             <TableHead>Produk</TableHead>
                             <TableHead className="text-right">Total Nilai</TableHead>
@@ -144,6 +154,11 @@ export function HistoryClient({ initialShipments, onSuccess }: HistoryClientProp
                                     </TableCell>
                                     <TableCell className="font-medium">{shipment.transactionId}</TableCell>
                                     <TableCell>{shipment.expedition}</TableCell>
+                                     <TableCell>
+                                        <Badge variant={getStatusVariant(shipment.status)}>
+                                            {shipment.status}
+                                        </Badge>
+                                    </TableCell>
                                     <TableCell>{shipment.user}</TableCell>
                                     <TableCell>
                                         <div className="flex flex-col gap-2">
@@ -193,14 +208,14 @@ export function HistoryClient({ initialShipments, onSuccess }: HistoryClientProp
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={7} className="h-24 text-center">
-                                    Tidak ada pengiriman baru yang perlu dikemas.
+                                <TableCell colSpan={8} className="h-24 text-center">
+                                    Tidak ada paket yang menunggu untuk dikirim.
                                 </TableCell>
                             </TableRow>
                         )}
                     </TableBody>
                     {shipments.length > 0 && (
-                        <TableCaption>Daftar semua pengiriman yang siap untuk dikemas.</TableCaption>
+                        <TableCaption>Daftar semua pengiriman yang siap untuk dikirim ke pelanggan.</TableCaption>
                     )}
                 </Table>
             </div>
