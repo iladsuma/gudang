@@ -65,7 +65,7 @@ const formatRupiah = (number: number) => {
 
 const Summary = ({ control }: { control: any }) => {
     const productsValue = useWatch({ control, name: 'products' });
-    const packagingCost = useWatch({ control, name: 'packagingCost' }) || 0;
+    const packagingCost = useWatch({ control, name: 'packagingCost' });
     
     const summary = React.useMemo(() => {
         if (!productsValue) return { totalItems: 0, totalShopping: 0, totalPacking: 0, grandTotal: 0 };
@@ -79,7 +79,7 @@ const Summary = ({ control }: { control: any }) => {
             return sum + (subtotal > 0 ? subtotal : 0);
         }, 0);
         
-        const totalPacking = packagingCost;
+        const totalPacking = Number(packagingCost) || 0;
         const grandTotal = totalShopping + totalPacking;
         
         return { totalItems, totalShopping, totalPacking, grandTotal };
@@ -152,14 +152,14 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
             productId: item.id,
             code: item.code,
             name: item.name,
-            quantity: item.quantity,
+            quantity: 1, // Default quantity to 1
             price: item.price,
             imageUrl: item.imageUrl || null,
       })),
     },
   });
   
-  const { fields, append, remove, replace } = useFieldArray({
+  const { fields, remove, replace } = useFieldArray({
     control: form.control,
     name: 'products',
   });
@@ -170,7 +170,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
             productId: item.id,
             code: item.code,
             name: item.name,
-            quantity: item.quantity,
+            quantity: 1, // Always start with 1 in the form
             price: item.price,
             imageUrl: item.imageUrl || null,
         }));
@@ -253,7 +253,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
         form.setValue(`products.${index}.name`, product.name);
         form.setValue(`products.${index}.price`, product.price);
         form.setValue(`products.${index}.imageUrl`, product.imageUrl);
-        form.setValue(`products.${index}.quantity`, product.quantity);
+        form.setValue(`products.${index}.quantity`, 1);
       }
   };
   
@@ -396,9 +396,9 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
                       <TableHeader>
                           <TableRow>
                               <TableHead className="w-[80px]">Gambar</TableHead>
-                              <TableHead className="w-[220px]">Nama Produk (dari Keranjang)</TableHead>
+                              <TableHead>Nama Produk</TableHead>
                               <TableHead>Kode</TableHead>
-                              <TableHead className="w-[100px]">Jumlah</TableHead>
+                              <TableHead className="w-[120px]">Jumlah</TableHead>
                               <TableHead className="w-[150px]">Harga (Rp)</TableHead>
                               <TableHead className="w-[150px] text-right">Subtotal</TableHead>
                               <TableHead className="w-[50px]"></TableHead>
@@ -425,36 +425,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
                                       />
                                   </TableCell>
                                    <TableCell>
-                                      <FormField
-                                          control={form.control}
-                                          name={`products.${index}.productId`}
-                                          render={({ field: productField }) => (
-                                              <FormItem>
-                                                  <FormControl>
-                                                      <Select
-                                                          onValueChange={(value) => {
-                                                              productField.onChange(value);
-                                                              handleProductSelectionChange(value, index);
-                                                          }}
-                                                          defaultValue={productField.value}
-                                                          disabled={isEditMode}
-                                                      >
-                                                          <SelectTrigger>
-                                                              <SelectValue placeholder="Pilih Produk dari Keranjang" />
-                                                          </SelectTrigger>
-                                                          <SelectContent>
-                                                              {initialProductsFromCart.map(opt => (
-                                                                  <SelectItem key={opt.id} value={opt.id}>
-                                                                      {opt.name} (Stok: {opt.stock})
-                                                                  </SelectItem>
-                                                              ))}
-                                                          </SelectContent>
-                                                      </Select>
-                                                  </FormControl>
-                                                  <FormMessage />
-                                              </FormItem>
-                                          )}
-                                      />
+                                      <p className="font-medium">{form.watch(`products.${index}.name`)}</p>
                                   </TableCell>
                                   <TableCell>
                                       <p className="font-mono text-sm text-muted-foreground">{form.watch(`products.${index}.code`)}</p>
@@ -469,13 +440,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
                                       />
                                   </TableCell>
                                   <TableCell>
-                                      <FormField
-                                          control={form.control}
-                                          name={`products.${index}.price`}
-                                          render={({ field: priceField }) => (
-                                              <FormItem><FormControl><Input type="number" placeholder="Rp" {...priceField} readOnly={isEditMode} /></FormControl><FormMessage /></FormItem>
-                                          )}
-                                      />
+                                    <p>{formatRupiah(price)}</p>
                                   </TableCell>
                                   <TableCell className="text-right font-medium">
                                       {formatRupiah(subtotal > 0 ? subtotal : 0)}
@@ -490,27 +455,6 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
                       </TableBody>
                   </Table>
                   </div>
-                   {!isEditMode && (
-                     <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="mt-4"
-                        onClick={() => {
-                            append({ 
-                                productId: '',
-                                code: '',
-                                name: '', 
-                                quantity: 1,
-                                price: 0,
-                                imageUrl: null
-                            });
-                        }}
-                        >
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Tambah Produk dari Keranjang
-                    </Button>
-                   )}
                   <FormMessage>{form.formState.errors.products?.root?.message}</FormMessage>
                   <FormMessage>{form.formState.errors.products?.[0]?.productId?.message}</FormMessage>
               </CardContent>
