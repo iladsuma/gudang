@@ -20,6 +20,7 @@ import { DateRangePicker } from '@/components/ui/date-range-picker';
 import type { DateRange } from 'react-day-picker';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface PopularProduct {
     productId: string;
@@ -45,6 +46,7 @@ export default function DashboardPage() {
         to: new Date(),
     });
     const [chartFilter, setChartFilter] = React.useState<'count' | 'value'>('count');
+    const [productLimit, setProductLimit] = React.useState<string>('10');
 
 
     React.useEffect(() => {
@@ -94,11 +96,13 @@ export default function DashboardPage() {
                         productMetrics[product.productId].value += product.quantity * product.price;
                     });
                 });
+                
+                const limit = productLimit === 'all' ? undefined : parseInt(productLimit, 10);
 
                 const sortedPopularProducts = Object.entries(productMetrics)
                     .map(([productId, data]) => ({ productId, ...data }))
                     .sort((a, b) => chartFilter === 'count' ? b.count - a.count : b.value - a.value)
-                    .slice(0, 10);
+                    .slice(0, limit);
                 
                 setPopularProducts(sortedPopularProducts);
 
@@ -114,7 +118,7 @@ export default function DashboardPage() {
 
             fetchData();
         }
-    }, [user, authLoading, router, dateRange, chartFilter]);
+    }, [user, authLoading, router, dateRange, chartFilter, productLimit]);
 
     const formatRupiah = (number: number) => {
         return new Intl.NumberFormat('id-ID', {
@@ -128,6 +132,8 @@ export default function DashboardPage() {
         dateRange.to ? `${format(dateRange.from, "d LLL, y")} - ${format(dateRange.to, "d LLL, y")}`
                      : format(dateRange.from, "d LLL, y")
     ) : "30 hari terakhir";
+    
+    const chartTitle = `${productLimit === 'all' ? 'Semua' : productLimit} Produk Terlaris (Rentang Terpilih)`;
 
     if (authLoading || (loadingData && user?.role === 'admin' && !dateRange)) {
         return (
@@ -215,23 +221,36 @@ export default function DashboardPage() {
                     <CardHeader>
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                             <div>
-                                <CardTitle>10 Produk Terlaris (Rentang Terpilih)</CardTitle>
+                                <CardTitle>{chartTitle}</CardTitle>
                                 <CardDescription>Produk yang paling banyak dikirim dalam rentang tanggal yang dipilih.</CardDescription>
                             </div>
-                            <RadioGroup
-                                defaultValue={chartFilter}
-                                onValueChange={(value) => setChartFilter(value as 'count' | 'value')}
-                                className="flex items-center space-x-4"
-                            >
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="count" id="count" />
-                                    <Label htmlFor="count">Jumlah Unit</Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="value" id="value" />
-                                    <Label htmlFor="value">Nilai (Rp)</Label>
-                                </div>
-                            </RadioGroup>
+                            <div className="flex items-center gap-4">
+                                <RadioGroup
+                                    defaultValue={chartFilter}
+                                    onValueChange={(value) => setChartFilter(value as 'count' | 'value')}
+                                    className="flex items-center"
+                                >
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="count" id="count" />
+                                        <Label htmlFor="count">Jumlah</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="value" id="value" />
+                                        <Label htmlFor="value">Nilai</Label>
+                                    </div>
+                                </RadioGroup>
+                                 <Select value={productLimit} onValueChange={setProductLimit}>
+                                    <SelectTrigger className="w-[120px]">
+                                        <SelectValue placeholder="Jumlah" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="5">Top 5</SelectItem>
+                                        <SelectItem value="10">Top 10</SelectItem>
+                                        <SelectItem value="20">Top 20</SelectItem>
+                                        <SelectItem value="all">Semua</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent className="pl-2">
@@ -311,5 +330,3 @@ export default function DashboardPage() {
         </div>
     );
 }
-
-    
