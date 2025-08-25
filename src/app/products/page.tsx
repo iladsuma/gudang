@@ -87,12 +87,12 @@ export default function ProductsPage() {
 
         toast({
             title: 'Sukses!',
-            description: `${itemsToAdd.length} jenis produk telah ditambahkan. Lanjutkan untuk mengisi detail pengiriman.`,
+            description: `${itemsToAdd.length} jenis produk telah ditambahkan ke keranjang.`,
         });
 
-        // Reset selection and go directly to the shipment form
+        // Reset selection and go to the cart page
         setSelection({});
-        router.push('/shipments?action=showForm');
+        router.push('/cart');
     }
   };
 
@@ -152,7 +152,7 @@ export default function ProductsPage() {
             </div>
             <Button onClick={handleBulkAddToCart} disabled={selectedCount === 0}>
               <ShoppingCart className="mr-2 h-4 w-4" />
-              Lanjut ke Rekap ({selectedCount})
+              Tambah ke Keranjang ({selectedCount})
             </Button>
           </div>
 

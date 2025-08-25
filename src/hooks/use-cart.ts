@@ -48,28 +48,42 @@ export const useCart = () => {
         return;
     }
     
-    let updatedCart = [...cart];
-    let itemsAddedCount = 0;
-
-    products.forEach(product => {
-        const existingItem = updatedCart.find(item => item.id === product.id);
-        if (!existingItem) {
-            updatedCart.push({ ...product, quantity });
-            itemsAddedCount++;
+    let updatedCart: CartItem[] = [];
+    setCart(prevCart => {
+        updatedCart = [...prevCart];
+        let itemsAddedCount = 0;
+        
+        products.forEach(product => {
+            const existingItem = updatedCart.find(item => item.id === product.id);
+            if (!existingItem) {
+                updatedCart.push({ ...product, quantity });
+                itemsAddedCount++;
+            }
+        });
+    
+        if (itemsAddedCount > 0 && !silent) {
+            toast({ title: 'Ditambahkan', description: `${itemsAddedCount} jenis produk masuk ke keranjang.`});
         }
+    
+        if (!silent) {
+            saveCartToLocalStorage(updatedCart);
+        }
+        return updatedCart;
     });
 
-    if (itemsAddedCount > 0 && !silent) {
-        toast({ title: 'Ditambahkan', description: `${itemsAddedCount} jenis produk masuk ke keranjang.`});
-    }
-
     if (silent) {
-      return updatedCart;
+      // Need to compute the updated cart state without using React state setters
+      const currentCart = cart; 
+      const newCart = [...currentCart];
+      products.forEach(product => {
+        const existingItem = newCart.find(item => item.id === product.id);
+        if(!existingItem) {
+          newCart.push({ ...product, quantity });
+        }
+      });
+      return newCart;
     }
-    
-    setCart(updatedCart);
-    saveCartToLocalStorage(updatedCart);
-    return;
+    return undefined; // To match signature
   };
 
   const updateQuantity = (productId: string, quantity: number) => {

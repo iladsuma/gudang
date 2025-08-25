@@ -50,7 +50,7 @@ export default function CartPage() {
                 <CardHeader>
                     <CardTitle className="text-2xl">Keranjang Anda</CardTitle>
                     <CardDescription>
-                        Periksa item Anda sebelum melanjutkan ke proses rekapitulasi pengiriman.
+                        Periksa item Anda sebelum melanjutkan ke proses rekapitulasi pengiriman. Kuantitas akan diisi di langkah berikutnya.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
