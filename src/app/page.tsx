@@ -1,18 +1,30 @@
+
 'use client';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/auth-context';
 
-// This page is a temporary redirector to the main page /shipments
 export default function HomePage() {
   const router = useRouter();
+  const { user, loading } = useAuth();
 
   useEffect(() => {
-    router.replace('/shipments');
-  }, [router]);
+    if (!loading) {
+        if (user) {
+            if (user.role === 'admin') {
+                router.replace('/dashboard');
+            } else {
+                router.replace('/shipments');
+            }
+        } else {
+            router.replace('/login');
+        }
+    }
+  }, [user, loading, router]);
 
   return (
     <div className="flex h-screen w-full items-center justify-center">
-        <p>Mengalihkan ke halaman utama...</p>
+        <p>Mengalihkan...</p>
     </div>
   );
 }

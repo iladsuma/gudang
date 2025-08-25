@@ -58,7 +58,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const loggedInUser = await apiLogin(username, password);
     setUser(loggedInUser);
     localStorage.setItem('user', JSON.stringify(loggedInUser));
-    router.push('/shipments');
+    
+    if (loggedInUser.role === 'admin') {
+        router.push('/dashboard');
+    } else {
+        router.push('/shipments');
+    }
   };
 
   const logout = () => {

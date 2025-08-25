@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Boxes, LogOut, ShoppingCart } from 'lucide-react';
+import { Boxes, LogOut, ShoppingCart, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { Button } from './ui/button';
 import { useRouter, usePathname } from 'next/navigation';
@@ -44,11 +44,19 @@ export function Header() {
             </Link>
             {user && (
               <nav className="flex items-center gap-4 text-sm">
+                {user.role === 'admin' && (
+                    <Link
+                        href="/dashboard"
+                        className={cn("flex items-center gap-2 transition-colors hover:text-foreground/80", pathname === '/dashboard' ? 'text-foreground' : 'text-foreground/60')}
+                    >
+                       <LayoutDashboard className="h-4 w-4" /> Dashboard
+                    </Link>
+                )}
                  <Link
                   href="/shipments"
-                  className={cn("transition-colors hover:text-foreground/80", pathname === '/shipments' ? 'text-foreground' : 'text-foreground/60')}
+                  className={cn("transition-colors hover:text-foreground/80", pathname.startsWith('/shipments') ? 'text-foreground' : 'text-foreground/60')}
                 >
-                  Rekap Pengiriman
+                  {user.role === 'admin' ? 'Antrian' : 'Pengiriman Saya'}
                 </Link>
                  <Link
                   href="/products"
@@ -62,13 +70,13 @@ export function Header() {
                       href="/history"
                       className={cn("transition-colors hover:text-foreground/80", pathname === '/history' ? 'text-foreground' : 'text-foreground/60')}
                     >
-                      Riwayat
+                      Pengemasan
                     </Link>
                     <Link
                       href="/invoices"
                       className={cn("transition-colors hover:text-foreground/80", pathname === '/invoices' ? 'text-foreground' : 'text-foreground/60')}
                     >
-                      Faktur
+                      Arsip Terkirim
                     </Link>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>

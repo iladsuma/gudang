@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -70,7 +69,7 @@ export default function HistoryPage() {
     <div className="container mx-auto p-4 md:p-8">
       <Card>
         <CardHeader>
-          <CardTitle>Riwayat Pengemasan</CardTitle>
+          <CardTitle>Antrian Pengemasan</CardTitle>
           <CardDescription>
             Konfirmasi dan catat pengiriman yang sudah selesai dikemas dan siap untuk dikirim.
           </CardDescription>
