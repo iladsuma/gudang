@@ -59,6 +59,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(loggedInUser);
     localStorage.setItem('user', JSON.stringify(loggedInUser));
     
+    // Clear cart from previous user session if any
+    const allKeys = Object.keys(localStorage);
+    for (const key of allKeys) {
+        if (key.startsWith('shipping_cart_')) {
+            localStorage.removeItem(key);
+        }
+    }
+    
     if (loggedInUser.role === 'admin') {
         router.push('/dashboard');
     } else {
@@ -69,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
+    // We don't clear the cart on logout, it's tied to the user ID
     router.push('/login');
   };
 
