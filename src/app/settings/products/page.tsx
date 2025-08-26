@@ -50,6 +50,7 @@ import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 const productFormSchema = z.object({
   code: z.string().min(1, 'Kode produk harus diisi.'),
@@ -381,7 +382,7 @@ function ProductsClient() {
                                     <TableCell>{product.unit}</TableCell>
                                     <TableCell>{formatRupiah(product.costPrice)}</TableCell>
                                     <TableCell>{formatRupiah(product.price)}</TableCell>
-                                    <TableCell>{product.stock}</TableCell>
+                                    <TableCell className={cn(product.stock <= product.minStock && 'text-red-500 font-bold')}>{product.stock}</TableCell>
                                     <TableCell>{product.minStock}</TableCell>
                                     <TableCell className="text-right">
                                        <Dialog open={!!stockEditProduct && stockEditProduct.id === product.id} onOpenChange={(open) => !open && setStockEditProduct(null)}>

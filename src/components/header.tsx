@@ -82,7 +82,7 @@ export function Header() {
                       href="/invoices"
                       className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname === '/invoices' ? 'text-foreground' : 'text-foreground/60')}
                     >
-                      <Archive className="h-4 w-4" /> Pengiriman & Arsip
+                      <Archive className="h-4 w-4" /> Arsip & Pengiriman
                     </Link>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>

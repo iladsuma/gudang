@@ -175,6 +175,7 @@ export default function DashboardPage() {
      const getStatusVariant = (status: Shipment['status']) => {
         switch (status) {
             case 'Proses': return 'secondary';
+            case 'Pengemasan': return 'default';
             case 'Terkirim': return 'outline';
             default: return 'secondary';
         }
@@ -231,7 +232,7 @@ export default function DashboardPage() {
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Menunggu Diproses</CardTitle>
+                        <CardTitle className="text-sm font-medium">Antrian Kemas</CardTitle>
                         <Send className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
@@ -332,10 +333,10 @@ export default function DashboardPage() {
                     <CardContent className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                              <Button asChild>
-                                <Link href="/shipments">Antrian Proses</Link>
+                                <Link href="/shipments">Antrian Kemas</Link>
                             </Button>
                             <Button asChild variant="secondary">
-                                <Link href="/invoices">Arsip Terkirim</Link>
+                                <Link href="/invoices">Arsip & Pengiriman</Link>
                             </Button>
                              <Button asChild variant="secondary">
                                 <Link href="/settings/products">Kelola Produk</Link>
@@ -357,7 +358,7 @@ export default function DashboardPage() {
                                 <TableBody>
                                     {recentActivity.map(s => (
                                         <TableRow key={s.id}>
-                                            <TableCell className='font-medium'>{s.transactionId}</TableCell>
+                                            <TableCell className='font-mono text-xs'>{s.transactionId}</TableCell>
                                             <TableCell><Badge variant={getStatusVariant(s.status)}>{s.status}</Badge></TableCell>
                                             <TableCell className='text-xs text-muted-foreground'>{format(new Date(s.createdAt), 'dd/MM/yy')}</TableCell>
                                         </TableRow>
