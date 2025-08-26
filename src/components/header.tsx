@@ -57,7 +57,7 @@ export function Header() {
                   href="/shipments"
                   className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname.startsWith('/shipments') ? 'text-foreground' : 'text-foreground/60')}
                 >
-                   <Send className="h-4 w-4" /> {user.role === 'admin' ? 'Antrian Proses' : 'Pengiriman Saya'}
+                   <PackageCheck className="h-4 w-4" /> {user.role === 'admin' ? 'Antrian Kemas' : 'Pengiriman Saya'}
                 </Link>
                  <Link
                   href="/products"
@@ -77,7 +77,7 @@ export function Header() {
                       href="/packaging-queue"
                       className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname === '/packaging-queue' ? 'text-foreground' : 'text-foreground/60')}
                     >
-                      <PackageOpen className="h-4 w-4" /> Antrian Kemas
+                      <Send className="h-4 w-4" /> Proses Kirim
                     </Link>
                     <Link
                       href="/invoices"

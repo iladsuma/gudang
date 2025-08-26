@@ -26,8 +26,8 @@ function ShipmentsPageContent() {
       const data = await getShipments();
       if(user?.role === 'admin') {
           setShipments(data.filter(s => s.status === 'Proses'));
-          setPageTitle('Antrian Proses Pengiriman');
-          setPageDescription("Pilih pengiriman yang akan diproses. Stok akan dikurangi dan status akan diubah menjadi 'Terkirim'.");
+          setPageTitle('Antrian Kemas');
+          setPageDescription("Pilih pengiriman yang akan diproses. Stok akan dikurangi dan status akan diubah menjadi 'Pengemasan'.");
       } else if (user) {
           setShipments(data.filter(s => s.user === user.username));
           setPageTitle('Riwayat Pengiriman Saya');

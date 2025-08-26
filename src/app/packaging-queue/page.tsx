@@ -132,9 +132,9 @@ export default function PackagingQueuePage() {
     <div className="container mx-auto p-4 md:p-8">
       <Card>
         <CardHeader>
-          <CardTitle>Antrian Pengemasan</CardTitle>
+          <CardTitle>Proses Kirim</CardTitle>
           <CardDescription>
-            Daftar pengiriman yang siap untuk dikemas dan dikirim. Pilih item dan tandai sebagai terkirim.
+            Daftar pengiriman yang sedang diproses atau dikemas. Pilih item di bawah untuk menandainya sebagai 'Terkirim'.
           </CardDescription>
         </CardHeader>
         <CardContent>
