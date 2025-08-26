@@ -87,5 +87,20 @@
   ],
   "shipments": [],
   "checkoutHistory": [],
-  "stockMovements": []
+  "stockMovements": [],
+  "customers": [],
+  "suppliers": [
+    {
+      "id": "sup_1",
+      "name": "Supplier A",
+      "address": "Jl. Industri No. 1, Bandung",
+      "phone": "022-123456"
+    },
+    {
+      "id": "sup_2",
+      "name": "CV. Maju Jaya",
+      "address": "Jl. Raya Bogor Km. 20, Jakarta",
+      "phone": "021-987654"
+    }
+  ]
 }

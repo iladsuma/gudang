@@ -2,7 +2,7 @@
 
 'use client';
 
-import type { User, Shipment, Checkout, Expedition, Product, Packaging, Customer, StockMovement } from '@/lib/types';
+import type { User, Shipment, Checkout, Expedition, Product, Packaging, Customer, StockMovement, Supplier } from '@/lib/types';
 import { initialData } from './initial-data';
 
 
@@ -18,6 +18,7 @@ let db: {
   shipments: Shipment[];
   checkoutHistory: Checkout[];
   customers: Customer[];
+  suppliers: Supplier[];
   stockMovements: StockMovement[];
 } = {
   users: [],
@@ -27,6 +28,7 @@ let db: {
   shipments: [],
   checkoutHistory: [],
   customers: [],
+  suppliers: [],
   stockMovements: [],
 };
 
@@ -39,7 +41,7 @@ function initializeDb() {
       try {
         db = JSON.parse(storedDb);
         // Basic validation to ensure all keys are present after parsing
-        const requiredKeys: (keyof typeof db)[] = ['users', 'products', 'expeditions', 'packagingOptions', 'shipments', 'checkoutHistory', 'customers', 'stockMovements'];
+        const requiredKeys: (keyof typeof db)[] = ['users', 'products', 'expeditions', 'packagingOptions', 'shipments', 'checkoutHistory', 'customers', 'suppliers', 'stockMovements'];
         let needsReset = false;
         for (const key of requiredKeys) {
             if (!db[key]) {
@@ -190,6 +192,41 @@ export async function updateCustomer(id: string, data: Omit<Customer, 'id'>): Pr
 
 export async function deleteCustomer(id: string): Promise<void> {
     db.customers = db.customers.filter(c => c.id !== id);
+    persistDb();
+    return Promise.resolve();
+}
+
+// --- Supplier Functions ---
+export async function getSuppliers(): Promise<Supplier[]> {
+    const sorted = [...db.suppliers].sort((a,b) => a.name.localeCompare(b.name));
+    return Promise.resolve(sorted);
+}
+
+export async function addSupplier(data: Omit<Supplier, 'id'>): Promise<Supplier> {
+    if (db.suppliers.some(s => s.name.toLowerCase() === data.name.toLowerCase())) {
+        throw new Error('Nama supplier sudah ada.');
+    }
+    const newSupplier: Supplier = { ...data, id: `sup_${Date.now()}` };
+    db.suppliers.push(newSupplier);
+    persistDb();
+    return Promise.resolve(newSupplier);
+}
+
+export async function updateSupplier(id: string, data: Omit<Supplier, 'id'>): Promise<Supplier> {
+    const supplierIndex = db.suppliers.findIndex(s => s.id === id);
+    if (supplierIndex === -1) {
+        throw new Error('Supplier tidak ditemukan.');
+    }
+     if (db.suppliers.some(s => s.id !== id && s.name.toLowerCase() === data.name.toLowerCase())) {
+        throw new Error('Nama supplier lain dengan nama ini sudah ada.');
+    }
+    db.suppliers[supplierIndex] = { ...db.suppliers[supplierIndex], ...data };
+    persistDb();
+    return Promise.resolve(db.suppliers[supplierIndex]);
+}
+
+export async function deleteSupplier(id: string): Promise<void> {
+    db.suppliers = db.suppliers.filter(s => s.id !== id);
     persistDb();
     return Promise.resolve();
 }

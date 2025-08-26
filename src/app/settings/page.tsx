@@ -95,6 +95,24 @@ export default function SettingsPage() {
                        </Button>
                     </CardFooter>
                 </Card>
+                 <Card className="flex flex-col">
+                    <CardHeader>
+                        <CardTitle>Manajemen Supplier</CardTitle>
+                        <CardDescription>
+                            Kelola daftar pemasok barang. Tambah, edit, dan hapus data supplier.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-grow">
+                       <p className="text-sm text-muted-foreground">Simpan informasi nama, alamat, dan nomor telepon supplier.</p>
+                    </CardContent>
+                    <CardFooter>
+                       <Button asChild>
+                           <Link href="/settings/suppliers">
+                                Kelola Supplier <ChevronRight className="ml-2 h-4 w-4" />
+                           </Link>
+                       </Button>
+                    </CardFooter>
+                </Card>
                 <Card className="flex flex-col">
                     <CardHeader>
                         <CardTitle>Manajemen Ekspedisi</CardTitle>

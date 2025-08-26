@@ -1,6 +1,6 @@
 
 
-import type { User, Product, Expedition, Packaging, Shipment, Checkout, Customer, StockMovement } from './types';
+import type { User, Product, Expedition, Packaging, Shipment, Checkout, Customer, StockMovement, Supplier } from './types';
 
 interface DbData {
   users: User[];
@@ -10,6 +10,7 @@ interface DbData {
   shipments: Shipment[];
   checkoutHistory: Checkout[];
   customers: Customer[];
+  suppliers: Supplier[];
   stockMovements: StockMovement[];
 }
 
@@ -120,6 +121,20 @@ export const initialData: DbData = {
           address: "Jl. Merdeka No. 10, Jakarta",
           phone: "081234567890"
       }
+  ],
+  suppliers: [
+     {
+      "id": "sup_1",
+      "name": "Supplier A",
+      "address": "Jl. Industri No. 1, Bandung",
+      "phone": "022-123456"
+    },
+    {
+      "id": "sup_2",
+      "name": "CV. Maju Jaya",
+      "address": "Jl. Raya Bogor Km. 20, Jakarta",
+      "phone": "021-987654"
+    }
   ],
   stockMovements: [],
 };

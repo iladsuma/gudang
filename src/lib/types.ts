@@ -67,6 +67,13 @@ export interface Customer {
     phone: string;
 }
 
+export interface Supplier {
+    id: string;
+    name: string;
+    address: string;
+    phone: string;
+}
+
 export interface CheckoutItem {
     name: string;
     quantity: number;
