@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -48,6 +49,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { Check, ChevronsUpDown } from 'lucide-react';
+import { Label } from '@/components/ui/label';
 
 // =======================
 // Zod Schema for the Form
@@ -303,6 +305,10 @@ export default function PurchasesPage() {
     const [allProducts, setAllProducts] = useState<Product[]>([]);
     const [allSuppliers, setAllSuppliers] = useState<Supplier[]>([]);
 
+    // Filters
+    const [searchTerm, setSearchTerm] = useState('');
+    const [supplierFilter, setSupplierFilter] = useState('all');
+
     const fetchData = useCallback(async () => {
         setDataLoading(true);
         const [purchasesData, productsData, suppliersData] = await Promise.all([getPurchases(), getProducts(), getSuppliers()]);
@@ -320,6 +326,18 @@ export default function PurchasesPage() {
             fetchData();
         }
     }, [user, authLoading, router, fetchData]);
+    
+    const filteredPurchases = useMemo(() => {
+        return purchases.filter(purchase => {
+            const matchesSearch = searchTerm === '' ||
+                purchase.purchaseNumber.toLowerCase().includes(searchTerm.toLowerCase());
+            
+            const matchesSupplier = supplierFilter === 'all' || purchase.supplierId === supplierFilter;
+
+            return matchesSearch && matchesSupplier;
+        });
+    }, [purchases, searchTerm, supplierFilter]);
+
 
     if (authLoading || (dataLoading && user?.role === 'admin')) {
         return (
@@ -358,6 +376,31 @@ export default function PurchasesPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
+                    <div className="flex flex-col md:flex-row gap-4 mb-4">
+                         <div className="grid gap-2 flex-1">
+                            <Label htmlFor="search-purchase">Cari No. Pembelian</Label>
+                            <Input 
+                                id="search-purchase"
+                                placeholder="Ketik nomor faktur..."
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                                className="w-full"
+                            />
+                         </div>
+                         <div className="grid gap-2">
+                            <Label htmlFor="filter-supplier">Filter Supplier</Label>
+                            <Select value={supplierFilter} onValueChange={setSupplierFilter}>
+                                <SelectTrigger id="filter-supplier" className="w-full md:w-[250px]">
+                                    <SelectValue placeholder="Semua Supplier" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Semua Supplier</SelectItem>
+                                    {allSuppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                         </div>
+                    </div>
+
                     <div className="rounded-md border">
                         <Table>
                              <TableHeader>
@@ -372,8 +415,8 @@ export default function PurchasesPage() {
                             <TableBody>
                                 {dataLoading ? (
                                     <TableRow><TableCell colSpan={5} className="h-24 text-center"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
-                                ) : purchases.length > 0 ? (
-                                    purchases.map(purchase => (
+                                ) : filteredPurchases.length > 0 ? (
+                                    filteredPurchases.map(purchase => (
                                         <TableRow key={purchase.id}>
                                             <TableCell className="font-mono">{purchase.purchaseNumber}</TableCell>
                                             <TableCell className="font-medium">{purchase.supplierName}</TableCell>
@@ -389,7 +432,7 @@ export default function PurchasesPage() {
                                         </TableRow>
                                     ))
                                 ) : (
-                                    <TableRow><TableCell colSpan={5} className="h-24 text-center">Belum ada riwayat pembelian.</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={5} className="h-24 text-center">Belum ada riwayat pembelian yang cocok dengan filter.</TableCell></TableRow>
                                 )}
                             </TableBody>
                         </Table>

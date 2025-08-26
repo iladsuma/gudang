@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Shipment } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Trash2, Loader2, FileText, Package, Pencil, Send } from 'lucide-react';
@@ -42,6 +42,7 @@ import Image from 'next/image';
 import { useAuth } from '@/context/auth-context';
 import { useCart } from '@/hooks/use-cart';
 import { Checkbox } from './ui/checkbox';
+import { Input } from './ui/input';
 
 export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shipments: Shipment[], onUpdate: () => void; }) {
   const { user } = useAuth();
@@ -55,6 +56,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
   const { cart } = useCart();
   const [selectedShipments, setSelectedShipments] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
 
   useEffect(() => {
@@ -66,6 +68,16 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
   useEffect(() => {
     setIsClient(true);
   }, []);
+  
+  const filteredShipments = useMemo(() => {
+    if (!searchTerm) return shipments;
+    const lowercasedFilter = searchTerm.toLowerCase();
+    return shipments.filter(shipment =>
+        shipment.transactionId.toLowerCase().includes(lowercasedFilter) ||
+        shipment.customerName.toLowerCase().includes(lowercasedFilter) ||
+        shipment.products.some(p => p.name.toLowerCase().includes(lowercasedFilter))
+    );
+  }, [shipments, searchTerm]);
   
   const formatRupiah = (number: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -142,7 +154,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
 
   const handleSelectAll = (checked: boolean) => {
       if(checked) {
-          setSelectedShipments(shipments.filter(s => s.status === 'Proses').map(s => s.id));
+          setSelectedShipments(filteredShipments.filter(s => s.status === 'Proses').map(s => s.id));
       } else {
           setSelectedShipments([]);
       }
@@ -175,25 +187,38 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
     }
   };
 
-  const shipmentsInProcess = shipments.filter(s => s.status === 'Proses');
+  const shipmentsInProcess = filteredShipments.filter(s => s.status === 'Proses');
   const isAdminView = user?.role === 'admin';
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className='w-full md:w-auto'>
+            {isAdminView && (
+                <Input 
+                    placeholder="Cari No. Transaksi, Pelanggan, atau Produk..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    className="w-full md:w-80"
+                />
+            )}
+        </div>
+        <div className="flex justify-end gap-2 w-full md:w-auto">
          {isAdminView && (
-            <Button onClick={handleProcessToPackaging} disabled={selectedShipments.length === 0 || isProcessing}>
+            <Button onClick={handleProcessToPackaging} disabled={selectedShipments.length === 0 || isProcessing} className="w-full md:w-auto">
                 {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Package className="mr-2 h-4 w-4" />}
                 Proses ke Pengemasan ({selectedShipments.length})
             </Button>
          )}
          {!isAdminView && (
-            <Button onClick={handleOpenForm}>
+            <Button onClick={handleOpenForm} className="w-full md:w-auto">
               <PlusCircle className="mr-2 h-4 w-4" />
               Tambah Pengiriman
             </Button>
          )}
+        </div>
       </div>
+
 
       <div className="rounded-md border">
         <Table>
@@ -203,7 +228,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
                 {isAdminView && (
                     <Checkbox 
                         onCheckedChange={handleSelectAll}
-                        checked={shipmentsInProcess.length > 0 && selectedShipments.length === shipmentsInProcess.length}
+                        checked={shipmentsInProcess.length > 0 && selectedShipments.length === shipmentsInProcess.length && shipmentsInProcess.length > 0}
                         aria-label="Pilih semua"
                     />
                 )}
@@ -223,8 +248,8 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
             </TableRow>
           </TableHeader>
           <TableBody>
-            {shipments.length > 0 ? (
-              shipments.map((shipment) => (
+            {filteredShipments.length > 0 ? (
+              filteredShipments.map((shipment) => (
                 <TableRow key={shipment.id} data-state={selectedShipments.includes(shipment.id) ? 'selected' : ''}>
                   <TableCell>
                     {shipment.status === 'Proses' && isAdminView && (
@@ -318,7 +343,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
             ) : (
               <TableRow>
                 <TableCell colSpan={13} className="h-24 text-center">
-                  Tidak ada data pengiriman.
+                  Tidak ada data pengiriman yang cocok dengan filter.
                 </TableCell>
               </TableRow>
             )}

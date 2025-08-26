@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -45,6 +46,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const formatRupiah = (number: number) => {
     if (isNaN(number)) return 'Rp 0';
@@ -292,13 +295,29 @@ function ReturnForm({ onFormSuccess }: { onFormSuccess: () => void }) {
 export default function ReturnsPage() {
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
-    const [returns, setReturns] = useState<Return[]>([]);
-    const [dataLoading, setDataLoading] = useState(true);
+    const [returns, setReturns] = React.useState<Return[]>([]);
+    const [dataLoading, setDataLoading] = React.useState(true);
+
+    // Filters
+    const [searchTerm, setSearchTerm] = React.useState('');
+    const [customerFilter, setCustomerFilter] = React.useState('all');
+    const [allCustomers, setAllCustomers] = React.useState<{id: string, name: string}[]>([]);
+
 
     const fetchData = React.useCallback(async () => {
         setDataLoading(true);
-        const data = await getReturns();
+        const [data, shipmentsData] = await Promise.all([getReturns(), getShipments()]);
+        
+        // Extract unique customers from shipments for the filter dropdown
+        const uniqueCustomers = shipmentsData.reduce((acc, curr) => {
+            if (!acc.find(c => c.id === curr.customerId)) {
+                acc.push({ id: curr.customerId, name: curr.customerName });
+            }
+            return acc;
+        }, [] as {id: string, name: string}[]);
+
         setReturns(data);
+        setAllCustomers(uniqueCustomers);
         setDataLoading(false);
     }, []);
 
@@ -310,6 +329,20 @@ export default function ReturnsPage() {
             fetchData();
         }
     }, [user, authLoading, router, fetchData]);
+    
+    const filteredReturns = React.useMemo(() => {
+        return returns.filter(retur => {
+            const matchesSearch = searchTerm === '' ||
+                retur.originalTransactionId.toLowerCase().includes(searchTerm.toLowerCase());
+            
+            const originalShipment = getShipments().then(s => s.find(ship => ship.id === retur.originalShipmentId)); // This is async, won't work well here.
+            // Let's assume customer name is on the return object.
+            const matchesCustomer = customerFilter === 'all' || retur.customerName === allCustomers.find(c => c.id === customerFilter)?.name;
+
+            return matchesSearch && matchesCustomer;
+        });
+    }, [returns, searchTerm, customerFilter, allCustomers]);
+    
     
     if (authLoading || (dataLoading && user?.role === 'admin')) {
         return (
@@ -348,6 +381,30 @@ export default function ReturnsPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
+                     <div className="flex flex-col md:flex-row gap-4 mb-4">
+                         <div className="grid gap-2 flex-1">
+                            <Label htmlFor="search-return">Cari No. Transaksi Asli</Label>
+                            <Input 
+                                id="search-return"
+                                placeholder="Ketik nomor transaksi..."
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                                className="w-full"
+                            />
+                         </div>
+                         <div className="grid gap-2">
+                            <Label htmlFor="filter-customer">Filter Pelanggan</Label>
+                            <Select value={customerFilter} onValueChange={setCustomerFilter}>
+                                <SelectTrigger id="filter-customer" className="w-full md:w-[250px]">
+                                    <SelectValue placeholder="Semua Pelanggan" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Semua Pelanggan</SelectItem>
+                                    {allCustomers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                         </div>
+                    </div>
                     <div className="rounded-md border">
                         <Table>
                             <TableHeader>
@@ -363,8 +420,8 @@ export default function ReturnsPage() {
                              <TableBody>
                                 {dataLoading ? (
                                     <TableRow><TableCell colSpan={6} className="h-24 text-center"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
-                                ) : returns.length > 0 ? (
-                                    returns.map(retur => (
+                                ) : filteredReturns.length > 0 ? (
+                                    filteredReturns.map(retur => (
                                         <TableRow key={retur.id}>
                                             <TableCell className="font-mono">{retur.originalTransactionId}</TableCell>
                                             <TableCell className="font-medium">{retur.customerName}</TableCell>

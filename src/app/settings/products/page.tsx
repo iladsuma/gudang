@@ -19,7 +19,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, PlusCircle, Trash2, Pencil, Edit, ArrowLeft, BookOpen, Upload, Download } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Pencil, Edit, ArrowLeft, BookOpen, Upload, Download, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -91,6 +91,12 @@ function ProductsClient() {
     const importInputRef = React.useRef<HTMLInputElement>(null);
     const { toast } = useToast();
 
+    // Filters
+    const [searchTerm, setSearchTerm] = React.useState('');
+    const [categoryFilter, setCategoryFilter] = React.useState('all');
+    const [unitFilter, setUnitFilter] = React.useState('all');
+
+
     // Mock data for dropdowns
     const units = ['PCS', 'DUS', 'KODI', 'KOLI', 'PACK'];
     const categories = ['Pakaian', 'Aksesoris', 'Elektronik', 'Makanan', 'Minuman'];
@@ -126,6 +132,19 @@ function ProductsClient() {
     React.useEffect(() => {
         fetchProducts();
     }, [fetchProducts]);
+    
+    const filteredProducts = React.useMemo(() => {
+        return products.filter(product => {
+            const matchesSearch = searchTerm === '' ||
+                product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                product.code.toLowerCase().includes(searchTerm.toLowerCase());
+            
+            const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
+            const matchesUnit = unitFilter === 'all' || product.unit === unitFilter;
+
+            return matchesSearch && matchesCategory && matchesUnit;
+        });
+    }, [products, searchTerm, categoryFilter, unitFilter]);
 
     const handleOpenForm = (product: Product | null) => {
         setEditingProduct(product);
@@ -329,118 +348,156 @@ function ProductsClient() {
 
     return (
         <div className="space-y-6">
-             <div className="flex items-center justify-end gap-2">
-                 <input
-                    type="file"
-                    accept=".csv"
-                    ref={importInputRef}
-                    onChange={handleImport}
-                    className="hidden"
-                />
-                <Button variant="outline" onClick={() => importInputRef.current?.click()}>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Impor dari CSV
-                </Button>
-                <Button variant="outline" onClick={handleExport} disabled={products.length === 0}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Ekspor ke CSV
-                </Button>
-                <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-                    <DialogTrigger asChild>
-                        <Button onClick={() => handleOpenForm(null)}>
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Tambah Produk
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-4xl">
-                        <Form {...form}>
-                            <form onSubmit={form.handleSubmit(onProductSubmit)}>
-                                <DialogHeader>
-                                    <DialogTitle>{editingProduct ? 'Edit Produk' : 'Tambah Produk Baru'}</DialogTitle>
-                                </DialogHeader>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-                                    <div className="md:col-span-2 flex flex-col items-center">
-                                        <FormField
-                                            control={form.control}
-                                            name="imageUrl"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Gambar Produk</FormLabel>
-                                                    <FormControl>
-                                                        <div>
-                                                            <input
-                                                                type="file"
-                                                                accept="image/*"
-                                                                ref={imageInputRef}
-                                                                onChange={handleImageChange}
-                                                                className="hidden"
-                                                            />
-                                                            <Image
-                                                                src={previewImage || 'https://placehold.co/200x200.png'}
-                                                                alt="Pratinjau"
-                                                                width={128}
-                                                                height={128}
-                                                                className="h-32 w-32 rounded-md object-cover cursor-pointer"
-                                                                onClick={() => imageInputRef.current?.click()}
-                                                            />
-                                                        </div>
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                    <input type="hidden" {...field} value={field.value || ''} />
-                                                </FormItem>
-                                            )}
-                                        />
+            <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4">
+                 <div className="flex flex-col md:flex-row gap-4">
+                     <div className="grid gap-2">
+                        <Label htmlFor="search-product">Cari Produk</Label>
+                        <Input 
+                            id="search-product"
+                            placeholder="Kode atau Nama..."
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                            className="w-full md:w-[250px]"
+                        />
+                     </div>
+                     <div className="grid gap-2">
+                        <Label htmlFor="filter-category">Jenis (Kategori)</Label>
+                        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                            <SelectTrigger id="filter-category" className="w-full md:w-[180px]">
+                                <SelectValue placeholder="Semua Kategori" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Semua Jenis</SelectItem>
+                                {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                     </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="filter-unit">Satuan</Label>
+                        <Select value={unitFilter} onValueChange={setUnitFilter}>
+                            <SelectTrigger id="filter-unit" className="w-full md:w-[150px]">
+                                <SelectValue placeholder="Semua Satuan" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Semua Satuan</SelectItem>
+                                {units.map(unit => <SelectItem key={unit} value={unit}>{unit}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                     </div>
+                 </div>
+                 <div className="flex items-center justify-end gap-2">
+                     <input
+                        type="file"
+                        accept=".csv"
+                        ref={importInputRef}
+                        onChange={handleImport}
+                        className="hidden"
+                    />
+                    <Button variant="outline" onClick={() => importInputRef.current?.click()}>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Impor
+                    </Button>
+                    <Button variant="outline" onClick={handleExport} disabled={products.length === 0}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Ekspor
+                    </Button>
+                    <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+                        <DialogTrigger asChild>
+                            <Button onClick={() => handleOpenForm(null)}>
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Tambah Produk
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-4xl">
+                            <Form {...form}>
+                                <form onSubmit={form.handleSubmit(onProductSubmit)}>
+                                    <DialogHeader>
+                                        <DialogTitle>{editingProduct ? 'Edit Produk' : 'Tambah Produk Baru'}</DialogTitle>
+                                    </DialogHeader>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+                                        <div className="md:col-span-2 flex flex-col items-center">
+                                            <FormField
+                                                control={form.control}
+                                                name="imageUrl"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Gambar Produk</FormLabel>
+                                                        <FormControl>
+                                                            <div>
+                                                                <input
+                                                                    type="file"
+                                                                    accept="image/*"
+                                                                    ref={imageInputRef}
+                                                                    onChange={handleImageChange}
+                                                                    className="hidden"
+                                                                />
+                                                                <Image
+                                                                    src={previewImage || 'https://placehold.co/200x200.png'}
+                                                                    alt="Pratinjau"
+                                                                    width={128}
+                                                                    height={128}
+                                                                    className="h-32 w-32 rounded-md object-cover cursor-pointer"
+                                                                    onClick={() => imageInputRef.current?.click()}
+                                                                />
+                                                            </div>
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                        <input type="hidden" {...field} value={field.value || ''} />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
+                                        <FormField control={form.control} name="code" render={({ field }) => (
+                                            <FormItem><FormLabel>Kode Item</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                        <FormField control={form.control} name="name" render={({ field }) => (
+                                            <FormItem><FormLabel>Nama Item</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                        <FormField control={form.control} name="category" render={({ field }) => (
+                                             <FormItem><FormLabel>Jenis (Kategori)</FormLabel>
+                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <FormControl><SelectTrigger><SelectValue placeholder="Pilih jenis" /></SelectTrigger></FormControl>
+                                                    <SelectContent>
+                                                        {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                             <FormMessage /></FormItem>
+                                        )} />
+                                         <FormField control={form.control} name="unit" render={({ field }) => (
+                                             <FormItem><FormLabel>Satuan</FormLabel>
+                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <FormControl><SelectTrigger><SelectValue placeholder="Pilih satuan" /></SelectTrigger></FormControl>
+                                                    <SelectContent>
+                                                        {units.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                             <FormMessage /></FormItem>
+                                        )} />
+                                        <FormField control={form.control} name="costPrice" render={({ field }) => (
+                                            <FormItem><FormLabel>Harga Pokok (Rp)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                        <FormField control={form.control} name="price" render={({ field }) => (
+                                            <FormItem><FormLabel>Harga Jual (Rp)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                        <FormField control={form.control} name="stock" render={({ field }) => (
+                                            <FormItem><FormLabel>Stok Awal</FormLabel><FormControl><Input type="number" {...field} disabled={!!editingProduct} /></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                        <FormField control={form.control} name="minStock" render={({ field }) => (
+                                            <FormItem><FormLabel>Stok Minimal</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                        )} />
                                     </div>
-                                    <FormField control={form.control} name="code" render={({ field }) => (
-                                        <FormItem><FormLabel>Kode Item</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                                    )} />
-                                    <FormField control={form.control} name="name" render={({ field }) => (
-                                        <FormItem><FormLabel>Nama Item</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                                    )} />
-                                    <FormField control={form.control} name="category" render={({ field }) => (
-                                         <FormItem><FormLabel>Jenis (Kategori)</FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                <FormControl><SelectTrigger><SelectValue placeholder="Pilih jenis" /></SelectTrigger></FormControl>
-                                                <SelectContent>
-                                                    {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-                                                </SelectContent>
-                                            </Select>
-                                         <FormMessage /></FormItem>
-                                    )} />
-                                     <FormField control={form.control} name="unit" render={({ field }) => (
-                                         <FormItem><FormLabel>Satuan</FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                <FormControl><SelectTrigger><SelectValue placeholder="Pilih satuan" /></SelectTrigger></FormControl>
-                                                <SelectContent>
-                                                    {units.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-                                                </SelectContent>
-                                            </Select>
-                                         <FormMessage /></FormItem>
-                                    )} />
-                                    <FormField control={form.control} name="costPrice" render={({ field }) => (
-                                        <FormItem><FormLabel>Harga Pokok (Rp)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                                    )} />
-                                    <FormField control={form.control} name="price" render={({ field }) => (
-                                        <FormItem><FormLabel>Harga Jual (Rp)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                                    )} />
-                                    <FormField control={form.control} name="stock" render={({ field }) => (
-                                        <FormItem><FormLabel>Stok Awal</FormLabel><FormControl><Input type="number" {...field} disabled={!!editingProduct} /></FormControl><FormMessage /></FormItem>
-                                    )} />
-                                    <FormField control={form.control} name="minStock" render={({ field }) => (
-                                        <FormItem><FormLabel>Stok Minimal</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                                    )} />
-                                </div>
-                                <DialogFooter>
-                                    <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>Batal</Button>
-                                    <Button type="submit" disabled={isSubmitting}>
-                                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                        Simpan
-                                    </Button>
-                                </DialogFooter>
-                            </form>
-                        </Form>
-                    </DialogContent>
-                </Dialog>
+                                    <DialogFooter>
+                                        <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>Batal</Button>
+                                        <Button type="submit" disabled={isSubmitting}>
+                                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                            Simpan
+                                        </Button>
+                                    </DialogFooter>
+                                </form>
+                            </Form>
+                        </DialogContent>
+                    </Dialog>
+                </div>
             </div>
             <div className="rounded-md border">
                 <Table>
@@ -460,8 +517,8 @@ function ProductsClient() {
                     <TableBody>
                         {loading ? (
                             <TableRow><TableCell colSpan={9} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
-                        ) : products.length > 0 ? (
-                            products.map((product) => (
+                        ) : filteredProducts.length > 0 ? (
+                            filteredProducts.map((product) => (
                                 <TableRow key={product.id}>
                                     <TableCell className="font-mono">{product.code}</TableCell>
                                     <TableCell className="font-medium">{product.name}</TableCell>
@@ -567,7 +624,7 @@ function ProductsClient() {
                                 </TableRow>
                             ))
                         ) : (
-                            <TableRow><TableCell colSpan={9} className="h-24 text-center">Belum ada data produk.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={9} className="h-24 text-center">Tidak ada produk yang cocok dengan filter.</TableCell></TableRow>
                         )}
                     </TableBody>
                 </Table>

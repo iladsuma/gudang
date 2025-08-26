@@ -1,7 +1,8 @@
 
+
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { processShipmentsToDelivered } from '@/lib/data';
 import type { Shipment } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -12,10 +13,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCap
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { Input } from './ui/input';
 
 export function PackagingQueueClient({ shipments, onUpdate }: { shipments: Shipment[]; onUpdate: () => void }) {
   const [selectedShipments, setSelectedShipments] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
   
   useEffect(() => {
@@ -23,9 +26,19 @@ export function PackagingQueueClient({ shipments, onUpdate }: { shipments: Shipm
     setSelectedShipments([]);
   }, [shipments]);
 
+  const filteredShipments = useMemo(() => {
+    if (!searchTerm) return shipments;
+    const lowercasedFilter = searchTerm.toLowerCase();
+    return shipments.filter(shipment =>
+        shipment.transactionId.toLowerCase().includes(lowercasedFilter) ||
+        shipment.customerName.toLowerCase().includes(lowercasedFilter) ||
+        shipment.products.some(p => p.name.toLowerCase().includes(lowercasedFilter))
+    );
+  }, [shipments, searchTerm]);
+
 
   const handleSelectAll = (checked: boolean) => {
-    setSelectedShipments(checked ? shipments.map(s => s.id) : []);
+    setSelectedShipments(checked ? filteredShipments.map(s => s.id) : []);
   };
 
   const handleSelectSingle = (shipmentId: string, checked: boolean) => {
@@ -78,19 +91,25 @@ export function PackagingQueueClient({ shipments, onUpdate }: { shipments: Shipm
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <Button onClick={handleProcessToDelivered} disabled={selectedShipments.length === 0 || isProcessing}>
-          {isProcessing ? <Loader2 className='mr-2' /> : <Send className='mr-2' />}
-          Tandai Terkirim ({selectedShipments.length})
-        </Button>
-      </div>
+       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+             <Input 
+                placeholder="Cari No. Transaksi, Pelanggan, atau Produk..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full md:w-80"
+            />
+            <Button onClick={handleProcessToDelivered} disabled={selectedShipments.length === 0 || isProcessing} className="w-full md:w-auto">
+              {isProcessing ? <Loader2 className='mr-2' /> : <Send className='mr-2' />}
+              Tandai Terkirim ({selectedShipments.length})
+            </Button>
+        </div>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className='w-[50px]'>
                 <Checkbox
-                  checked={shipments.length > 0 && selectedShipments.length === shipments.length}
+                  checked={filteredShipments.length > 0 && selectedShipments.length === filteredShipments.length}
                   onCheckedChange={handleSelectAll}
                   aria-label="Pilih semua"
                 />
@@ -103,8 +122,8 @@ export function PackagingQueueClient({ shipments, onUpdate }: { shipments: Shipm
             </TableRow>
           </TableHeader>
           <TableBody>
-            {shipments.length > 0 ? (
-              shipments.map((shipment) => (
+            {filteredShipments.length > 0 ? (
+              filteredShipments.map((shipment) => (
                 <TableRow key={shipment.id} data-state={selectedShipments.includes(shipment.id) ? "selected" : ""}>
                   <TableCell>
                     <Checkbox
@@ -135,7 +154,7 @@ export function PackagingQueueClient({ shipments, onUpdate }: { shipments: Shipm
             ) : (
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center">
-                  Tidak ada pengiriman dalam antrian pengemasan.
+                  Tidak ada pengiriman dalam antrian pengemasan yang cocok dengan filter.
                 </TableCell>
               </TableRow>
             )}

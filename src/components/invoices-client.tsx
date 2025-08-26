@@ -28,6 +28,7 @@ import 'jspdf-autotable';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
+import { Input } from './ui/input';
 
 
 // Extend jsPDF with autoTable, which is a plugin.
@@ -40,11 +41,23 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
   const [shipments, setShipments] = React.useState(initialShipments);
   const [selectedShipments, setSelectedShipments] = React.useState<string[]>([]);
   const [isPrinting, setIsPrinting] = React.useState(false);
+  const [searchTerm, setSearchTerm] = React.useState('');
   const { toast } = useToast();
 
   React.useEffect(() => {
     setShipments(initialShipments);
   }, [initialShipments]);
+
+  const filteredShipments = React.useMemo(() => {
+    if (!searchTerm) return shipments;
+    const lowercasedFilter = searchTerm.toLowerCase();
+    return shipments.filter(shipment =>
+        shipment.transactionId.toLowerCase().includes(lowercasedFilter) ||
+        shipment.customerName.toLowerCase().includes(lowercasedFilter) ||
+        shipment.user.toLowerCase().includes(lowercasedFilter) ||
+        shipment.products.some(p => p.name.toLowerCase().includes(lowercasedFilter))
+    );
+  }, [shipments, searchTerm]);
   
   const formatRupiah = (number: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -65,7 +78,7 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
 
   const handleSelectAll = (checked: boolean) => {
     if(checked) {
-        setSelectedShipments(shipments.map(s => s.id));
+        setSelectedShipments(filteredShipments.map(s => s.id));
     } else {
         setSelectedShipments([]);
     }
@@ -202,8 +215,14 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
   
   return (
     <div className='space-y-4'>
-        <div className="flex justify-end">
-            <Button onClick={handlePrintInvoices} disabled={selectedShipments.length === 0 || isPrinting}>
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+             <Input 
+                placeholder="Cari No. Transaksi, User, Pelanggan..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full md:w-80"
+            />
+            <Button onClick={handlePrintInvoices} disabled={selectedShipments.length === 0 || isPrinting} className="w-full md:w-auto">
                 {isPrinting ? <Loader2 className='mr-2' /> : <FileDown className='mr-2' />}
                 Cetak Faktur Terpilih ({selectedShipments.length})
             </Button>
@@ -214,7 +233,7 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
             <TableRow>
               <TableHead className='w-[50px]'>
                   <Checkbox
-                      checked={shipments.length > 0 && selectedShipments.length === shipments.length}
+                      checked={filteredShipments.length > 0 && selectedShipments.length === filteredShipments.length}
                       onCheckedChange={handleSelectAll}
                   />
               </TableHead>
@@ -227,8 +246,8 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
             </TableRow>
           </TableHeader>
           <TableBody>
-            {shipments.length > 0 ? (
-              shipments.map((shipment) => (
+            {filteredShipments.length > 0 ? (
+              filteredShipments.map((shipment) => (
                 <TableRow key={shipment.id} data-state={selectedShipments.includes(shipment.id) ? "selected" : ""}>
                     <TableCell>
                         <Checkbox
@@ -269,7 +288,7 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
             ) : (
               <TableRow>
                 <TableCell colSpan={7} className="h-24 text-center">
-                  Belum ada pengiriman yang diproses.
+                  Tidak ada pengiriman yang cocok dengan filter.
                 </TableCell>
               </TableRow>
             )}
