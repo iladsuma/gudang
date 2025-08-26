@@ -3,7 +3,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, PackageCheck, Settings, Send, Users } from 'lucide-react';
+import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, PackageCheck, Settings, Send, Users, PackageOpen } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { Button } from './ui/button';
 import { useRouter, usePathname } from 'next/navigation';
@@ -67,6 +67,12 @@ export function Header() {
                 </Link>
                 {user.role === 'admin' && (
                   <>
+                    <Link
+                      href="/packaging-queue"
+                      className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname === '/packaging-queue' ? 'text-foreground' : 'text-foreground/60')}
+                    >
+                      <PackageOpen className="h-4 w-4" /> Antrian Kemas
+                    </Link>
                     <Link
                       href="/invoices"
                       className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname === '/invoices' ? 'text-foreground' : 'text-foreground/60')}

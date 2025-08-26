@@ -36,7 +36,7 @@ import { Badge } from './ui/badge';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { deleteShipment, processShipmentsToDelivered } from '@/lib/data';
+import { deleteShipment, processShipmentsToPackaging } from '@/lib/data';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/context/auth-context';
@@ -134,6 +134,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
   const getStatusVariant = (status: Shipment['status']) => {
     switch (status) {
         case 'Proses': return 'secondary';
+        case 'Pengemasan': return 'default';
         case 'Terkirim': return 'outline';
         default: return 'secondary';
     }
@@ -155,15 +156,15 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
       }
   }
 
-  const handleProcessToDelivered = async () => {
+  const handleProcessToPackaging = async () => {
     if (selectedShipments.length === 0) {
         toast({ variant: 'destructive', title: 'Tidak Ada Terpilih', description: 'Pilih setidaknya satu pengiriman untuk diproses.' });
         return;
     }
     setIsProcessing(true);
     try {
-        await processShipmentsToDelivered(selectedShipments);
-        toast({ title: 'Sukses!', description: `${selectedShipments.length} pengiriman telah diproses dan dipindahkan ke arsip.` });
+        await processShipmentsToPackaging(selectedShipments);
+        toast({ title: 'Sukses!', description: `${selectedShipments.length} pengiriman telah dipindahkan ke antrian pengemasan.` });
         onUpdate();
         setSelectedShipments([]);
     } catch (error) {
@@ -181,9 +182,9 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
     <div className="space-y-4">
       <div className="flex justify-end gap-2">
          {isAdminView && (
-            <Button onClick={handleProcessToDelivered} disabled={selectedShipments.length === 0 || isProcessing}>
-                {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                Proses & Kirim ({selectedShipments.length})
+            <Button onClick={handleProcessToPackaging} disabled={selectedShipments.length === 0 || isProcessing}>
+                {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Package className="mr-2 h-4 w-4" />}
+                Proses ke Pengemasan ({selectedShipments.length})
             </Button>
          )}
          {!isAdminView && (

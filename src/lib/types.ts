@@ -24,7 +24,7 @@ export interface Shipment {
     transactionId: string;
     expedition: string;
     packagingId: string; // The selected packaging for the whole shipment
-    status: 'Proses' | 'Terkirim';
+    status: 'Proses' | 'Pengemasan' | 'Terkirim';
     receipt?: { // Receipt is now optional
         fileName: string;
         dataUrl: string; // Base64 encoded PDF
