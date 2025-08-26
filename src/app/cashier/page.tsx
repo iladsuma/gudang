@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import { getProducts, getCustomers } from '@/lib/data';
+import { getProducts, getCustomers, processDirectSale } from '@/lib/data';
 import type { Product, Customer, ShipmentProduct, Shipment } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -140,6 +140,10 @@ export default function CashierPage() {
     };
     
     const handleSubmit = async () => {
+        if (!user) {
+            toast({ variant: 'destructive', title: 'Gagal', description: 'User tidak ditemukan.' });
+            return;
+        }
         if (cart.length === 0) {
             toast({ variant: 'destructive', title: 'Keranjang Kosong', description: 'Tambahkan produk terlebih dahulu.' });
             return;
@@ -151,15 +155,7 @@ export default function CashierPage() {
         
         setIsSubmitting(true);
         try {
-            const response = await fetch('/api/sales', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user, customerId: selectedCustomer, products: cart }),
-            });
-            const result = await response.json();
-            if (!response.ok) {
-                throw new Error(result.message || 'Gagal memproses transaksi.');
-            }
+            const result = await processDirectSale(user, selectedCustomer, cart);
             // Success
             setLastTransaction(result);
             setIsSuccessDialogOpen(true);

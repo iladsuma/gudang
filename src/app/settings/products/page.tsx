@@ -291,8 +291,8 @@ function ProductsClient() {
                         };
 
                         // Check if product with the same code or name exists
-                        const existingByName = products.find(p => p.name.toLowerCase() === validatedData.name.toLowerCase());
                         const existingByCode = products.find(p => p.code.toLowerCase() === validatedData.code.toLowerCase());
+                        const existingByName = products.find(p => p.name.toLowerCase() === validatedData.name.toLowerCase());
 
                         if (existingByCode) {
                            await updateProduct(existingByCode.id, validatedData);
@@ -446,36 +446,30 @@ function ProductsClient() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead className='w-[50px]'>No</TableHead>
-                            <TableHead>Gambar</TableHead>
                             <TableHead>Kode Item</TableHead>
                             <TableHead>Nama Item</TableHead>
-                            <TableHead>Jenis</TableHead>
+                            <TableHead>Stok</TableHead>
                             <TableHead>Satuan</TableHead>
+                            <TableHead>Jenis</TableHead>
                             <TableHead>Harga Pokok</TableHead>
                             <TableHead>Harga Jual</TableHead>
-                            <TableHead>Stok</TableHead>
                             <TableHead>Stok Min.</TableHead>
                             <TableHead className="text-right">Aksi</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loading ? (
-                            <TableRow><TableCell colSpan={11} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
+                            <TableRow><TableCell colSpan={9} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
                         ) : products.length > 0 ? (
-                            products.map((product, index) => (
+                            products.map((product) => (
                                 <TableRow key={product.id}>
-                                    <TableCell>{index + 1}</TableCell>
-                                    <TableCell>
-                                        <Image src={product.imageUrl || 'https://placehold.co/100x100.png'} alt={product.name} width={40} height={40} className="h-10 w-10 rounded-md object-cover" />
-                                    </TableCell>
                                     <TableCell className="font-mono">{product.code}</TableCell>
                                     <TableCell className="font-medium">{product.name}</TableCell>
-                                    <TableCell>{product.category}</TableCell>
+                                    <TableCell className={cn(product.stock <= product.minStock && 'text-red-500 font-bold')}>{product.stock}</TableCell>
                                     <TableCell>{product.unit}</TableCell>
+                                    <TableCell>{product.category}</TableCell>
                                     <TableCell>{formatRupiah(product.costPrice)}</TableCell>
                                     <TableCell>{formatRupiah(product.price)}</TableCell>
-                                    <TableCell className={cn(product.stock <= product.minStock && 'text-red-500 font-bold')}>{product.stock}</TableCell>
                                     <TableCell>{product.minStock}</TableCell>
                                     <TableCell className="text-right">
                                        <Dialog open={!!stockEditProduct && stockEditProduct.id === product.id} onOpenChange={(open) => !open && setStockEditProduct(null)}>
@@ -573,7 +567,7 @@ function ProductsClient() {
                                 </TableRow>
                             ))
                         ) : (
-                            <TableRow><TableCell colSpan={11} className="h-24 text-center">Belum ada data produk.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={9} className="h-24 text-center">Belum ada data produk.</TableCell></TableRow>
                         )}
                     </TableBody>
                 </Table>

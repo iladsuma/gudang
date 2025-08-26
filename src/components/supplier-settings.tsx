@@ -170,8 +170,8 @@ export function SupplierSettings() {
                             <TableHead className='w-[50px]'>No</TableHead>
                             <TableHead>ID Supplier</TableHead>
                             <TableHead>Nama Supplier</TableHead>
-                            <TableHead>No. Telepon</TableHead>
                             <TableHead>Alamat</TableHead>
+                            <TableHead>No. Telepon</TableHead>
                             <TableHead className="text-right">Aksi</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -184,8 +184,8 @@ export function SupplierSettings() {
                                     <TableCell>{index + 1}</TableCell>
                                     <TableCell className="font-mono text-xs">{supplier.id}</TableCell>
                                     <TableCell className="font-medium">{supplier.name}</TableCell>
-                                    <TableCell>{supplier.phone}</TableCell>
                                     <TableCell>{supplier.address}</TableCell>
+                                    <TableCell>{supplier.phone}</TableCell>
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="icon" onClick={() => handleOpenForm(supplier)}><Pencil className="h-4 w-4" /></Button>
                                         <AlertDialog>

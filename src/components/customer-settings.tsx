@@ -170,8 +170,8 @@ export function CustomerSettings() {
                             <TableHead className='w-[50px]'>No</TableHead>
                             <TableHead>ID Pelanggan</TableHead>
                             <TableHead>Nama Pelanggan</TableHead>
-                            <TableHead>No. Telepon</TableHead>
                             <TableHead>Alamat</TableHead>
+                            <TableHead>No. Telepon</TableHead>
                             <TableHead className="text-right">Aksi</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -184,8 +184,8 @@ export function CustomerSettings() {
                                     <TableCell>{index + 1}</TableCell>
                                     <TableCell className="font-mono text-xs">{customer.id}</TableCell>
                                     <TableCell className="font-medium">{customer.name}</TableCell>
-                                    <TableCell>{customer.phone}</TableCell>
                                     <TableCell>{customer.address}</TableCell>
+                                    <TableCell>{customer.phone}</TableCell>
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="icon" onClick={() => handleOpenForm(customer)}><Pencil className="h-4 w-4" /></Button>
                                         <AlertDialog>

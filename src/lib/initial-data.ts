@@ -1,6 +1,6 @@
 
 
-import type { User, Product, Expedition, Packaging, Shipment, Checkout, Customer, StockMovement, Supplier, Purchase } from './types';
+import type { User, Product, Expedition, Packaging, Shipment, Checkout, Customer, StockMovement, Supplier, Purchase, Return } from './types';
 
 interface DbData {
   users: User[];
@@ -13,6 +13,7 @@ interface DbData {
   suppliers: Supplier[];
   stockMovements: StockMovement[];
   purchases: Purchase[];
+  returns: Return[];
 }
 
 export const initialData: DbData = {
@@ -138,5 +139,6 @@ export const initialData: DbData = {
     }
   ],
   stockMovements: [],
-  purchases: []
+  purchases: [],
+  returns: []
 };

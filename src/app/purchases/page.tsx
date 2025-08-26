@@ -64,6 +64,7 @@ const purchaseProductSchema = z.object({
 const purchaseFormSchema = z.object({
   purchaseNumber: z.string().min(1, 'Nomor Pembelian harus diisi.'),
   supplierId: z.string().min(1, 'Supplier harus dipilih.'),
+  supplierName: z.string(),
   products: z.array(purchaseProductSchema).min(1, 'Minimal harus ada satu produk.'),
 });
 
@@ -119,6 +120,7 @@ function PurchaseForm({ allProducts, allSuppliers, onFormSuccess }: { allProduct
         defaultValues: {
             purchaseNumber: '',
             supplierId: '',
+            supplierName: '',
             products: [],
         },
     });
@@ -149,8 +151,7 @@ function PurchaseForm({ allProducts, allSuppliers, onFormSuccess }: { allProduct
     const onSubmit = async (data: PurchaseFormValues) => {
         setIsSubmitting(true);
         try {
-            const supplierName = allSuppliers.find(s => s.id === data.supplierId)?.name || 'Unknown';
-            await addPurchase({ ...data, supplierName });
+            await addPurchase(data);
             toast({ title: 'Sukses!', description: 'Transaksi pembelian berhasil disimpan. Stok telah diperbarui.' });
             form.reset();
             setIsFormOpen(false);
@@ -184,7 +185,14 @@ function PurchaseForm({ allProducts, allSuppliers, onFormSuccess }: { allProduct
                             )} />
                              <FormField control={form.control} name="supplierId" render={({ field }) => (
                                 <FormItem><FormLabel>Supplier</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <Select 
+                                        onValueChange={(value) => {
+                                            field.onChange(value);
+                                            const supplierName = allSuppliers.find(s => s.id === value)?.name || 'Unknown';
+                                            form.setValue('supplierName', supplierName);
+                                        }}
+                                        defaultValue={field.value}
+                                    >
                                         <FormControl><SelectTrigger><SelectValue placeholder="Pilih supplier" /></SelectTrigger></FormControl>
                                         <SelectContent>
                                             {allSuppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
