@@ -2,7 +2,7 @@
 
 'use client';
 
-import type { User, Shipment, Checkout, Expedition, Product, Packaging, Customer, StockMovement, Supplier, Purchase, PurchaseProduct, ShipmentProduct } from './types';
+import type { User, Shipment, Checkout, Expedition, Product, Packaging, Customer, StockMovement, Supplier, Purchase, PurchaseProduct, ShipmentProduct, Return, ReturnedProduct } from './types';
 import { initialData } from './initial-data';
 
 
@@ -21,6 +21,7 @@ let db: {
   suppliers: Supplier[];
   stockMovements: StockMovement[];
   purchases: Purchase[];
+  returns: Return[];
 } = {
   users: [],
   products: [],
@@ -32,6 +33,7 @@ let db: {
   suppliers: [],
   stockMovements: [],
   purchases: [],
+  returns: [],
 };
 
 
@@ -43,7 +45,7 @@ function initializeDb() {
       try {
         db = JSON.parse(storedDb);
         // Basic validation to ensure all keys are present after parsing
-        const requiredKeys: (keyof typeof db)[] = ['users', 'products', 'expeditions', 'packagingOptions', 'shipments', 'checkoutHistory', 'customers', 'suppliers', 'stockMovements', 'purchases'];
+        const requiredKeys: (keyof typeof db)[] = ['users', 'products', 'expeditions', 'packagingOptions', 'shipments', 'checkoutHistory', 'customers', 'suppliers', 'stockMovements', 'purchases', 'returns'];
         let needsReset = false;
         for (const key of requiredKeys) {
             if (!db[key]) {
@@ -165,11 +167,12 @@ export async function deleteUser(id: string): Promise<void> {
 
 // --- Customer Functions ---
 export async function getCustomers(): Promise<Customer[]> {
-    const sorted = [...db.customers].sort((a,b) => a.name.localeCompare(b.name));
+    const sorted = [...(db.customers || [])].sort((a,b) => a.name.localeCompare(b.name));
     return Promise.resolve(sorted);
 }
 
 export async function addCustomer(data: Omit<Customer, 'id'>): Promise<Customer> {
+    if (!db.customers) db.customers = [];
     if (db.customers.some(c => c.name.toLowerCase() === data.name.toLowerCase())) {
         throw new Error('Nama pelanggan sudah ada.');
     }
@@ -180,6 +183,7 @@ export async function addCustomer(data: Omit<Customer, 'id'>): Promise<Customer>
 }
 
 export async function updateCustomer(id: string, data: Omit<Customer, 'id'>): Promise<Customer> {
+    if (!db.customers) db.customers = [];
     const customerIndex = db.customers.findIndex(c => c.id === id);
     if (customerIndex === -1) {
         throw new Error('Pelanggan tidak ditemukan.');
@@ -193,6 +197,7 @@ export async function updateCustomer(id: string, data: Omit<Customer, 'id'>): Pr
 }
 
 export async function deleteCustomer(id: string): Promise<void> {
+    if (!db.customers) db.customers = [];
     db.customers = db.customers.filter(c => c.id !== id);
     persistDb();
     return Promise.resolve();
@@ -200,11 +205,12 @@ export async function deleteCustomer(id: string): Promise<void> {
 
 // --- Supplier Functions ---
 export async function getSuppliers(): Promise<Supplier[]> {
-    const sorted = [...db.suppliers].sort((a,b) => a.name.localeCompare(b.name));
+    const sorted = [...(db.suppliers || [])].sort((a,b) => a.name.localeCompare(b.name));
     return Promise.resolve(sorted);
 }
 
 export async function addSupplier(data: Omit<Supplier, 'id'>): Promise<Supplier> {
+    if (!db.suppliers) db.suppliers = [];
     if (db.suppliers.some(s => s.name.toLowerCase() === data.name.toLowerCase())) {
         throw new Error('Nama supplier sudah ada.');
     }
@@ -215,6 +221,7 @@ export async function addSupplier(data: Omit<Supplier, 'id'>): Promise<Supplier>
 }
 
 export async function updateSupplier(id: string, data: Omit<Supplier, 'id'>): Promise<Supplier> {
+    if (!db.suppliers) db.suppliers = [];
     const supplierIndex = db.suppliers.findIndex(s => s.id === id);
     if (supplierIndex === -1) {
         throw new Error('Supplier tidak ditemukan.');
@@ -228,6 +235,7 @@ export async function updateSupplier(id: string, data: Omit<Supplier, 'id'>): Pr
 }
 
 export async function deleteSupplier(id: string): Promise<void> {
+    if (!db.suppliers) db.suppliers = [];
     db.suppliers = db.suppliers.filter(s => s.id !== id);
     persistDb();
     return Promise.resolve();
@@ -236,11 +244,11 @@ export async function deleteSupplier(id: string): Promise<void> {
 
 // --- Shipment Functions ---
 export async function getShipments(): Promise<Shipment[]> {
-    const sorted = [...db.shipments].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const sorted = [...(db.shipments || [])].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return Promise.resolve(sorted);
 }
 
-export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'status' | 'totalItems' | 'totalAmount' | 'totalProductCost' | 'totalPackingCost'> & { packagingCost: number }): Promise<Shipment> {
+export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'status' | 'totalItems' | 'totalAmount' | 'totalProductCost' | 'totalPackingCost' | 'customerName'> & { packagingCost: number }): Promise<Shipment> {
     const totalItems = data.products.reduce((sum, p) => sum + p.quantity, 0);
     const totalProductCost = data.products.reduce((sum, p) => sum + (p.price * p.quantity), 0);
     const totalPackingCost = data.packagingCost || 0;
@@ -265,7 +273,7 @@ export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'sta
     return Promise.resolve(newShipment);
 }
 
-export async function updateShipment(shipmentId: string, data: Omit<Shipment, 'id' | 'createdAt' | 'status' | 'totalItems' | 'totalAmount' | 'totalProductCost' | 'totalPackingCost'> & { packagingCost: number }): Promise<Shipment> {
+export async function updateShipment(shipmentId: string, data: Omit<Shipment, 'id' | 'createdAt' | 'status' | 'totalItems' | 'totalAmount' | 'totalProductCost' | 'totalPackingCost' | 'customerName'> & { packagingCost: number }): Promise<Shipment> {
     const shipmentIndex = db.shipments.findIndex(s => s.id === shipmentId);
     if (shipmentIndex === -1) {
         throw new Error("Pengiriman tidak ditemukan.");
@@ -428,18 +436,19 @@ export async function processShipmentsToDelivered(shipmentIds: string[]): Promis
 
 
 export async function getCheckoutHistory(): Promise<Checkout[]> {
-    const sorted = [...db.checkoutHistory].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const sorted = [...(db.checkoutHistory || [])].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return Promise.resolve(sorted);
 }
 
 
 // --- Expedition Functions ---
 export async function getExpeditions(): Promise<Expedition[]> {
-    const sorted = [...db.expeditions].sort((a, b) => a.name.localeCompare(b.name));
+    const sorted = [...(db.expeditions || [])].sort((a, b) => a.name.localeCompare(b.name));
     return Promise.resolve(sorted);
 }
 
 export async function addExpedition(name: string): Promise<Expedition> {
+    if (!db.expeditions) db.expeditions = [];
     if (db.expeditions.some(e => e.name.toLowerCase() === name.toLowerCase())) {
         throw new Error('Nama ekspedisi sudah ada.');
     }
@@ -450,6 +459,7 @@ export async function addExpedition(name: string): Promise<Expedition> {
 }
 
 export async function updateExpedition(id: string, name: string): Promise<Expedition> {
+    if (!db.expeditions) db.expeditions = [];
     const expeditionIndex = db.expeditions.findIndex(e => e.id === id);
     if (expeditionIndex === -1) {
         throw new Error('Ekspedisi tidak ditemukan.');
@@ -463,6 +473,7 @@ export async function updateExpedition(id: string, name: string): Promise<Expedi
 }
 
 export async function deleteExpedition(id: string): Promise<void> {
+    if (!db.expeditions) db.expeditions = [];
     db.expeditions = db.expeditions.filter(e => e.id !== id);
     persistDb();
     return Promise.resolve();
@@ -470,11 +481,12 @@ export async function deleteExpedition(id: string): Promise<void> {
 
 // --- Master Product Functions ---
 export async function getProducts(): Promise<Product[]> {
-    const sorted = [...db.products].sort((a,b) => a.name.localeCompare(b.name));
+    const sorted = [...(db.products || [])].sort((a,b) => a.name.localeCompare(b.name));
     return Promise.resolve(sorted);
 }
 
 export async function addProduct(product: Omit<Product, 'id'>): Promise<Product> {
+    if (!db.products) db.products = [];
     if (db.products.some(p => p.name.toLowerCase() === product.name.toLowerCase())) {
         throw new Error('Nama produk sudah ada.');
     }
@@ -562,7 +574,7 @@ export async function updateProductStock(id: string, newStock: number): Promise<
 }
 
 export async function getStockMovements(productId: string): Promise<StockMovement[]> {
-    const movements = db.stockMovements
+    const movements = (db.stockMovements || [])
         .filter(sm => sm.productId === productId)
         .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return Promise.resolve(movements);
@@ -571,11 +583,12 @@ export async function getStockMovements(productId: string): Promise<StockMovemen
 
 // --- Packaging Functions ---
 export async function getPackagingOptions(): Promise<Packaging[]> {
-    const sorted = [...db.packagingOptions].sort((a,b) => a.name.localeCompare(b.name));
+    const sorted = [...(db.packagingOptions || [])].sort((a,b) => a.name.localeCompare(b.name));
     return Promise.resolve(sorted);
 }
 
 export async function addPackagingOption(data: Omit<Packaging, 'id'>): Promise<Packaging> {
+    if (!db.packagingOptions) db.packagingOptions = [];
     if (db.packagingOptions.some(o => o.name.toLowerCase() === data.name.toLowerCase())) {
         throw new Error('Nama kemasan sudah ada.');
     }
@@ -586,6 +599,7 @@ export async function addPackagingOption(data: Omit<Packaging, 'id'>): Promise<P
 }
 
 export async function updatePackagingOption(id: string, data: Omit<Packaging, 'id'>): Promise<Packaging> {
+    if (!db.packagingOptions) db.packagingOptions = [];
     const optionIndex = db.packagingOptions.findIndex(o => o.id === id);
     if (optionIndex === -1) {
         throw new Error('Tipe kemasan tidak ditemukan.');
@@ -599,6 +613,7 @@ export async function updatePackagingOption(id: string, data: Omit<Packaging, 'i
 }
 
 export async function deletePackagingOption(id: string): Promise<void> {
+    if (!db.packagingOptions) db.packagingOptions = [];
     db.packagingOptions = db.packagingOptions.filter(o => o.id !== id);
     persistDb();
     return Promise.resolve();
@@ -606,11 +621,12 @@ export async function deletePackagingOption(id: string): Promise<void> {
 
 // --- Purchase Functions ---
 export async function getPurchases(): Promise<Purchase[]> {
-    const sorted = [...db.purchases].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const sorted = [...(db.purchases || [])].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return Promise.resolve(sorted);
 }
 
 export async function addPurchase(data: Omit<Purchase, 'id' | 'createdAt' | 'status' | 'totalAmount'>): Promise<Purchase> {
+    if (!db.purchases) db.purchases = [];
     const totalAmount = data.products.reduce((sum, p) => sum + p.costPrice * p.quantity, 0);
 
     const newPurchase: Purchase = {
@@ -721,4 +737,67 @@ export async function processDirectSale(
     persistDb();
     
     return Promise.resolve(newShipment);
+}
+
+// --- Return Functions ---
+export async function getReturns(): Promise<Return[]> {
+    if (!db.returns) db.returns = [];
+    const sorted = [...db.returns].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return Promise.resolve(sorted);
+}
+
+
+export async function addReturn(data: { originalShipmentId: string, products: ReturnedProduct[], reason: string }): Promise<Return> {
+    if (!db.returns) db.returns = [];
+    if (!db.stockMovements) db.stockMovements = [];
+
+    const originalShipment = db.shipments.find(s => s.id === data.originalShipmentId);
+    if (!originalShipment) {
+        throw new Error('Transaksi penjualan asli tidak ditemukan.');
+    }
+
+    const totalAmount = data.products.reduce((sum, p) => sum + p.price * p.quantity, 0);
+
+    const newReturn: Return = {
+        id: `ret_${Date.now()}`,
+        originalShipmentId: data.originalShipmentId,
+        originalTransactionId: originalShipment.transactionId,
+        customerName: originalShipment.customerName,
+        products: data.products,
+        reason: data.reason,
+        totalAmount,
+        createdAt: new Date().toISOString(),
+    };
+
+    // --- Stock and Stock Movement Logic ---
+    data.products.forEach(p => {
+        const productIndex = db.products.findIndex(prod => prod.id === p.productId);
+        if (productIndex !== -1) {
+            const product = db.products[productIndex];
+            const stockBefore = product.stock;
+            product.stock += p.quantity; // Increase stock due to return
+            const stockAfter = product.stock;
+
+            const movement: StockMovement = {
+                id: `sm_ret_${Date.now()}_${p.productId}`,
+                productId: p.productId,
+                referenceId: newReturn.id,
+                type: 'Retur',
+                quantityChange: p.quantity,
+                stockBefore: stockBefore,
+                stockAfter: stockAfter,
+                notes: `Retur dari transaksi ${originalShipment.transactionId}`,
+                createdAt: new Date().toISOString(),
+            };
+            db.stockMovements.push(movement);
+        } else {
+            console.warn(`Product with ID ${p.productId} not found during return transaction.`);
+        }
+    });
+    // --- End of Stock Logic ---
+
+
+    db.returns.unshift(newReturn);
+    persistDb();
+    return Promise.resolve(newReturn);
 }
