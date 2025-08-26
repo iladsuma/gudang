@@ -44,6 +44,13 @@ export interface User {
     password?: string;
 }
 
+export interface Customer {
+    id: string;
+    name: string;
+    address: string;
+    phone: string;
+}
+
 export interface CheckoutItem {
     name: string;
     quantity: number;

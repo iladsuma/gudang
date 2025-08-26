@@ -1,5 +1,5 @@
 
-import type { User, Product, Expedition, Packaging, Shipment, Checkout } from './types';
+import type { User, Product, Expedition, Packaging, Shipment, Checkout, Customer } from './types';
 
 interface DbData {
   users: User[];
@@ -8,6 +8,7 @@ interface DbData {
   packagingOptions: Packaging[];
   shipments: Shipment[];
   checkoutHistory: Checkout[];
+  customers: Customer[];
 }
 
 export const initialData: DbData = {
@@ -91,5 +92,19 @@ export const initialData: DbData = {
     }
   ],
   shipments: [],
-  checkoutHistory: []
+  checkoutHistory: [],
+  customers: [
+      {
+          id: "cust_1",
+          name: "Pelanggan Umum",
+          address: "N/A",
+          phone: "N/A"
+      },
+       {
+          id: "cust_2",
+          name: "Budi Santoso",
+          address: "Jl. Merdeka No. 10, Jakarta",
+          phone: "081234567890"
+      }
+  ]
 };

@@ -3,7 +3,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, PackageCheck, Settings, Send } from 'lucide-react';
+import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, PackageCheck, Settings, Send, Users } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { Button } from './ui/button';
 import { useRouter, usePathname } from 'next/navigation';
@@ -83,6 +83,7 @@ export function Header() {
                       <DropdownMenuContent>
                         <DropdownMenuItem onSelect={() => router.push('/settings')}>Pengaturan Umum</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => router.push('/settings/products')}>Produk</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => router.push('/settings/customers')}>Pelanggan</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => router.push('/settings/expeditions')}>Ekspedisi</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => router.push('/settings/packaging')}>Kemasan</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => router.push('/settings/users')}>Pengguna</DropdownMenuItem>

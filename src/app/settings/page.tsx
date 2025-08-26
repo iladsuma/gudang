@@ -77,6 +77,24 @@ export default function SettingsPage() {
                        </Button>
                     </CardFooter>
                 </Card>
+                 <Card className="flex flex-col">
+                    <CardHeader>
+                        <CardTitle>Manajemen Pelanggan</CardTitle>
+                        <CardDescription>
+                            Kelola daftar pelanggan yang bertransaksi. Tambah, edit, dan hapus data pelanggan.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-grow">
+                       <p className="text-sm text-muted-foreground">Simpan informasi nama, alamat, dan nomor telepon pelanggan.</p>
+                    </CardContent>
+                    <CardFooter>
+                       <Button asChild>
+                           <Link href="/settings/customers">
+                                Kelola Pelanggan <ChevronRight className="ml-2 h-4 w-4" />
+                           </Link>
+                       </Button>
+                    </CardFooter>
+                </Card>
                 <Card className="flex flex-col">
                     <CardHeader>
                         <CardTitle>Manajemen Ekspedisi</CardTitle>

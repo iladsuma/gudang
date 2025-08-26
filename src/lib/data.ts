@@ -2,7 +2,7 @@
 
 'use client';
 
-import type { User, Shipment, Checkout, Expedition, Product, Packaging } from '@/lib/types';
+import type { User, Shipment, Checkout, Expedition, Product, Packaging, Customer } from '@/lib/types';
 import { initialData } from './initial-data';
 
 
@@ -17,6 +17,7 @@ let db: {
   packagingOptions: Packaging[];
   shipments: Shipment[];
   checkoutHistory: Checkout[];
+  customers: Customer[];
 } = {
   users: [],
   products: [],
@@ -24,6 +25,7 @@ let db: {
   packagingOptions: [],
   shipments: [],
   checkoutHistory: [],
+  customers: [],
 };
 
 
@@ -35,7 +37,7 @@ function initializeDb() {
       try {
         db = JSON.parse(storedDb);
         // Basic validation to ensure all keys are present after parsing
-        const requiredKeys: (keyof typeof db)[] = ['users', 'products', 'expeditions', 'packagingOptions', 'shipments', 'checkoutHistory'];
+        const requiredKeys: (keyof typeof db)[] = ['users', 'products', 'expeditions', 'packagingOptions', 'shipments', 'checkoutHistory', 'customers'];
         let needsReset = false;
         for (const key of requiredKeys) {
             if (!db[key]) {
@@ -154,6 +156,42 @@ export async function deleteUser(id: string): Promise<void> {
     persistDb();
     return Promise.resolve();
 }
+
+// --- Customer Functions ---
+export async function getCustomers(): Promise<Customer[]> {
+    const sorted = [...db.customers].sort((a,b) => a.name.localeCompare(b.name));
+    return Promise.resolve(sorted);
+}
+
+export async function addCustomer(data: Omit<Customer, 'id'>): Promise<Customer> {
+    if (db.customers.some(c => c.name.toLowerCase() === data.name.toLowerCase())) {
+        throw new Error('Nama pelanggan sudah ada.');
+    }
+    const newCustomer: Customer = { ...data, id: `cust_${Date.now()}` };
+    db.customers.push(newCustomer);
+    persistDb();
+    return Promise.resolve(newCustomer);
+}
+
+export async function updateCustomer(id: string, data: Omit<Customer, 'id'>): Promise<Customer> {
+    const customerIndex = db.customers.findIndex(c => c.id === id);
+    if (customerIndex === -1) {
+        throw new Error('Pelanggan tidak ditemukan.');
+    }
+     if (db.customers.some(c => c.id !== id && c.name.toLowerCase() === data.name.toLowerCase())) {
+        throw new Error('Nama pelanggan lain dengan nama ini sudah ada.');
+    }
+    db.customers[customerIndex] = { ...db.customers[customerIndex], ...data };
+    persistDb();
+    return Promise.resolve(db.customers[customerIndex]);
+}
+
+export async function deleteCustomer(id: string): Promise<void> {
+    db.customers = db.customers.filter(c => c.id !== id);
+    persistDb();
+    return Promise.resolve();
+}
+
 
 // --- Shipment Functions ---
 export async function getShipments(): Promise<Shipment[]> {
