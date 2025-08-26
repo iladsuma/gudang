@@ -167,6 +167,8 @@ export function SupplierSettings() {
                 <Table>
                     <TableHeader>
                         <TableRow>
+                            <TableHead className='w-[50px]'>No</TableHead>
+                            <TableHead>ID Supplier</TableHead>
                             <TableHead>Nama Supplier</TableHead>
                             <TableHead>No. Telepon</TableHead>
                             <TableHead>Alamat</TableHead>
@@ -175,10 +177,12 @@ export function SupplierSettings() {
                     </TableHeader>
                     <TableBody>
                         {loading ? (
-                            <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
+                            <TableRow><TableCell colSpan={6} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
                         ) : suppliers.length > 0 ? (
-                            suppliers.map((supplier) => (
+                            suppliers.map((supplier, index) => (
                                 <TableRow key={supplier.id}>
+                                    <TableCell>{index + 1}</TableCell>
+                                    <TableCell className="font-mono text-xs">{supplier.id}</TableCell>
                                     <TableCell className="font-medium">{supplier.name}</TableCell>
                                     <TableCell>{supplier.phone}</TableCell>
                                     <TableCell>{supplier.address}</TableCell>
@@ -199,7 +203,7 @@ export function SupplierSettings() {
                                 </TableRow>
                             ))
                         ) : (
-                            <TableRow><TableCell colSpan={4} className="h-24 text-center">Belum ada data supplier.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={6} className="h-24 text-center">Belum ada data supplier.</TableCell></TableRow>
                         )}
                     </TableBody>
                 </Table>

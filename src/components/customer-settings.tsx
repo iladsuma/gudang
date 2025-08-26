@@ -167,6 +167,8 @@ export function CustomerSettings() {
                 <Table>
                     <TableHeader>
                         <TableRow>
+                            <TableHead className='w-[50px]'>No</TableHead>
+                            <TableHead>ID Pelanggan</TableHead>
                             <TableHead>Nama Pelanggan</TableHead>
                             <TableHead>No. Telepon</TableHead>
                             <TableHead>Alamat</TableHead>
@@ -175,10 +177,12 @@ export function CustomerSettings() {
                     </TableHeader>
                     <TableBody>
                         {loading ? (
-                            <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
+                            <TableRow><TableCell colSpan={6} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
                         ) : customers.length > 0 ? (
-                            customers.map((customer) => (
+                            customers.map((customer, index) => (
                                 <TableRow key={customer.id}>
+                                    <TableCell>{index + 1}</TableCell>
+                                    <TableCell className="font-mono text-xs">{customer.id}</TableCell>
                                     <TableCell className="font-medium">{customer.name}</TableCell>
                                     <TableCell>{customer.phone}</TableCell>
                                     <TableCell>{customer.address}</TableCell>
@@ -199,7 +203,7 @@ export function CustomerSettings() {
                                 </TableRow>
                             ))
                         ) : (
-                            <TableRow><TableCell colSpan={4} className="h-24 text-center">Belum ada data pelanggan.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={6} className="h-24 text-center">Belum ada data pelanggan.</TableCell></TableRow>
                         )}
                     </TableBody>
                 </Table>
