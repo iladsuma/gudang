@@ -2,7 +2,7 @@
 
 'use client';
 
-import type { User, Shipment, Checkout, Expedition, Product, Packaging, Customer, StockMovement, Supplier } from '@/lib/types';
+import type { User, Shipment, Checkout, Expedition, Product, Packaging, Customer, StockMovement, Supplier, Purchase, PurchaseProduct } from '@/lib/types';
 import { initialData } from './initial-data';
 
 
@@ -20,6 +20,7 @@ let db: {
   customers: Customer[];
   suppliers: Supplier[];
   stockMovements: StockMovement[];
+  purchases: Purchase[];
 } = {
   users: [],
   products: [],
@@ -30,6 +31,7 @@ let db: {
   customers: [],
   suppliers: [],
   stockMovements: [],
+  purchases: [],
 };
 
 
@@ -41,7 +43,7 @@ function initializeDb() {
       try {
         db = JSON.parse(storedDb);
         // Basic validation to ensure all keys are present after parsing
-        const requiredKeys: (keyof typeof db)[] = ['users', 'products', 'expeditions', 'packagingOptions', 'shipments', 'checkoutHistory', 'customers', 'suppliers', 'stockMovements'];
+        const requiredKeys: (keyof typeof db)[] = ['users', 'products', 'expeditions', 'packagingOptions', 'shipments', 'checkoutHistory', 'customers', 'suppliers', 'stockMovements', 'purchases'];
         let needsReset = false;
         for (const key of requiredKeys) {
             if (!db[key]) {
@@ -479,17 +481,19 @@ export async function addProduct(product: Omit<Product, 'id'>): Promise<Product>
     db.products.push(newProduct);
     
     // Add initial stock movement
-    const movement: StockMovement = {
-        id: `sm_${Date.now()}_${Math.random()}`,
-        productId: newProduct.id,
-        type: 'Stok Awal',
-        quantityChange: newProduct.stock,
-        stockBefore: 0,
-        stockAfter: newProduct.stock,
-        notes: 'Stok awal saat produk dibuat',
-        createdAt: new Date().toISOString(),
-    };
-    db.stockMovements.push(movement);
+    if(newProduct.stock > 0) {
+        const movement: StockMovement = {
+            id: `sm_${Date.now()}_${Math.random()}`,
+            productId: newProduct.id,
+            type: 'Stok Awal',
+            quantityChange: newProduct.stock,
+            stockBefore: 0,
+            stockAfter: newProduct.stock,
+            notes: 'Stok awal saat produk dibuat',
+            createdAt: new Date().toISOString(),
+        };
+        db.stockMovements.push(movement);
+    }
     
     persistDb();
     return Promise.resolve(newProduct);
@@ -594,4 +598,50 @@ export async function deletePackagingOption(id: string): Promise<void> {
     db.packagingOptions = db.packagingOptions.filter(o => o.id !== id);
     persistDb();
     return Promise.resolve();
+}
+
+// --- Purchase Functions ---
+export async function getPurchases(): Promise<Purchase[]> {
+    const sorted = [...db.purchases].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return Promise.resolve(sorted);
+}
+
+export async function addPurchase(data: Omit<Purchase, 'id' | 'createdAt' | 'status' | 'totalAmount'>): Promise<Purchase> {
+    const totalAmount = data.products.reduce((sum, p) => sum + p.costPrice * p.quantity, 0);
+
+    const newPurchase: Purchase = {
+        ...data,
+        id: `purch_${Date.now()}`,
+        status: 'Selesai',
+        totalAmount,
+        createdAt: new Date().toISOString(),
+    };
+
+    // Update stock for each product and create stock movements
+    newPurchase.products.forEach(p => {
+        const productIndex = db.products.findIndex(prod => prod.id === p.productId);
+        if (productIndex !== -1) {
+            const product = db.products[productIndex];
+            const stockBefore = product.stock;
+            product.stock += p.quantity;
+            const stockAfter = product.stock;
+
+            const movement: StockMovement = {
+                id: `sm_purch_${Date.now()}_${p.productId}`,
+                productId: p.productId,
+                referenceId: newPurchase.id,
+                type: 'Pembelian',
+                quantityChange: p.quantity,
+                stockBefore: stockBefore,
+                stockAfter: stockAfter,
+                notes: `Pembelian dari ${newPurchase.supplierName} (No: ${newPurchase.purchaseNumber})`,
+                createdAt: new Date().toISOString(),
+            };
+            db.stockMovements.push(movement);
+        }
+    });
+
+    db.purchases.unshift(newPurchase);
+    persistDb();
+    return Promise.resolve(newPurchase);
 }

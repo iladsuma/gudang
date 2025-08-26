@@ -16,7 +16,7 @@ export interface Product {
 export interface StockMovement {
     id: string;
     productId: string;
-    referenceId?: string; // e.g., shipmentId
+    referenceId?: string; // e.g., shipmentId or purchaseId
     type: 'Stok Awal' | 'Penjualan' | 'Stok Opname' | 'Pembelian' | 'Retur';
     quantityChange: number; // e.g., -5 for sale, +50 for purchase
     stockBefore: number;
@@ -24,6 +24,28 @@ export interface StockMovement {
     notes?: string;
     createdAt: string;
 }
+
+export interface PurchaseProduct {
+    productId: string;
+    code: string;
+    name: string;
+    quantity: number;
+    costPrice: number; // Harga beli saat transaksi ini
+    imageUrl: string | null;
+}
+
+
+export interface Purchase {
+    id: string;
+    supplierId: string;
+    supplierName: string;
+    purchaseNumber: string; // Nomor faktur pembelian
+    status: 'Selesai' | 'Draf';
+    products: PurchaseProduct[];
+    totalAmount: number;
+    createdAt: string; // ISO String for when it was added
+}
+
 
 export interface ShipmentProduct {
     productId: string; // Reference to the master product
