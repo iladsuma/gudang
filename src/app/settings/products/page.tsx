@@ -19,7 +19,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, PlusCircle, Trash2, Pencil, Edit, ArrowLeft, History } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Pencil, Edit, ArrowLeft, BookOpen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -417,7 +417,7 @@ function ProductsClient() {
                                         <Dialog open={!!viewingHistoryProduct && viewingHistoryProduct.id === product.id} onOpenChange={(open) => !open && setViewingHistoryProduct(null)}>
                                             <DialogTrigger asChild>
                                                 <Button variant="ghost" size="icon" title="Kartu Stok" onClick={() => handleViewHistory(product)}>
-                                                    <History className="h-4 w-4" />
+                                                    <BookOpen className="h-4 w-4" />
                                                 </Button>
                                             </DialogTrigger>
                                             <DialogContent className="sm:max-w-3xl">
