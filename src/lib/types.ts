@@ -4,8 +4,12 @@ export interface Product {
     id: string;
     code: string; // Kode Item
     name: string;
-    price: number;
+    price: number; // Harga Jual
+    costPrice: number; // Harga Pokok
     stock: number;
+    minStock: number; // Stok Minimal
+    unit: string; // Satuan (PCS, DUS, dll)
+    category: string; // Kategori Barang
     imageUrl: string;
 }
 

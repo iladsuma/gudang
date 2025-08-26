@@ -1,4 +1,5 @@
 
+
 import type { User, Product, Expedition, Packaging, Shipment, Checkout, Customer } from './types';
 
 interface DbData {
@@ -31,24 +32,36 @@ export const initialData: DbData = {
       id: "prod_1",
       code: "BA-001",
       name: "Baju Anak",
-      price: 50000,
+      price: 75000,
+      costPrice: 50000,
       stock: 100,
+      minStock: 10,
+      unit: "PCS",
+      category: "Pakaian",
       imageUrl: "https://placehold.co/100x100.png"
     },
     {
       id: "prod_2",
       code: "CP-001",
       name: "Celana Panjang",
-      price: 120000,
+      price: 150000,
+      costPrice: 120000,
       stock: 50,
+      minStock: 5,
+      unit: "PCS",
+      category: "Pakaian",
       imageUrl: "https://placehold.co/100x100.png"
     },
     {
       id: "prod_3",
       code: "TP-001",
       name: "Topi",
-      price: 35000,
+      price: 50000,
+      costPrice: 35000,
       stock: 75,
+      minStock: 15,
+      unit: "PCS",
+      category: "Aksesoris",
       imageUrl: "https://placehold.co/100x100.png"
     }
   ],
