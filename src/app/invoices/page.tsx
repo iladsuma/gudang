@@ -1,9 +1,9 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/auth-context';
-import { getShipments } from '@/lib/data';
+import { getShipments, processShipmentsToDelivered } from '@/lib/data';
 import type { Shipment } from '@/lib/types';
 import {
   Card,
@@ -15,6 +15,8 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { InvoicesClient } from '@/components/invoices-client';
 import { useRouter } from 'next/navigation';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PackagingQueueClient } from '@/components/packaging-queue-client';
 
 export default function InvoicesPage() {
   const { user, loading: authLoading } = useAuth();
@@ -22,6 +24,15 @@ export default function InvoicesPage() {
   const [dataLoading, setDataLoading] = useState(true);
   const router = useRouter();
 
+  const fetchShipments = useCallback(async () => {
+    if (user?.role === 'admin') {
+      setDataLoading(true);
+      getShipments().then(data => {
+        setShipments(data.filter(s => s.status === 'Terkirim' || s.status === 'Pengemasan'));
+        setDataLoading(false);
+      });
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!authLoading && user?.role !== 'admin') {
@@ -29,12 +40,9 @@ export default function InvoicesPage() {
     }
     
     if (user?.role === 'admin') {
-      getShipments().then(data => {
-        setShipments(data.filter(s => s.status === 'Terkirim'));
-        setDataLoading(false);
-      });
+      fetchShipments();
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, router, fetchShipments]);
   
   if (authLoading || (dataLoading && user?.role === 'admin')) {
       return (
@@ -60,19 +68,49 @@ export default function InvoicesPage() {
       );
   }
 
+  const packagingShipments = shipments.filter(s => s.status === 'Pengemasan');
+  const deliveredShipments = shipments.filter(s => s.status === 'Terkirim');
+
   return (
     <div className="container mx-auto p-4 md:p-8">
-      <Card>
-        <CardHeader>
-          <CardTitle>Arsip Pengiriman Terkirim</CardTitle>
-          <CardDescription>
-            Daftar semua pengiriman yang telah selesai diproses dan statusnya 'Terkirim'.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <InvoicesClient shipments={shipments} />
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="packaging">
+        <div className="flex justify-between items-end mb-4">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Pengiriman & Arsip</h1>
+              <p className="text-muted-foreground">Kelola pengiriman yang siap dikirim dan lihat arsip yang sudah selesai.</p>
+            </div>
+            <TabsList>
+              <TabsTrigger value="packaging">Siap Kirim ({packagingShipments.length})</TabsTrigger>
+              <TabsTrigger value="archive">Arsip Terkirim ({deliveredShipments.length})</TabsTrigger>
+            </TabsList>
+        </div>
+        <TabsContent value="packaging">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Siap Kirim</CardTitle>
+                    <CardDescription>
+                        Daftar pengiriman yang sudah dikemas dan siap untuk ditandai sebagai 'Terkirim'.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <PackagingQueueClient shipments={packagingShipments} onUpdate={fetchShipments} />
+                </CardContent>
+            </Card>
+        </TabsContent>
+        <TabsContent value="archive">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Arsip Pengiriman Terkirim</CardTitle>
+                    <CardDescription>
+                       Daftar semua pengiriman yang telah selesai diproses dan statusnya 'Terkirim'.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <InvoicesClient shipments={deliveredShipments} />
+                </CardContent>
+            </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

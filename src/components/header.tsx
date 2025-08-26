@@ -1,9 +1,8 @@
 
-
 'use client';
 
 import Link from 'next/link';
-import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, PackageCheck, Settings, Send, Users, PackageOpen, Truck, ShoppingBag } from 'lucide-react';
+import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, PackageCheck, Settings, Users, Truck, ShoppingBag } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { Button } from './ui/button';
 import { useRouter, usePathname } from 'next/navigation';
@@ -57,7 +56,7 @@ export function Header() {
                   href="/shipments"
                   className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname.startsWith('/shipments') ? 'text-foreground' : 'text-foreground/60')}
                 >
-                   <PackageCheck className="h-4 w-4" /> {user.role === 'admin' ? 'Antrian Kemas' : 'Pengiriman Saya'}
+                   <PackageCheck className="h-4 w-4" /> Antrian Kemas
                 </Link>
                  <Link
                   href="/products"
@@ -74,16 +73,10 @@ export function Header() {
                       <ShoppingBag className="h-4 w-4" /> Pembelian
                     </Link>
                     <Link
-                      href="/packaging-queue"
-                      className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname === '/packaging-queue' ? 'text-foreground' : 'text-foreground/60')}
-                    >
-                      <Send className="h-4 w-4" /> Proses Kirim
-                    </Link>
-                    <Link
                       href="/invoices"
                       className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname === '/invoices' ? 'text-foreground' : 'text-foreground/60')}
                     >
-                      <Archive className="h-4 w-4" /> Arsip Terkirim
+                      <Archive className="h-4 w-4" /> Pengiriman & Arsip
                     </Link>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
