@@ -60,6 +60,8 @@ export interface Shipment {
     id: string;
     user: string;
     transactionId: string;
+    customerId: string;
+    customerName: string;
     expedition: string;
     packagingId: string; // The selected packaging for the whole shipment
     status: 'Proses' | 'Pengemasan' | 'Terkirim';

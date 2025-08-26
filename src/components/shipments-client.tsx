@@ -209,6 +209,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
                 )}
               </TableHead>
               <TableHead>No. Transaksi</TableHead>
+              <TableHead>Pelanggan</TableHead>
               <TableHead>Ekspedisi</TableHead>
                <TableHead>Status</TableHead>
               <TableHead>Resi</TableHead>
@@ -235,6 +236,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
                     )}
                   </TableCell>
                   <TableCell>{shipment.transactionId}</TableCell>
+                  <TableCell>{shipment.customerName}</TableCell>
                   <TableCell>{shipment.expedition}</TableCell>
                   <TableCell>
                     <Badge variant={getStatusVariant(shipment.status)}>
@@ -315,7 +317,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={12} className="h-24 text-center">
+                <TableCell colSpan={13} className="h-24 text-center">
                   Tidak ada data pengiriman.
                 </TableCell>
               </TableRow>

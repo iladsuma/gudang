@@ -2,7 +2,7 @@
 
 'use client';
 
-import type { User, Shipment, Checkout, Expedition, Product, Packaging, Customer, StockMovement, Supplier, Purchase, PurchaseProduct } from '@/lib/types';
+import type { User, Shipment, Checkout, Expedition, Product, Packaging, Customer, StockMovement, Supplier, Purchase, PurchaseProduct, ShipmentProduct } from './types';
 import { initialData } from './initial-data';
 
 
@@ -245,11 +245,13 @@ export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'sta
     const totalProductCost = data.products.reduce((sum, p) => sum + (p.price * p.quantity), 0);
     const totalPackingCost = data.packagingCost || 0;
     const grandTotal = totalProductCost + totalPackingCost;
+    const customer = db.customers.find(c => c.id === data.customerId);
 
     const newShipment: Shipment = {
         ...data,
         id: `ship_${Date.now()}_${Math.random()}`,
         status: 'Proses',
+        customerName: customer?.name || 'Pelanggan Umum',
         createdAt: new Date().toISOString(),
         totalItems,
         totalProductCost,
@@ -277,10 +279,12 @@ export async function updateShipment(shipmentId: string, data: Omit<Shipment, 'i
     const totalProductCost = data.products.reduce((sum, p) => sum + (p.price * p.quantity), 0);
     const totalPackingCost = data.packagingCost || 0;
     const grandTotal = totalProductCost + totalPackingCost;
+    const customer = db.customers.find(c => c.id === data.customerId);
     
     const updatedShipment: Shipment = {
         ...originalShipment,
         ...data,
+        customerName: customer?.name || 'Pelanggan Umum',
         totalItems,
         totalProductCost,
         totalPackingCost,
@@ -644,4 +648,77 @@ export async function addPurchase(data: Omit<Purchase, 'id' | 'createdAt' | 'sta
     db.purchases.unshift(newPurchase);
     persistDb();
     return Promise.resolve(newPurchase);
+}
+
+// --- Direct Sale Function ---
+export async function processDirectSale(
+    user: User, 
+    customerId: string,
+    products: ShipmentProduct[]
+): Promise<Shipment> {
+    // 1. Check stock for all products first
+    for (const product of products) {
+        const masterProduct = db.products.find(p => p.id === product.productId);
+        if (!masterProduct) {
+            throw new Error(`Produk "${product.name}" tidak ditemukan.`);
+        }
+        if (masterProduct.stock < product.quantity) {
+            throw new Error(`Stok tidak mencukupi untuk "${product.name}". Sisa: ${masterProduct.stock}, Dibutuhkan: ${product.quantity}.`);
+        }
+    }
+
+    // 2. All stock is sufficient, proceed with transaction
+    const totalItems = products.reduce((sum, p) => sum + p.quantity, 0);
+    const totalAmount = products.reduce((sum, p) => sum + (p.price * p.quantity), 0);
+    const customer = db.customers.find(c => c.id === customerId);
+    if (!customer) {
+        throw new Error('Pelanggan tidak ditemukan.');
+    }
+
+    const newShipment: Shipment = {
+        id: `sale_${Date.now()}`,
+        user: user.username,
+        transactionId: `KASIR-${Date.now()}`,
+        customerId: customerId,
+        customerName: customer.name,
+        expedition: 'Langsung', // Direct sale indicator
+        packagingId: 'pkg_direct', // Direct sale indicator
+        status: 'Terkirim', // Completed immediately
+        products: products,
+        totalItems: totalItems,
+        totalProductCost: totalAmount,
+        totalPackingCost: 0,
+        totalAmount: totalAmount,
+        createdAt: new Date().toISOString(),
+    };
+
+    // 3. Deduct stock and create stock movements
+    products.forEach(p => {
+        const productIndex = db.products.findIndex(prod => prod.id === p.productId);
+        if (productIndex !== -1) {
+            const product = db.products[productIndex];
+            const stockBefore = product.stock;
+            product.stock -= p.quantity;
+            const stockAfter = product.stock;
+
+            const movement: StockMovement = {
+                id: `sm_sale_${Date.now()}_${p.productId}`,
+                productId: p.productId,
+                referenceId: newShipment.id,
+                type: 'Penjualan',
+                quantityChange: -p.quantity,
+                stockBefore: stockBefore,
+                stockAfter: stockAfter,
+                notes: `Penjualan langsung (Kasir) - ${newShipment.transactionId}`,
+                createdAt: new Date().toISOString(),
+            };
+            db.stockMovements.push(movement);
+        }
+    });
+
+    // 4. Save shipment and persist DB
+    db.shipments.unshift(newShipment);
+    persistDb();
+    
+    return Promise.resolve(newShipment);
 }

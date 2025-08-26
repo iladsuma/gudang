@@ -6,7 +6,7 @@ import * as React from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { Shipment, Expedition, Packaging, CartItem } from '@/lib/types';
+import type { Shipment, Expedition, Packaging, CartItem, Customer } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ import { DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/co
 import { Loader2, PlusCircle, Trash2, Upload } from 'lucide-react';
 import { Card, CardContent, CardFooter } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import { addShipment, getExpeditions, getPackagingOptions, updateShipment } from '@/lib/data';
+import { addShipment, getExpeditions, getPackagingOptions, updateShipment, getCustomers } from '@/lib/data';
 import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Label } from './ui/label';
@@ -35,6 +35,7 @@ const shipmentProductSchema = z.object({
 const shipmentFormSchema = z.object({
   user: z.string().min(1, 'User harus diisi'),
   transactionId: z.string().min(1, 'No. Transaksi harus diisi.'),
+  customerId: z.string().min(1, 'Pelanggan harus dipilih'),
   expedition: z.string().min(1, 'Nama ekspedisi harus dipilih'),
   packagingId: z.string().min(1, "Pilih kemasan"),
   packagingCost: z.coerce.number().min(0),
@@ -120,6 +121,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [expeditions, setExpeditions] = React.useState<Expedition[]>([]);
   const [packagingOptions, setPackagingOptions] = React.useState<Packaging[]>([]);
+  const [customers, setCustomers] = React.useState<Customer[]>([]);
 
   const isEditMode = !!shipmentToEdit;
 
@@ -137,6 +139,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
     defaultValues: isEditMode ? {
         user: shipmentToEdit.user,
         transactionId: shipmentToEdit.transactionId,
+        customerId: shipmentToEdit.customerId,
         expedition: shipmentToEdit.expedition,
         packagingId: shipmentToEdit.packagingId || '',
         packagingCost: shipmentToEdit.totalPackingCost || 0,
@@ -145,6 +148,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
     } : {
       user: user?.username || '',
       transactionId: '',
+      customerId: '',
       expedition: '',
       packagingId: '',
       packagingCost: 0,
@@ -185,6 +189,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
     }
     getExpeditions().then(setExpeditions);
     getPackagingOptions().then(setPackagingOptions);
+    getCustomers().then(setCustomers);
   }, [user, form, generateTransactionId, isEditMode]);
 
 
@@ -277,7 +282,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
       </DialogHeader>
     <Form {...form}>
         <form id="shipment-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
               control={form.control}
               name="user"
@@ -304,6 +309,28 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
                     </FormItem>
                 )}
                 />
+                 <FormField
+                  control={form.control}
+                  name="customerId"
+                  render={({ field }) => (
+                      <FormItem>
+                      <FormLabel>Pelanggan</FormLabel>
+                      <FormControl>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <SelectTrigger>
+                                  <SelectValue placeholder="Pilih pelanggan" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  {customers.map(c => (
+                                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                  ))}
+                              </SelectContent>
+                          </Select>
+                      </FormControl>
+                      <FormMessage />
+                      </FormItem>
+                  )}
+              />
                <FormField
                   control={form.control}
                   name="expedition"
@@ -356,35 +383,33 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
                         </FormItem>
                     )}
                 />
+                <FormField
+                    control={form.control}
+                    name="receipt"
+                    render={() => (
+                        <FormItem>
+                            <FormLabel>Resi (PDF) (Opsional)</FormLabel>
+                            <FormControl>
+                                <div>
+                                    <input
+                                        type="file"
+                                        accept="application/pdf"
+                                        ref={pdfFileInputRef}
+                                        onChange={handlePdfFileChange}
+                                        className="hidden"
+                                    />
+                                    <Button type="button" variant="outline" onClick={() => pdfFileInputRef.current?.click()}>
+                                        <Upload className="mr-2 h-4 w-4" />
+                                        {receiptValue?.fileName ? 'Ganti File' : 'Unggah PDF'}
+                                    </Button>
+                                </div>
+                            </FormControl>
+                            {receiptValue?.fileName && <p className="text-sm text-muted-foreground">File: {receiptValue.fileName}</p>}
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
           </div>
-          
-
-          <FormField
-              control={form.control}
-              name="receipt"
-              render={() => (
-                  <FormItem>
-                      <FormLabel>Resi (PDF) (Opsional)</FormLabel>
-                      <FormControl>
-                          <div>
-                              <input
-                                  type="file"
-                                  accept="application/pdf"
-                                  ref={pdfFileInputRef}
-                                  onChange={handlePdfFileChange}
-                                  className="hidden"
-                              />
-                              <Button type="button" variant="outline" onClick={() => pdfFileInputRef.current?.click()}>
-                                  <Upload className="mr-2 h-4 w-4" />
-                                  {receiptValue?.fileName ? 'Ganti File' : 'Unggah PDF'}
-                              </Button>
-                          </div>
-                      </FormControl>
-                      {receiptValue?.fileName && <p className="text-sm text-muted-foreground">File: {receiptValue.fileName}</p>}
-                      <FormMessage />
-                  </FormItem>
-              )}
-          />
           
           <Card>
               <CardContent className="pt-6">
