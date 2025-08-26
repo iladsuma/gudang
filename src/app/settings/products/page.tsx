@@ -1,12 +1,13 @@
 
+
 'use client';
 
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { getProducts, addProduct, deleteProduct, updateProduct, updateProductStock } from '@/lib/data';
-import type { Product } from '@/lib/types';
+import { getProducts, addProduct, deleteProduct, updateProduct, updateProductStock, getStockMovements } from '@/lib/data';
+import type { Product, StockMovement } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -18,7 +19,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, PlusCircle, Trash2, Pencil, Edit, ArrowLeft } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Pencil, Edit, ArrowLeft, History } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -47,6 +48,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { format } from 'date-fns';
+import { id } from 'date-fns/locale';
 
 const productFormSchema = z.object({
   code: z.string().min(1, 'Kode produk harus diisi.'),
@@ -76,6 +79,9 @@ function ProductsClient() {
     const [isDeleting, setIsDeleting] = React.useState<string | null>(null);
     const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
     const [stockEditProduct, setStockEditProduct] = React.useState<Product | null>(null);
+    const [viewingHistoryProduct, setViewingHistoryProduct] = React.useState<Product | null>(null);
+    const [stockMovements, setStockMovements] = React.useState<StockMovement[]>([]);
+    const [isHistoryLoading, setIsHistoryLoading] = React.useState(false);
     const [isFormOpen, setIsFormOpen] = React.useState(false);
     const [previewImage, setPreviewImage] = React.useState<string | null>(null);
     const imageInputRef = React.useRef<HTMLInputElement>(null);
@@ -154,6 +160,13 @@ function ProductsClient() {
         stockForm.reset({ stock: product.stock });
     };
 
+    const handleViewHistory = async (product: Product) => {
+        setViewingHistoryProduct(product);
+        setIsHistoryLoading(true);
+        const movements = await getStockMovements(product.id);
+        setStockMovements(movements);
+        setIsHistoryLoading(false);
+    }
 
     const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -371,7 +384,7 @@ function ProductsClient() {
                                     <TableCell>{product.stock}</TableCell>
                                     <TableCell>{product.minStock}</TableCell>
                                     <TableCell className="text-right">
-                                       <Dialog open={stockEditProduct?.id === product.id} onOpenChange={(open) => !open && setStockEditProduct(null)}>
+                                       <Dialog open={!!stockEditProduct && stockEditProduct.id === product.id} onOpenChange={(open) => !open && setStockEditProduct(null)}>
                                             <DialogTrigger asChild>
                                                 <Button variant="ghost" size="icon" title="Edit Stok" onClick={() => handleOpenStockForm(product)}>
                                                     <Edit className="h-4 w-4" />
@@ -398,6 +411,54 @@ function ProductsClient() {
                                                         </DialogFooter>
                                                     </form>
                                                 </Form>
+                                            </DialogContent>
+                                        </Dialog>
+
+                                        <Dialog open={!!viewingHistoryProduct && viewingHistoryProduct.id === product.id} onOpenChange={(open) => !open && setViewingHistoryProduct(null)}>
+                                            <DialogTrigger asChild>
+                                                <Button variant="ghost" size="icon" title="Kartu Stok" onClick={() => handleViewHistory(product)}>
+                                                    <History className="h-4 w-4" />
+                                                </Button>
+                                            </DialogTrigger>
+                                            <DialogContent className="sm:max-w-3xl">
+                                                <DialogHeader>
+                                                    <DialogTitle>Kartu Stok: {viewingHistoryProduct?.name}</DialogTitle>
+                                                    <DialogDescription>Riwayat pergerakan stok untuk produk ini.</DialogDescription>
+                                                </DialogHeader>
+                                                <div className="mt-4 max-h-[60vh] overflow-y-auto">
+                                                    {isHistoryLoading ? <Loader2 className="mx-auto my-8 h-8 w-8 animate-spin" /> :
+                                                        stockMovements.length > 0 ? (
+                                                            <Table>
+                                                                <TableHeader>
+                                                                    <TableRow>
+                                                                        <TableHead>Tanggal</TableHead>
+                                                                        <TableHead>Tipe</TableHead>
+                                                                        <TableHead>Perubahan</TableHead>
+                                                                        <TableHead>Stok Akhir</TableHead>
+                                                                        <TableHead>Catatan</TableHead>
+                                                                    </TableRow>
+                                                                </TableHeader>
+                                                                <TableBody>
+                                                                    {stockMovements.map(m => (
+                                                                        <TableRow key={m.id}>
+                                                                            <TableCell className="text-xs">{format(new Date(m.createdAt), 'dd MMM yy, HH:mm', { locale: id })}</TableCell>
+                                                                            <TableCell>{m.type}</TableCell>
+                                                                            <TableCell className={m.quantityChange > 0 ? 'text-green-600' : 'text-red-600'}>
+                                                                                {m.quantityChange > 0 ? `+${m.quantityChange}` : m.quantityChange}
+                                                                            </TableCell>
+                                                                            <TableCell className='font-medium'>{m.stockAfter}</TableCell>
+                                                                            <TableCell className='text-xs text-muted-foreground'>{m.notes}</TableCell>
+                                                                        </TableRow>
+                                                                    ))}
+                                                                </TableBody>
+                                                            </Table>
+                                                        ) : (
+                                                            <p className='text-center text-muted-foreground py-8'>Belum ada riwayat pergerakan stok.</p>
+                                                        )}
+                                                </div>
+                                                <DialogFooter>
+                                                    <Button variant="outline" onClick={() => setViewingHistoryProduct(null)}>Tutup</Button>
+                                                </DialogFooter>
                                             </DialogContent>
                                         </Dialog>
 

@@ -13,6 +13,18 @@ export interface Product {
     imageUrl: string;
 }
 
+export interface StockMovement {
+    id: string;
+    productId: string;
+    referenceId?: string; // e.g., shipmentId
+    type: 'Stok Awal' | 'Penjualan' | 'Stok Opname' | 'Pembelian' | 'Retur';
+    quantityChange: number; // e.g., -5 for sale, +50 for purchase
+    stockBefore: number;
+    stockAfter: number;
+    notes?: string;
+    createdAt: string;
+}
+
 export interface ShipmentProduct {
     productId: string; // Reference to the master product
     code: string;

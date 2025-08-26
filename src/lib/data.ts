@@ -2,7 +2,7 @@
 
 'use client';
 
-import type { User, Shipment, Checkout, Expedition, Product, Packaging, Customer } from '@/lib/types';
+import type { User, Shipment, Checkout, Expedition, Product, Packaging, Customer, StockMovement } from '@/lib/types';
 import { initialData } from './initial-data';
 
 
@@ -18,6 +18,7 @@ let db: {
   shipments: Shipment[];
   checkoutHistory: Checkout[];
   customers: Customer[];
+  stockMovements: StockMovement[];
 } = {
   users: [],
   products: [],
@@ -26,6 +27,7 @@ let db: {
   shipments: [],
   checkoutHistory: [],
   customers: [],
+  stockMovements: [],
 };
 
 
@@ -37,7 +39,7 @@ function initializeDb() {
       try {
         db = JSON.parse(storedDb);
         // Basic validation to ensure all keys are present after parsing
-        const requiredKeys: (keyof typeof db)[] = ['users', 'products', 'expeditions', 'packagingOptions', 'shipments', 'checkoutHistory', 'customers'];
+        const requiredKeys: (keyof typeof db)[] = ['users', 'products', 'expeditions', 'packagingOptions', 'shipments', 'checkoutHistory', 'customers', 'stockMovements'];
         let needsReset = false;
         for (const key of requiredKeys) {
             if (!db[key]) {
@@ -272,7 +274,7 @@ export async function processShipmentsToPackaging(shipmentIds: string[]): Promis
   }
 
   // Stock Deduction Logic
-  const productStockUpdates: { [productId: string]: number } = {};
+  const productStockUpdates: { [productId: string]: { newStock: number, originalStock: number, quantityChange: number } } = {};
 
   for (const shipment of shipmentsToProcess) {
     for (const product of shipment.products) {
@@ -280,24 +282,49 @@ export async function processShipmentsToPackaging(shipmentIds: string[]): Promis
       if (!masterProduct) {
         throw new Error(`Produk dengan kode "${product.code}" tidak ditemukan di database.`);
       }
-      const currentStock = (productStockUpdates[product.productId] !== undefined) ? productStockUpdates[product.productId] : masterProduct.stock;
-      const stockNeeded = product.quantity;
-      const stockAfterThisTx = currentStock - stockNeeded;
+      
+      const currentStock = (productStockUpdates[product.productId] !== undefined) 
+          ? productStockUpdates[product.productId].newStock
+          : masterProduct.stock;
+
+      const stockAfterThisTx = currentStock - product.quantity;
 
       if (stockAfterThisTx < 0) {
-        throw new Error(`Stok tidak mencukupi untuk produk "${product.name}". Stok sisa: ${currentStock}, dibutuhkan: ${stockNeeded}.`);
+        throw new Error(`Stok tidak mencukupi untuk produk "${product.name}". Stok sisa: ${currentStock}, dibutuhkan: ${product.quantity}.`);
       }
-      productStockUpdates[product.productId] = stockAfterThisTx;
+      
+      // Accumulate changes if the same product is in multiple shipments
+      const existingChange = productStockUpdates[product.productId]?.quantityChange || 0;
+      productStockUpdates[product.productId] = {
+          newStock: stockAfterThisTx,
+          originalStock: masterProduct.stock, // Store the very original stock
+          quantityChange: existingChange + product.quantity
+      };
+
+       // Record stock movement for this specific product in this shipment
+        const movement: StockMovement = {
+            id: `sm_${Date.now()}_${Math.random()}`,
+            productId: product.productId,
+            referenceId: shipment.id,
+            type: 'Penjualan',
+            quantityChange: -product.quantity,
+            stockBefore: currentStock,
+            stockAfter: stockAfterThisTx,
+            notes: `Penjualan dari transaksi ${shipment.transactionId}`,
+            createdAt: new Date().toISOString(),
+        };
+        db.stockMovements.push(movement);
     }
   }
 
-  // Apply stock updates and status changes
+  // Apply final stock updates to master products
   db.products.forEach((p, index) => {
     if (productStockUpdates[p.id] !== undefined) {
-      db.products[index].stock = productStockUpdates[p.id];
+      db.products[index].stock = productStockUpdates[p.id].newStock;
     }
   });
 
+  // Update shipment statuses
   db.shipments.forEach((s, index) => {
     if (shipmentIds.includes(s.id)) {
       db.shipments[index].status = 'Pengemasan';
@@ -413,6 +440,20 @@ export async function addProduct(product: Omit<Product, 'id'>): Promise<Product>
     }
     const newProduct: Product = { ...product, id: `prod_${Date.now()}` };
     db.products.push(newProduct);
+    
+    // Add initial stock movement
+    const movement: StockMovement = {
+        id: `sm_${Date.now()}_${Math.random()}`,
+        productId: newProduct.id,
+        type: 'Stok Awal',
+        quantityChange: newProduct.stock,
+        stockBefore: 0,
+        stockAfter: newProduct.stock,
+        notes: 'Stok awal saat produk dibuat',
+        createdAt: new Date().toISOString(),
+    };
+    db.stockMovements.push(movement);
+    
     persistDb();
     return Promise.resolve(newProduct);
 }
@@ -428,13 +469,20 @@ export async function updateProduct(id: string, productUpdate: Omit<Product, 'id
      if (db.products.some(p => p.id !== id && p.code.toLowerCase() === productUpdate.code.toLowerCase())) {
         throw new Error('Kode produk lain dengan nama ini sudah ada.');
     }
-    db.products[productIndex] = { ...db.products[productIndex], ...productUpdate };
+    
+    const originalProduct = db.products[productIndex];
+    // Prevent stock from being updated through this function
+    const payload = { ...productUpdate, stock: originalProduct.stock };
+    
+    db.products[productIndex] = { ...originalProduct, ...payload };
     persistDb();
     return Promise.resolve(db.products[productIndex]);
 }
 
 export async function deleteProduct(id: string): Promise<void> {
     db.products = db.products.filter(p => p.id !== id);
+    // Optionally, also delete related stock movements
+    db.stockMovements = db.stockMovements.filter(sm => sm.productId !== id);
     persistDb();
     return Promise.resolve();
 }
@@ -444,9 +492,35 @@ export async function updateProductStock(id: string, newStock: number): Promise<
     if (productIndex === -1) {
         throw new Error('Produk tidak ditemukan.');
     }
+    
+    const product = db.products[productIndex];
+    const oldStock = product.stock;
+
+    if(oldStock === newStock) return Promise.resolve(product); // No change
+
+    // Record stock opname movement
+    const movement: StockMovement = {
+        id: `sm_${Date.now()}_${Math.random()}`,
+        productId: id,
+        type: 'Stok Opname',
+        quantityChange: newStock - oldStock,
+        stockBefore: oldStock,
+        stockAfter: newStock,
+        notes: 'Penyesuaian stok manual',
+        createdAt: new Date().toISOString(),
+    };
+    db.stockMovements.push(movement);
+    
     db.products[productIndex].stock = newStock;
     persistDb();
     return Promise.resolve(db.products[productIndex]);
+}
+
+export async function getStockMovements(productId: string): Promise<StockMovement[]> {
+    const movements = db.stockMovements
+        .filter(sm => sm.productId === productId)
+        .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return Promise.resolve(movements);
 }
 
 
