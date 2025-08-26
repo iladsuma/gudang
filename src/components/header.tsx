@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, PackageCheck, Settings, Users, Truck, ShoppingBag, ShoppingBasket } from 'lucide-react';
+import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, Settings, Truck, ShoppingBag, ShoppingBasket, Undo2 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { Button } from './ui/button';
 import { useRouter, usePathname } from 'next/navigation';
@@ -77,6 +77,12 @@ export function Header() {
                       className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname === '/purchases' ? 'text-foreground' : 'text-foreground/60')}
                     >
                       <ShoppingBag className="h-4 w-4" /> Pembelian
+                    </Link>
+                    <Link
+                      href="/returns"
+                      className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname === '/returns' ? 'text-foreground' : 'text-foreground/60')}
+                    >
+                      <Undo2 className="h-4 w-4" /> Retur Penjualan
                     </Link>
                     <Link
                       href="/invoices"

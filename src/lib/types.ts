@@ -16,7 +16,7 @@ export interface Product {
 export interface StockMovement {
     id: string;
     productId: string;
-    referenceId?: string; // e.g., shipmentId or purchaseId
+    referenceId?: string; // e.g., shipmentId or purchaseId or returnId
     type: 'Stok Awal' | 'Penjualan' | 'Stok Opname' | 'Pembelian' | 'Retur';
     quantityChange: number; // e.g., -5 for sale, +50 for purchase
     stockBefore: number;
@@ -75,6 +75,24 @@ export interface Shipment {
     totalPackingCost: number; // Total of all packing fees
     totalAmount: number; // Grand total (totalProductCost + totalPackingCost)
     createdAt: string; // ISO String for when it was added
+}
+
+export interface ReturnedProduct {
+    productId: string;
+    name: string;
+    quantity: number;
+    price: number;
+}
+
+export interface Return {
+    id: string;
+    originalShipmentId: string;
+    originalTransactionId: string;
+    customerName: string;
+    products: ReturnedProduct[];
+    reason: string;
+    totalAmount: number;
+    createdAt: string;
 }
 
 export interface User {
