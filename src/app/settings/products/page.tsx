@@ -19,7 +19,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, PlusCircle, Trash2, Pencil, Edit, ArrowLeft, BookOpen } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Pencil, Edit, ArrowLeft, BookOpen, Upload, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -51,6 +51,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import Papa from 'papaparse';
+
 
 const productFormSchema = z.object({
   code: z.string().min(1, 'Kode produk harus diisi.'),
@@ -86,6 +88,7 @@ function ProductsClient() {
     const [isFormOpen, setIsFormOpen] = React.useState(false);
     const [previewImage, setPreviewImage] = React.useState<string | null>(null);
     const imageInputRef = React.useRef<HTMLInputElement>(null);
+    const importInputRef = React.useRef<HTMLInputElement>(null);
     const { toast } = useToast();
 
     // Mock data for dropdowns
@@ -249,9 +252,99 @@ function ProductsClient() {
         }).format(number);
     };
 
+    const handleExport = () => {
+        const csv = Papa.unparse(products);
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'products.csv');
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast({ title: 'Sukses', description: 'Data produk telah diekspor.' });
+    };
+
+    const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: async (results) => {
+                const importedProducts = results.data as any[];
+                let successCount = 0;
+                let errorCount = 0;
+
+                for (const productData of importedProducts) {
+                    try {
+                        // Basic validation and type coercion
+                        const validatedData = {
+                            ...productData,
+                            price: Number(productData.price) || 0,
+                            costPrice: Number(productData.costPrice) || 0,
+                            stock: parseInt(productData.stock, 10) || 0,
+                            minStock: parseInt(productData.minStock, 10) || 0,
+                            imageUrl: productData.imageUrl || 'https://placehold.co/100x100.png',
+                        };
+
+                        // Check if product with the same code or name exists
+                        const existingByName = products.find(p => p.name.toLowerCase() === validatedData.name.toLowerCase());
+                        const existingByCode = products.find(p => p.code.toLowerCase() === validatedData.code.toLowerCase());
+
+                        if (existingByCode) {
+                           await updateProduct(existingByCode.id, validatedData);
+                        } else if (existingByName) {
+                           await updateProduct(existingByName.id, validatedData);
+                        }
+                        else {
+                           await addProduct(validatedData);
+                        }
+                        successCount++;
+
+                    } catch (e) {
+                        console.error("Gagal mengimpor baris:", productData, e);
+                        errorCount++;
+                    }
+                }
+                toast({
+                    title: 'Impor Selesai',
+                    description: `${successCount} produk berhasil diimpor/diperbarui. ${errorCount} baris gagal.`,
+                });
+                fetchProducts();
+            },
+            error: (error) => {
+                toast({ variant: 'destructive', title: 'Gagal Membaca File', description: error.message });
+            }
+        });
+        
+        // Reset file input
+        if(importInputRef.current) {
+            importInputRef.current.value = '';
+        }
+    };
+
+
     return (
         <div className="space-y-6">
-             <div className="flex items-center justify-end">
+             <div className="flex items-center justify-end gap-2">
+                 <input
+                    type="file"
+                    accept=".csv"
+                    ref={importInputRef}
+                    onChange={handleImport}
+                    className="hidden"
+                />
+                <Button variant="outline" onClick={() => importInputRef.current?.click()}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Impor dari CSV
+                </Button>
+                <Button variant="outline" onClick={handleExport} disabled={products.length === 0}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Ekspor ke CSV
+                </Button>
                 <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
                     <DialogTrigger asChild>
                         <Button onClick={() => handleOpenForm(null)}>
