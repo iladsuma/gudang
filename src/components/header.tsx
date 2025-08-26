@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, Settings, Truck, ShoppingBag, ShoppingBasket, Undo2 } from 'lucide-react';
+import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, Settings, Truck, ShoppingBag, ShoppingBasket, Undo2, ArrowRightLeft } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { Button } from './ui/button';
 import { useRouter, usePathname } from 'next/navigation';
@@ -30,6 +30,8 @@ export function Header() {
   };
 
   const isSettingsPage = pathname.startsWith('/settings');
+  const isTransactionPage = ['/cashier', '/purchases', '/returns'].includes(pathname);
+
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -66,30 +68,27 @@ export function Header() {
                 </Link>
                 {user.role === 'admin' && (
                   <>
-                     <Link
-                        href="/cashier"
-                        className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname === '/cashier' ? 'text-foreground' : 'text-foreground/60')}
-                      >
-                        <ShoppingBasket className="h-4 w-4" /> Kasir
-                      </Link>
-                     <Link
-                      href="/purchases"
-                      className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname === '/purchases' ? 'text-foreground' : 'text-foreground/60')}
-                    >
-                      <ShoppingBag className="h-4 w-4" /> Pembelian
-                    </Link>
-                    <Link
-                      href="/returns"
-                      className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname === '/returns' ? 'text-foreground' : 'text-foreground/60')}
-                    >
-                      <Undo2 className="h-4 w-4" /> Retur Penjualan
-                    </Link>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className={cn("gap-1 px-2 h-auto text-sm transition-colors hover:text-foreground/80", isTransactionPage ? 'text-foreground' : 'text-foreground/60')}>
+                            <ArrowRightLeft className="h-4 w-4" /> Transaksi
+                            <ChevronDown className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onSelect={() => router.push('/cashier')}><ShoppingBasket className="mr-2"/> Kasir</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => router.push('/purchases')}><ShoppingBag className="mr-2"/> Pembelian</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => router.push('/returns')}><Undo2 className="mr-2"/> Retur Penjualan</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
                     <Link
                       href="/invoices"
                       className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname === '/invoices' ? 'text-foreground' : 'text-foreground/60')}
                     >
                       <Archive className="h-4 w-4" /> Arsip & Pengiriman
                     </Link>
+
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className={cn("gap-1 px-2 h-auto text-sm transition-colors hover:text-foreground/80", isSettingsPage ? 'text-foreground' : 'text-foreground/60')}>
