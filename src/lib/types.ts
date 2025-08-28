@@ -163,3 +163,6 @@ export interface CartItem extends Product {
 export interface ProductSelection {
     [productId: string]: boolean;
 }
+
+export type SortableProductField = 'code' | 'name' | 'category' | 'stock';
+export type SortOrder = 'asc' | 'desc';

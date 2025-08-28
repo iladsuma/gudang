@@ -6,8 +6,8 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { getProducts, addProduct, deleteProduct, updateProduct, updateProductStock, getStockMovements } from '@/lib/data';
-import type { Product, StockMovement } from '@/lib/types';
+import { getProducts, addProduct, deleteMultipleProducts, updateProduct, updateProductStock, getStockMovements } from '@/lib/data';
+import type { Product, StockMovement, ProductSelection, SortableProductField, SortOrder } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -19,7 +19,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, PlusCircle, Trash2, Pencil, Edit, ArrowLeft, BookOpen, Upload, Download, X } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Pencil, Edit, ArrowLeft, BookOpen, Upload, Download, X, ArrowUpDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -53,6 +53,7 @@ import { id } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import Papa from 'papaparse';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 
 
 const productFormSchema = z.object({
@@ -80,7 +81,6 @@ function ProductsClient() {
     const [products, setProducts] = React.useState<Product[]>([]);
     const [loading, setLoading] = React.useState(true);
     const [isSubmitting, setIsSubmitting] = React.useState(false);
-    const [isDeleting, setIsDeleting] = React.useState<string | null>(null);
     const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
     const [stockEditProduct, setStockEditProduct] = React.useState<Product | null>(null);
     const [viewingHistoryProduct, setViewingHistoryProduct] = React.useState<Product | null>(null);
@@ -92,11 +92,15 @@ function ProductsClient() {
     const importInputRef = React.useRef<HTMLInputElement>(null);
     const { toast } = useToast();
 
+    // State for selection and sorting
+    const [selection, setSelection] = React.useState<ProductSelection>({});
+    const [sortBy, setSortBy] = React.useState<SortableProductField>('code');
+    const [sortOrder, setSortOrder] = React.useState<SortOrder>('asc');
+
     // Filters
     const [searchTerm, setSearchTerm] = React.useState('');
     const [categoryFilter, setCategoryFilter] = React.useState('all');
     const [unitFilter, setUnitFilter] = React.useState('all');
-
 
     // Mock data for dropdowns
     const units = ['PCS', 'DUS', 'KODI', 'KOLI', 'PACK'];
@@ -125,10 +129,10 @@ function ProductsClient() {
 
     const fetchProducts = React.useCallback(async () => {
         setLoading(true);
-        const data = await getProducts();
+        const data = await getProducts(sortBy, sortOrder);
         setProducts(data);
         setLoading(false);
-    }, []);
+    }, [sortBy, sortOrder]);
 
     React.useEffect(() => {
         fetchProducts();
@@ -250,19 +254,49 @@ function ProductsClient() {
         }
     };
 
-    const onDelete = async (id: string) => {
-        setIsDeleting(id);
-        try {
-            await deleteProduct(id);
-            toast({ title: 'Sukses', description: 'Produk berhasil dihapus.' });
-            fetchProducts();
-        } catch (error) {
-            const message = error instanceof Error ? error.message : 'Gagal menghapus produk.';
-            toast({ variant: 'destructive', title: 'Kesalahan', description: message });
-        } finally {
-            setIsDeleting(null);
+    const handleSort = (field: SortableProductField) => {
+        if (sortBy === field) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortBy(field);
+            setSortOrder('asc');
         }
     };
+    
+    const handleSelectAll = (checked: boolean) => {
+        if (checked) {
+            const newSelection = filteredProducts.reduce((acc, product) => {
+                acc[product.id] = true;
+                return acc;
+            }, {} as ProductSelection);
+            setSelection(newSelection);
+        } else {
+            setSelection({});
+        }
+    };
+
+    const handleSelectRow = (productId: string, checked: boolean) => {
+        setSelection(prev => ({ ...prev, [productId]: checked }));
+    };
+
+    const selectedIds = Object.keys(selection).filter(id => selection[id]);
+    const selectedCount = selectedIds.length;
+
+    const onDeleteMultiple = async () => {
+        setIsSubmitting(true);
+        try {
+            await deleteMultipleProducts(selectedIds);
+            toast({ title: 'Sukses', description: `${selectedCount} produk berhasil dihapus.` });
+            setSelection({});
+            fetchProducts();
+        } catch (error) {
+             const message = error instanceof Error ? error.message : 'Gagal menghapus produk.';
+            toast({ variant: 'destructive', title: 'Kesalahan', description: message });
+        } finally {
+            setIsSubmitting(false);
+        }
+    }
+
 
     const formatRupiah = (number: number) => {
         return new Intl.NumberFormat('id-ID', {
@@ -294,7 +328,7 @@ function ProductsClient() {
             header: true,
             skipEmptyLines: true,
             complete: async (results) => {
-                const importedProducts = results.data as any[];
+                const importedProducts = (results.data as any[]).sort((a, b) => a.code.localeCompare(b.code));
                 let successCount = 0;
                 let errorCount = 0;
 
@@ -312,14 +346,10 @@ function ProductsClient() {
 
                         // Check if product with the same code or name exists
                         const existingByCode = products.find(p => p.code.toLowerCase() === validatedData.code.toLowerCase());
-                        const existingByName = products.find(p => p.name.toLowerCase() === validatedData.name.toLowerCase());
-
+                        
                         if (existingByCode) {
                            await updateProduct(existingByCode.id, validatedData);
-                        } else if (existingByName) {
-                           await updateProduct(existingByName.id, validatedData);
-                        }
-                        else {
+                        } else {
                            await addProduct(validatedData);
                         }
                         successCount++;
@@ -500,27 +530,74 @@ function ProductsClient() {
                     </Dialog>
                 </div>
             </div>
+
+            {selectedCount > 0 && (
+                <div className='flex justify-between items-center bg-muted/50 p-3 rounded-lg'>
+                    <p className='text-sm text-muted-foreground'>{selectedCount} produk terpilih</p>
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" disabled={isSubmitting}>
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Hapus Terpilih
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader><AlertDialogTitle>Apakah Anda yakin?</AlertDialogTitle><AlertDialogDescription>Tindakan ini tidak dapat dibatalkan. {selectedCount} produk akan dihapus secara permanen.</AlertDialogDescription></AlertDialogHeader>
+                            <AlertDialogFooter><AlertDialogCancel>Batal</AlertDialogCancel><AlertDialogAction onClick={onDeleteMultiple}>Hapus</AlertDialogAction></AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </div>
+            )}
+            
             <div className="rounded-md border">
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Kode Item</TableHead>
-                            <TableHead>Nama Item</TableHead>
-                            <TableHead>Stok</TableHead>
+                            <TableHead className='w-12'>
+                                <Checkbox
+                                    checked={filteredProducts.length > 0 && selectedCount === filteredProducts.length}
+                                    onCheckedChange={handleSelectAll}
+                                />
+                            </TableHead>
+                            <TableHead className="w-40 cursor-pointer hover:bg-muted" onClick={() => handleSort('code')}>
+                                <div className='flex items-center gap-2'>
+                                    Kode Item {sortBy === 'code' && <ArrowUpDown className="h-4 w-4" />}
+                                </div>
+                            </TableHead>
+                            <TableHead className="cursor-pointer hover:bg-muted" onClick={() => handleSort('name')}>
+                                 <div className='flex items-center gap-2'>
+                                    Nama Item {sortBy === 'name' && <ArrowUpDown className="h-4 w-4" />}
+                                </div>
+                            </TableHead>
+                            <TableHead className="w-24 cursor-pointer hover:bg-muted" onClick={() => handleSort('stock')}>
+                                 <div className='flex items-center gap-2'>
+                                    Stok {sortBy === 'stock' && <ArrowUpDown className="h-4 w-4" />}
+                                </div>
+                            </TableHead>
                             <TableHead>Satuan</TableHead>
-                            <TableHead>Jenis</TableHead>
-                            <TableHead>Harga Pokok</TableHead>
-                            <TableHead>Harga Jual</TableHead>
-                            <TableHead>Stok Min.</TableHead>
-                            <TableHead className="text-right">Aksi</TableHead>
+                            <TableHead className="w-40 cursor-pointer hover:bg-muted" onClick={() => handleSort('category')}>
+                                <div className='flex items-center gap-2'>
+                                   Jenis {sortBy === 'category' && <ArrowUpDown className="h-4 w-4" />}
+                                </div>
+                            </TableHead>
+                            <TableHead className="w-32">Harga Pokok</TableHead>
+                            <TableHead className="w-32">Harga Jual</TableHead>
+                            <TableHead className="w-28">Stok Min.</TableHead>
+                            <TableHead className="text-right w-40">Aksi</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loading ? (
-                            <TableRow><TableCell colSpan={9} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
+                            <TableRow><TableCell colSpan={10} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
                         ) : filteredProducts.length > 0 ? (
                             filteredProducts.map((product) => (
-                                <TableRow key={product.id}>
+                                <TableRow key={product.id} data-state={selection[product.id] && "selected"}>
+                                    <TableCell>
+                                        <Checkbox
+                                            checked={selection[product.id] || false}
+                                            onCheckedChange={(checked) => handleSelectRow(product.id, !!checked)}
+                                        />
+                                    </TableCell>
                                     <TableCell className="font-mono">{product.code}</TableCell>
                                     <TableCell className="font-medium">{product.name}</TableCell>
                                     <TableCell className={cn(product.stock <= product.minStock && 'text-red-500 font-bold')}>{product.stock}</TableCell>
@@ -610,22 +687,11 @@ function ProductsClient() {
 
                                         <Button variant="ghost" size="icon" title="Edit Produk" onClick={() => handleOpenForm(product)}><Pencil className="h-4 w-4" /></Button>
                                         
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button variant="ghost" size="icon" title="Hapus Produk" disabled={!!isDeleting}>
-                                                    {isDeleting === product.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                                                </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader><AlertDialogTitle>Apakah Anda yakin?</AlertDialogTitle><AlertDialogDescription>Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription></AlertDialogHeader>
-                                                <AlertDialogFooter><AlertDialogCancel>Batal</AlertDialogCancel><AlertDialogAction onClick={() => onDelete(product.id)}>Hapus</AlertDialogAction></AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
                                     </TableCell>
                                 </TableRow>
                             ))
                         ) : (
-                            <TableRow><TableCell colSpan={9} className="h-24 text-center">Tidak ada produk yang cocok dengan filter.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={10} className="h-24 text-center">Tidak ada produk yang cocok dengan filter.</TableCell></TableRow>
                         )}
                     </TableBody>
                 </Table>

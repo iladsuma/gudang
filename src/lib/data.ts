@@ -2,7 +2,7 @@
 
 'use client';
 
-import type { User, Shipment, Checkout, Expedition, Product, Packaging, Customer, StockMovement, Supplier, Purchase, PurchaseProduct, ShipmentProduct, Return, ReturnedProduct } from './types';
+import type { User, Shipment, Checkout, Expedition, Product, Packaging, Customer, StockMovement, Supplier, Purchase, PurchaseProduct, ShipmentProduct, Return, ReturnedProduct, SortableProductField, SortOrder } from './types';
 import { initialData } from './initial-data';
 
 
@@ -480,10 +480,22 @@ export async function deleteExpedition(id: string): Promise<void> {
 }
 
 // --- Master Product Functions ---
-export async function getProducts(): Promise<Product[]> {
-    const sorted = [...(db.products || [])].sort((a,b) => a.name.localeCompare(b.name));
+export async function getProducts(sortBy: SortableProductField = 'code', sortOrder: SortOrder = 'asc'): Promise<Product[]> {
+    const sorted = [...(db.products || [])].sort((a, b) => {
+        const valA = a[sortBy];
+        const valB = b[sortBy];
+
+        if (typeof valA === 'string' && typeof valB === 'string') {
+            return sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        }
+        if (typeof valA === 'number' && typeof valB === 'number') {
+            return sortOrder === 'asc' ? valA - valB : valB - valA;
+        }
+        return 0;
+    });
     return Promise.resolve(sorted);
 }
+
 
 export async function addProduct(product: Omit<Product, 'id'>): Promise<Product> {
     if (!db.products) db.products = [];
@@ -543,6 +555,15 @@ export async function deleteProduct(id: string): Promise<void> {
     persistDb();
     return Promise.resolve();
 }
+
+export async function deleteMultipleProducts(ids: string[]): Promise<void> {
+    db.products = db.products.filter(p => !ids.includes(p.id));
+    // Optionally, also delete related stock movements
+    db.stockMovements = db.stockMovements.filter(sm => !ids.includes(sm.productId));
+    persistDb();
+    return Promise.resolve();
+}
+
 
 export async function updateProductStock(id: string, newStock: number): Promise<Product> {
     const productIndex = db.products.findIndex(p => p.id === id);
