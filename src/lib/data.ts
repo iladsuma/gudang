@@ -175,7 +175,7 @@ export async function addCustomer(data: Omit<Customer, 'id'>): Promise<Customer>
     if (db.customers.some(c => c.name.toLowerCase() === data.name.toLowerCase())) {
         throw new Error('Nama pelanggan sudah ada.');
     }
-    const newCustomer: Customer = { ...data, id: `cust_${Date.now()}` };
+    const newCustomer: Customer = { ...data, id: `cust_${Date.now()}_${Math.random().toString(36).substring(2, 9)}` };
     db.customers.push(newCustomer);
     persistDb();
     return Promise.resolve(newCustomer);
@@ -213,7 +213,7 @@ export async function addSupplier(data: Omit<Supplier, 'id'>): Promise<Supplier>
     if (db.suppliers.some(s => s.name.toLowerCase() === data.name.toLowerCase())) {
         throw new Error('Nama supplier sudah ada.');
     }
-    const newSupplier: Supplier = { ...data, id: `sup_${Date.now()}` };
+    const newSupplier: Supplier = { ...data, id: `sup_${Date.now()}_${Math.random().toString(36).substring(2, 9)}` };
     db.suppliers.push(newSupplier);
     persistDb();
     return Promise.resolve(newSupplier);
@@ -412,7 +412,7 @@ export async function processShipmentsToDelivered(shipmentIds: string[]): Promis
   const totalBatchItems = processedSummaries.reduce((sum, s) => sum + s.totalItems, 0);
 
   const newBatchCheckout: Checkout = {
-    id: `batch_${Date.now()}`,
+    id: `batch_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
     processorName: processorName,
     processedShipments: processedSummaries,
     totalBatchItems: totalBatchItems,
@@ -451,7 +451,7 @@ export async function addExpedition(name: string): Promise<Expedition> {
     if (db.expeditions.some(e => e.name.toLowerCase() === name.toLowerCase())) {
         throw new Error('Nama ekspedisi sudah ada.');
     }
-    const newExpedition: Expedition = { id: `exp_${Date.now()}`, name };
+    const newExpedition: Expedition = { id: `exp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`, name };
     db.expeditions.push(newExpedition);
     persistDb();
     return Promise.resolve(newExpedition);
@@ -652,7 +652,7 @@ export async function addPackagingOption(data: Omit<Packaging, 'id'>): Promise<P
     if (db.packagingOptions.some(o => o.name.toLowerCase() === data.name.toLowerCase())) {
         throw new Error('Nama kemasan sudah ada.');
     }
-    const newOption: Packaging = { ...data, id: `pkg_${Date.now()}` };
+    const newOption: Packaging = { ...data, id: `pkg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}` };
     db.packagingOptions.push(newOption);
     persistDb();
     return Promise.resolve(newOption);
@@ -691,7 +691,7 @@ export async function addPurchase(data: Omit<Purchase, 'id' | 'createdAt' | 'sta
 
     const newPurchase: Purchase = {
         ...data,
-        id: `purch_${Date.now()}`,
+        id: `purch_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
         status: 'Selesai',
         totalAmount,
         createdAt: new Date().toISOString(),
@@ -752,7 +752,7 @@ export async function processDirectSale(
     }
 
     const newShipment: Shipment = {
-        id: `sale_${Date.now()}`,
+        id: `sale_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
         user: user.username,
         transactionId: `KASIR-${Date.now()}`,
         customerId: customerId,
@@ -819,7 +819,7 @@ export async function addReturn(data: { originalShipmentId: string, products: Re
     const totalAmount = data.products.reduce((sum, p) => sum + p.price * p.quantity, 0);
 
     const newReturn: Return = {
-        id: `ret_${Date.now()}`,
+        id: `ret_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
         originalShipmentId: data.originalShipmentId,
         originalTransactionId: originalShipment.transactionId,
         customerName: originalShipment.customerName,
@@ -861,5 +861,7 @@ export async function addReturn(data: { originalShipmentId: string, products: Re
     persistDb();
     return Promise.resolve(newReturn);
 }
+
+    
 
     
