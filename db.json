@@ -39,7 +39,7 @@
       "name": "Celana Panjang",
       "price": 150000,
       "costPrice": 120000,
-      "stock": 50,
+      "stock": 48,
       "minStock": 5,
       "unit": "PCS",
       "category": "Pakaian",
@@ -136,6 +136,26 @@
       "stockAfter": 99,
       "notes": "Penjualan langsung (Kasir) - KASIR-1756207864085",
       "createdAt": "2025-08-26T11:31:04.085Z"
+    },
+    {
+      "id": "sm_opname_1756461933092_prod_2",
+      "productId": "prod_2",
+      "type": "Stok Opname",
+      "quantityChange": -2,
+      "stockBefore": 50,
+      "stockAfter": 48,
+      "notes": "Ditemukan 2 barang rusak",
+      "createdAt": "2025-08-28T10:05:33.092Z"
+    },
+    {
+      "id": "sm_opname_1756462001555_prod_1",
+      "productId": "prod_1",
+      "type": "Stok Opname",
+      "quantityChange": 1,
+      "stockBefore": 98,
+      "stockAfter": 99,
+      "notes": "Hasil opname mingguan, ada kelebihan 1",
+      "createdAt": "2025-08-28T10:06:41.555Z"
     }
   ],
   "customers": [
