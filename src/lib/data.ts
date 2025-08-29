@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import type { User, Shipment, Checkout, Expedition, Product, Packaging, Customer, StockMovement, Supplier, Purchase, PurchaseProduct, ShipmentProduct, Return, ReturnedProduct, SortableProductField, SortOrder } from './types';
@@ -123,7 +122,7 @@ export async function addUser(data: Omit<User, 'id'>): Promise<User> {
     }
     const newUser: User = {
         ...data,
-        id: `usr_${Date.now()}_${Math.random()}`,
+        id: `usr_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
     };
     db.users.push(newUser);
     persistDb();
@@ -257,7 +256,7 @@ export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'sta
 
     const newShipment: Shipment = {
         ...data,
-        id: `ship_${Date.now()}_${Math.random()}`,
+        id: `ship_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
         status: 'Proses',
         customerName: customer?.name || 'Pelanggan Umum',
         createdAt: new Date().toISOString(),
@@ -354,7 +353,7 @@ export async function processShipmentsToPackaging(shipmentIds: string[]): Promis
 
        // Record stock movement for this specific product in this shipment
         const movement: StockMovement = {
-            id: `sm_${Date.now()}_${Math.random()}`,
+            id: `sm_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
             productId: product.productId,
             referenceId: shipment.id,
             type: 'Penjualan',
@@ -505,13 +504,13 @@ export async function addProduct(product: Omit<Product, 'id'>): Promise<Product>
     if (db.products.some(p => p.code.toLowerCase() === product.code.toLowerCase())) {
         throw new Error('Kode produk sudah ada.');
     }
-    const newProduct: Product = { ...product, id: `prod_${Date.now()}` };
+    const newProduct: Product = { ...product, id: `prod_${Date.now()}_${Math.random().toString(36).substring(2, 9)}` };
     db.products.push(newProduct);
     
     // Add initial stock movement
     if(newProduct.stock > 0) {
         const movement: StockMovement = {
-            id: `sm_${Date.now()}_${Math.random()}`,
+            id: `sm_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
             productId: newProduct.id,
             type: 'Stok Awal',
             quantityChange: newProduct.stock,
@@ -578,7 +577,7 @@ export async function updateProductStock(id: string, newStock: number, notes: st
 
     // Record stock opname movement
     const movement: StockMovement = {
-        id: `sm_${Date.now()}_${Math.random()}`,
+        id: `sm_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
         productId: id,
         type: 'Stok Opname',
         quantityChange: newStock - oldStock,
@@ -862,3 +861,5 @@ export async function addReturn(data: { originalShipmentId: string, products: Re
     persistDb();
     return Promise.resolve(newReturn);
 }
+
+    
