@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, Settings, Truck, ShoppingBag, ShoppingBasket, Undo2, ArrowRightLeft } from 'lucide-react';
+import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, Settings, Truck, ShoppingBag, ShoppingBasket, Undo2, ArrowRightLeft, PackageCheck } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { Button } from './ui/button';
 import { useRouter, usePathname } from 'next/navigation';
@@ -30,7 +30,7 @@ export function Header() {
   };
 
   const isSettingsPage = pathname.startsWith('/settings');
-  const isTransactionPage = ['/cashier', '/purchases', '/returns'].includes(pathname);
+  const isTransactionPage = ['/cashier', '/purchases', '/returns', '/stock-opname'].includes(pathname);
 
 
   return (
@@ -79,6 +79,7 @@ export function Header() {
                         <DropdownMenuItem onSelect={() => router.push('/cashier')}><ShoppingBasket className="mr-2"/> Kasir</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => router.push('/purchases')}><ShoppingBag className="mr-2"/> Pembelian</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => router.push('/returns')}><Undo2 className="mr-2"/> Retur Penjualan</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => router.push('/stock-opname')}><PackageCheck className="mr-2"/> Stok Opname</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
 
