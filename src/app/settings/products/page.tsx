@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -433,102 +432,10 @@ function ProductsClient() {
                         <Download className="mr-2 h-4 w-4" />
                         Ekspor
                     </Button>
-                    <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-                        <DialogTrigger asChild>
-                            <Button onClick={() => handleOpenForm(null)}>
-                                <PlusCircle className="mr-2 h-4 w-4" />
-                                Tambah Produk
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-4xl">
-                            <Form {...form}>
-                                <form onSubmit={form.handleSubmit(onProductSubmit)}>
-                                    <DialogHeader>
-                                        <DialogTitle>{editingProduct ? 'Edit Produk' : 'Tambah Produk Baru'}</DialogTitle>
-                                    </DialogHeader>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-                                        <div className="md:col-span-2 flex flex-col items-center">
-                                            <FormField
-                                                control={form.control}
-                                                name="imageUrl"
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>Gambar Produk</FormLabel>
-                                                        <FormControl>
-                                                            <div>
-                                                                <input
-                                                                    type="file"
-                                                                    accept="image/*"
-                                                                    ref={imageInputRef}
-                                                                    onChange={handleImageChange}
-                                                                    className="hidden"
-                                                                />
-                                                                <Image
-                                                                    src={previewImage || 'https://placehold.co/200x200.png'}
-                                                                    alt="Pratinjau"
-                                                                    width={128}
-                                                                    height={128}
-                                                                    className="h-32 w-32 rounded-md object-cover cursor-pointer"
-                                                                    onClick={() => imageInputRef.current?.click()}
-                                                                />
-                                                            </div>
-                                                        </FormControl>
-                                                        <FormMessage />
-                                                        <input type="hidden" {...field} value={field.value || ''} />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </div>
-                                        <FormField control={form.control} name="code" render={({ field }) => (
-                                            <FormItem><FormLabel>Kode Item</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                                        )} />
-                                        <FormField control={form.control} name="name" render={({ field }) => (
-                                            <FormItem><FormLabel>Nama Item</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                                        )} />
-                                        <FormField control={form.control} name="category" render={({ field }) => (
-                                             <FormItem><FormLabel>Jenis (Kategori)</FormLabel>
-                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                    <FormControl><SelectTrigger><SelectValue placeholder="Pilih jenis" /></SelectTrigger></FormControl>
-                                                    <SelectContent>
-                                                        {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-                                                    </SelectContent>
-                                                </Select>
-                                             <FormMessage /></FormItem>
-                                        )} />
-                                         <FormField control={form.control} name="unit" render={({ field }) => (
-                                             <FormItem><FormLabel>Satuan</FormLabel>
-                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                    <FormControl><SelectTrigger><SelectValue placeholder="Pilih satuan" /></SelectTrigger></FormControl>
-                                                    <SelectContent>
-                                                        {units.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-                                                    </SelectContent>
-                                                </Select>
-                                             <FormMessage /></FormItem>
-                                        )} />
-                                        <FormField control={form.control} name="costPrice" render={({ field }) => (
-                                            <FormItem><FormLabel>Harga Pokok (Rp)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                                        )} />
-                                        <FormField control={form.control} name="price" render={({ field }) => (
-                                            <FormItem><FormLabel>Harga Jual (Rp)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                                        )} />
-                                        <FormField control={form.control} name="stock" render={({ field }) => (
-                                            <FormItem><FormLabel>Stok Awal</FormLabel><FormControl><Input type="number" {...field} disabled={!!editingProduct} /></FormControl><FormMessage /></FormItem>
-                                        )} />
-                                        <FormField control={form.control} name="minStock" render={({ field }) => (
-                                            <FormItem><FormLabel>Stok Minimal</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                                        )} />
-                                    </div>
-                                    <DialogFooter>
-                                        <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>Batal</Button>
-                                        <Button type="submit" disabled={isSubmitting}>
-                                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                            Simpan
-                                        </Button>
-                                    </DialogFooter>
-                                </form>
-                            </Form>
-                        </DialogContent>
-                    </Dialog>
+                    <Button onClick={() => handleOpenForm(null)}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Tambah Produk
+                    </Button>
                 </div>
             </div>
 
@@ -697,6 +604,97 @@ function ProductsClient() {
                     </TableBody>
                 </Table>
             </div>
+
+             <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+                <DialogContent className="sm:max-w-4xl">
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onProductSubmit)}>
+                            <DialogHeader>
+                                <DialogTitle>{editingProduct ? 'Edit Produk' : 'Tambah Produk Baru'}</DialogTitle>
+                            </DialogHeader>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+                                <div className="md:col-span-2 flex flex-col items-center">
+                                    <FormField
+                                        control={form.control}
+                                        name="imageUrl"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Gambar Produk</FormLabel>
+                                                <FormControl>
+                                                    <div>
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*"
+                                                            ref={imageInputRef}
+                                                            onChange={handleImageChange}
+                                                            className="hidden"
+                                                        />
+                                                        <Image
+                                                            src={previewImage || 'https://placehold.co/200x200.png'}
+                                                            alt="Pratinjau"
+                                                            width={128}
+                                                            height={128}
+                                                            className="h-32 w-32 rounded-md object-cover cursor-pointer"
+                                                            onClick={() => imageInputRef.current?.click()}
+                                                        />
+                                                    </div>
+                                                </FormControl>
+                                                <FormMessage />
+                                                <input type="hidden" {...field} value={field.value || ''} />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                                <FormField control={form.control} name="code" render={({ field }) => (
+                                    <FormItem><FormLabel>Kode Item</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={form.control} name="name" render={({ field }) => (
+                                    <FormItem><FormLabel>Nama Item</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={form.control} name="category" render={({ field }) => (
+                                     <FormItem><FormLabel>Jenis (Kategori)</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl><SelectTrigger><SelectValue placeholder="Pilih jenis" /></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                     <FormMessage /></FormItem>
+                                )} />
+                                 <FormField control={form.control} name="unit" render={({ field }) => (
+                                     <FormItem><FormLabel>Satuan</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl><SelectTrigger><SelectValue placeholder="Pilih satuan" /></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                {units.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                     <FormMessage /></FormItem>
+                                )} />
+                                <FormField control={form.control} name="costPrice" render={({ field }) => (
+                                    <FormItem><FormLabel>Harga Pokok (Rp)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={form.control} name="price" render={({ field }) => (
+                                    <FormItem><FormLabel>Harga Jual (Rp)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={form.control} name="stock" render={({ field }) => (
+                                    <FormItem><FormLabel>Stok Awal</FormLabel><FormControl><Input type="number" {...field} disabled={!!editingProduct} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={form.control} name="minStock" render={({ field }) => (
+                                    <FormItem><FormLabel>Stok Minimal</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                            </div>
+                            <DialogFooter>
+                                <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>Batal</Button>
+                                <Button type="submit" disabled={isSubmitting}>
+                                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Simpan
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </Form>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
@@ -765,3 +763,5 @@ export default function ProductsSettingsPage() {
         </div>
     );
 }
+
+    
