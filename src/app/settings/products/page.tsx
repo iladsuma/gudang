@@ -6,7 +6,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { getProducts, addProduct, deleteMultipleProducts, updateProduct, updateProductStock, getStockMovements, bulkUpdateProductStock } from '@/lib/data';
+import { getProducts, addProduct, deleteMultipleProducts, updateProduct, updateProductStock, getStockMovements, bulkUpdateProductStock, getStockOpnameMovements } from '@/lib/data';
 import type { Product, StockMovement, ProductSelection, SortableProductField, SortOrder } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +19,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, PlusCircle, Trash2, Pencil, Edit, ArrowLeft, BookOpen, Upload, Download, X, ArrowUpDown } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Pencil, Edit, ArrowLeft, BookOpen, Upload, Download, X, ArrowUpDown, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -48,13 +48,21 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import Papa from 'papaparse';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
+import type { DateRange } from 'react-day-picker';
+
+interface jsPDFWithAutoTable extends jsPDF {
+  autoTable: (options: any) => jsPDF;
+}
 
 
 const productFormSchema = z.object({
@@ -104,6 +112,13 @@ function ProductsClient() {
     const [searchTerm, setSearchTerm] = React.useState('');
     const [categoryFilter, setCategoryFilter] = React.useState('all');
     const [unitFilter, setUnitFilter] = React.useState('all');
+    
+    // Reporting
+    const [reportDateRange, setReportDateRange] = React.useState<DateRange | undefined>({
+        from: subDays(new Date(), 29),
+        to: new Date(),
+    });
+    const [isPrintingReport, setIsPrintingReport] = React.useState(false);
 
     // Mock data for dropdowns
     const units = ['PCS', 'DUS', 'KODI', 'KOLI', 'PACK'];
@@ -362,7 +377,7 @@ function ProductsClient() {
                 // Find the header row by looking for "Kode Item"
                 for (let i = 0; i < rawData.length; i++) {
                     const row = rawData[i];
-                    if (row.some(cell => cell.toLowerCase().trim().includes('kode item'))) {
+                    if (row.some(cell => typeof cell === 'string' && cell.toLowerCase().trim().includes('kode item'))) {
                         headerRowIndex = i;
                         actualHeaders = row.map(h => h.toLowerCase().trim());
                         break;
@@ -391,9 +406,9 @@ function ProductsClient() {
                 let errorCount = 0;
 
                 for (const row of dataRows) {
-                    const codeCell = actualHeaders.findIndex(h => h.includes('kode item'));
-                    const code = (codeCell !== -1) ? row[codeCell] : undefined;
-
+                    const codeCellIndex = actualHeaders.findIndex(h => h.includes('kode item'));
+                    const code = (codeCellIndex !== -1) ? row[codeCellIndex] : undefined;
+                     
                     if (!code) {
                         continue; // Skip rows without a code
                     }
@@ -408,7 +423,7 @@ function ProductsClient() {
                             if (key === 'stock' || key === 'minStock') {
                                 value = parseInt(value, 10) || 0;
                             } else if (key === 'price' || key === 'costPrice') {
-                                value = parseFloat(value.replace(/,/g, '')) || 0;
+                                value = parseFloat(String(value).replace(/,/g, '')) || 0;
                             } else if(key === 'unit' && typeof value === 'string') {
                                 value = value.split(' ')[1] || 'PCS';
                             }
@@ -503,6 +518,75 @@ function ProductsClient() {
         }
     };
 
+    const handlePrintOpnameReport = async () => {
+        if (!reportDateRange?.from || !reportDateRange?.to) {
+            toast({
+                variant: 'destructive',
+                title: 'Rentang Tanggal Diperlukan',
+                description: 'Silakan pilih rentang tanggal untuk mencetak laporan.',
+            });
+            return;
+        }
+
+        setIsPrintingReport(true);
+        try {
+            const movements = await getStockOpnameMovements(reportDateRange.from, reportDateRange.to);
+
+            if (movements.length === 0) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Tidak Ada Data',
+                    description: 'Tidak ada data penyesuaian stok pada rentang tanggal yang dipilih.',
+                });
+                return;
+            }
+
+            const doc = new jsPDF() as jsPDFWithAutoTable;
+
+            doc.setFontSize(16);
+            doc.text('Laporan Penyesuaian Stok (Opname)', 14, 22);
+            doc.setFontSize(10);
+            doc.text(
+                `Periode: ${format(reportDateRange.from, 'dd MMM yyyy', { locale: id })} - ${format(reportDateRange.to, 'dd MMM yyyy', { locale: id })}`,
+                14,
+                28
+            );
+
+            const tableColumn = ["Tanggal", "Kode Item", "Nama Item", "Stok Buku", "Stok Fisik", "Selisih", "Keterangan"];
+            const tableRows: any[] = [];
+
+            movements.forEach(m => {
+                const row = [
+                    format(new Date(m.createdAt), 'dd/MM/yy HH:mm'),
+                    m.productCode,
+                    m.productName,
+                    m.stockBefore,
+                    m.stockAfter,
+                    m.quantityChange > 0 ? `+${m.quantityChange}` : m.quantityChange,
+                    m.notes || '-'
+                ];
+                tableRows.push(row);
+            });
+
+            doc.autoTable({
+                head: [tableColumn],
+                body: tableRows,
+                startY: 35,
+                theme: 'grid',
+                headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+            });
+
+            const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
+            doc.save(`laporan_opname_${timestamp}.pdf`);
+
+            toast({ title: 'Sukses!', description: 'Laporan berhasil dibuat.' });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Gagal', description: 'Tidak dapat membuat laporan PDF.' });
+        } finally {
+            setIsPrintingReport(false);
+        }
+    };
+
 
     // Watch for changes in the physical stock form field to calculate the difference
     const physicalStock = stockOpnameForm.watch('physicalStock');
@@ -550,37 +634,35 @@ function ProductsClient() {
                      </div>
                  </div>
                  <div className="flex items-center justify-end flex-wrap gap-2">
-                     <input
-                        type="file"
-                        accept=".csv"
-                        ref={opnameImportInputRef}
-                        onChange={handleStockOpnameImport}
-                        className="hidden"
-                    />
-                    <Button variant="outline" onClick={() => opnameImportInputRef.current?.click()}>
-                        <Upload className="mr-2 h-4 w-4" />
-                        Impor Stok Opname
-                    </Button>
-                     <input
-                        type="file"
-                        accept=".csv"
-                        ref={importInputRef}
-                        onChange={handleImport}
-                        className="hidden"
-                    />
-                    <Button variant="outline" onClick={() => importInputRef.current?.click()}>
-                        <Upload className="mr-2 h-4 w-4" />
-                        Impor Produk
-                    </Button>
-                    <Button variant="outline" onClick={handleExport} disabled={products.length === 0}>
-                        <Download className="mr-2 h-4 w-4" />
-                        Ekspor
-                    </Button>
+                     
                     <Button onClick={() => handleOpenForm(null)}>
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Tambah Produk
                     </Button>
                 </div>
+            </div>
+
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4 p-4 border rounded-lg bg-muted/50">
+                 <div className='flex flex-wrap items-center gap-2'>
+                    <input type="file" accept=".csv" ref={opnameImportInputRef} onChange={handleStockOpnameImport} className="hidden" />
+                    <Button variant="outline" onClick={() => opnameImportInputRef.current?.click()}>
+                        <Upload className="mr-2 h-4 w-4" /> Impor Stok Opname
+                    </Button>
+                     <input type="file" accept=".csv" ref={importInputRef} onChange={handleImport} className="hidden" />
+                    <Button variant="outline" onClick={() => importInputRef.current?.click()}>
+                        <Upload className="mr-2 h-4 w-4" /> Impor Produk
+                    </Button>
+                    <Button variant="outline" onClick={handleExport} disabled={products.length === 0}>
+                        <Download className="mr-2 h-4 w-4" /> Ekspor Produk
+                    </Button>
+                 </div>
+                 <div className='flex items-end gap-2'>
+                    <DateRangePicker date={reportDateRange} onDateChange={setReportDateRange} />
+                    <Button onClick={handlePrintOpnameReport} disabled={isPrintingReport}>
+                        {isPrintingReport ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
+                        Cetak Laporan Opname
+                    </Button>
+                 </div>
             </div>
 
             {selectedCount > 0 && (
@@ -611,7 +693,6 @@ function ProductsClient() {
                                     onCheckedChange={handleSelectAll}
                                 />
                             </TableHead>
-                            <TableHead className="w-[50px]">No</TableHead>
                             <TableHead className="w-40 cursor-pointer hover:bg-muted" onClick={() => handleSort('code')}>
                                 <div className='flex items-center gap-2'>
                                     Kode Item {sortBy === 'code' && <ArrowUpDown className="h-4 w-4" />}
@@ -641,9 +722,9 @@ function ProductsClient() {
                     </TableHeader>
                     <TableBody>
                         {loading ? (
-                            <TableRow><TableCell colSpan={11} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
+                            <TableRow><TableCell colSpan={10} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
                         ) : filteredProducts.length > 0 ? (
-                            filteredProducts.map((product, index) => (
+                            filteredProducts.map((product) => (
                                 <TableRow key={product.id} data-state={selection[product.id] ? "selected" : ""}>
                                     <TableCell>
                                         <Checkbox
@@ -651,7 +732,6 @@ function ProductsClient() {
                                             onCheckedChange={(checked) => handleSelectRow(product.id, !!checked)}
                                         />
                                     </TableCell>
-                                    <TableCell>{index + 1}</TableCell>
                                     <TableCell className="font-mono">{product.code}</TableCell>
                                     <TableCell className="font-medium">{product.name}</TableCell>
                                     <TableCell className={cn(product.stock <= product.minStock && 'text-red-500 font-bold')}>{product.stock}</TableCell>
@@ -779,7 +859,7 @@ function ProductsClient() {
                                 </TableRow>
                             ))
                         ) : (
-                            <TableRow><TableCell colSpan={11} className="h-24 text-center">Tidak ada produk yang cocok dengan filter.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={10} className="h-24 text-center">Tidak ada produk yang cocok dengan filter.</TableCell></TableRow>
                         )}
                     </TableBody>
                 </Table>
@@ -947,3 +1027,4 @@ export default function ProductsSettingsPage() {
     
 
     
+

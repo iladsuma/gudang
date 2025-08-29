@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import type { User, Shipment, Checkout, Expedition, Product, Packaging, Customer, StockMovement, Supplier, Purchase, PurchaseProduct, ShipmentProduct, Return, ReturnedProduct, SortableProductField, SortOrder } from './types';
@@ -609,7 +610,7 @@ export async function updateProductStock(id: string, newStock: number, notes: st
 
     // Record stock opname movement
     const movement: StockMovement = {
-        id: `sm_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        id: `sm_opname_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
         productId: id,
         type: 'Stok Opname',
         quantityChange: newStock - oldStock,
@@ -671,7 +672,6 @@ export async function getStockMovements(productId: string): Promise<StockMovemen
         .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return Promise.resolve(movements);
 }
-
 
 // --- Packaging Functions ---
 export async function getPackagingOptions(): Promise<Packaging[]> {
@@ -894,6 +894,31 @@ export async function addReturn(data: { originalShipmentId: string, products: Re
     return Promise.resolve(newReturn);
 }
 
+export async function getStockOpnameMovements(startDate?: Date, endDate?: Date): Promise<(StockMovement & { productCode: string, productName: string })[]> {
+    if (!db.stockMovements) return [];
+
+    let movements = db.stockMovements
+        .filter(sm => sm.type === 'Stok Opname');
+
+    if (startDate && endDate) {
+        movements = movements.filter(sm => {
+            const movementDate = new Date(sm.createdAt);
+            return movementDate >= startDate && movementDate <= endDate;
+        });
+    }
+
+    const movementsWithProductInfo = movements.map(sm => {
+        const product = db.products.find(p => p.id === sm.productId);
+        return {
+            ...sm,
+            productCode: product?.code || 'N/A',
+            productName: product?.name || 'Produk Tidak Ditemukan',
+        };
+    }).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    return Promise.resolve(movementsWithProductInfo);
+}
     
 
     
+
