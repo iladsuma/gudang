@@ -328,11 +328,20 @@ function ProductsClient() {
             header: true,
             skipEmptyLines: true,
             complete: async (results) => {
-                const importedProducts = (results.data as any[]).sort((a, b) => a.code.localeCompare(b.code));
+                const importedProducts = (results.data as any[]).sort((a, b) => {
+                    // Defensive sorting
+                    const codeA = a?.code || '';
+                    const codeB = b?.code || '';
+                    return codeA.localeCompare(codeB);
+                });
                 let successCount = 0;
                 let errorCount = 0;
 
                 for (const productData of importedProducts) {
+                    // Skip if row is empty or doesn't have a code
+                    if (!productData || !productData.code) {
+                        continue;
+                    }
                     try {
                         // Basic validation and type coercion
                         const validatedData = {
