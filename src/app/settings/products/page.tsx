@@ -6,7 +6,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { getProducts, addProduct, deleteMultipleProducts, updateProduct, updateProductStock, getStockMovements } from '@/lib/data';
+import { getProducts, addProduct, deleteMultipleProducts, updateProduct, updateProductStock, getStockMovements, bulkUpdateProductStock } from '@/lib/data';
 import type { Product, StockMovement, ProductSelection, SortableProductField, SortOrder } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -92,6 +92,7 @@ function ProductsClient() {
     const [previewImage, setPreviewImage] = React.useState<string | null>(null);
     const imageInputRef = React.useRef<HTMLInputElement>(null);
     const importInputRef = React.useRef<HTMLInputElement>(null);
+    const opnameImportInputRef = React.useRef<HTMLInputElement>(null);
     const { toast } = useToast();
 
     // State for selection and sorting
@@ -388,6 +389,51 @@ function ProductsClient() {
         }
     };
     
+    const handleStockOpnameImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: async (results) => {
+                const stockUpdates: { code: string; physicalStock: number; notes: string }[] = [];
+                for (const row of (results.data as any[])) {
+                    const code = row['KODE ITEM / BARCODE (1)'];
+                    const physicalStock = parseInt(row['JUMLAH FISIK SATUAN DASAR (2)'], 10);
+                    const notes = row['KETERANGAN (3)'] || 'Impor Stok Opname Massal';
+
+                    if (code && !isNaN(physicalStock)) {
+                        stockUpdates.push({ code, physicalStock, notes });
+                    }
+                }
+
+                if (stockUpdates.length > 0) {
+                    const { success, failure } = await bulkUpdateProductStock(stockUpdates);
+                    toast({
+                        title: 'Impor Stok Opname Selesai',
+                        description: `${success} produk berhasil diperbarui, ${failure} kode item tidak ditemukan.`,
+                    });
+                    fetchProducts();
+                } else {
+                     toast({
+                        variant: 'destructive',
+                        title: 'Tidak Ada Data Valid',
+                        description: 'Pastikan file CSV Anda memiliki kolom "KODE ITEM / BARCODE (1)" dan "JUMLAH FISIK SATUAN DASAR (2)".',
+                    });
+                }
+            },
+            error: (error) => {
+                toast({ variant: 'destructive', title: 'Gagal Membaca File', description: error.message });
+            }
+        });
+
+        if (opnameImportInputRef.current) {
+            opnameImportInputRef.current.value = '';
+        }
+    };
+
+
     // Watch for changes in the physical stock form field to calculate the difference
     const physicalStock = stockOpnameForm.watch('physicalStock');
     const bookStock = stockEditProduct?.stock ?? 0;
@@ -433,7 +479,18 @@ function ProductsClient() {
                         </Select>
                      </div>
                  </div>
-                 <div className="flex items-center justify-end gap-2">
+                 <div className="flex items-center justify-end flex-wrap gap-2">
+                     <input
+                        type="file"
+                        accept=".csv"
+                        ref={opnameImportInputRef}
+                        onChange={handleStockOpnameImport}
+                        className="hidden"
+                    />
+                    <Button variant="outline" onClick={() => opnameImportInputRef.current?.click()}>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Impor Stok Opname
+                    </Button>
                      <input
                         type="file"
                         accept=".csv"
@@ -443,7 +500,7 @@ function ProductsClient() {
                     />
                     <Button variant="outline" onClick={() => importInputRef.current?.click()}>
                         <Upload className="mr-2 h-4 w-4" />
-                        Impor
+                        Impor Produk
                     </Button>
                     <Button variant="outline" onClick={handleExport} disabled={products.length === 0}>
                         <Download className="mr-2 h-4 w-4" />

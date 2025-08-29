@@ -594,6 +594,46 @@ export async function updateProductStock(id: string, newStock: number, notes: st
     return Promise.resolve(db.products[productIndex]);
 }
 
+export async function bulkUpdateProductStock(updates: { code: string; physicalStock: number; notes: string }[]): Promise<{ success: number; failure: number }> {
+    let success = 0;
+    let failure = 0;
+
+    for (const update of updates) {
+        const productIndex = db.products.findIndex(p => p.code.toLowerCase() === update.code.toLowerCase());
+        
+        if (productIndex !== -1) {
+            const product = db.products[productIndex];
+            const oldStock = product.stock;
+            const newStock = update.physicalStock;
+
+            if (oldStock !== newStock) {
+                const movement: StockMovement = {
+                    id: `sm_bulk_${Date.now()}_${product.id}`,
+                    productId: product.id,
+                    type: 'Stok Opname',
+                    quantityChange: newStock - oldStock,
+                    stockBefore: oldStock,
+                    stockAfter: newStock,
+                    notes: update.notes || 'Impor Stok Opname Massal',
+                    createdAt: new Date().toISOString(),
+                };
+                db.stockMovements.push(movement);
+                db.products[productIndex].stock = newStock;
+            }
+            success++;
+        } else {
+            failure++;
+        }
+    }
+
+    if (success > 0) {
+        persistDb();
+    }
+
+    return Promise.resolve({ success, failure });
+}
+
+
 export async function getStockMovements(productId: string): Promise<StockMovement[]> {
     const movements = (db.stockMovements || [])
         .filter(sm => sm.productId === productId)
