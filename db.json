@@ -27,7 +27,7 @@
       "name": "Baju Anak",
       "price": 75000,
       "costPrice": 50000,
-      "stock": 99,
+      "stock": 100,
       "minStock": 10,
       "unit": "PCS",
       "category": "Pakaian",
@@ -39,7 +39,7 @@
       "name": "Celana Panjang",
       "price": 150000,
       "costPrice": 120000,
-      "stock": 48,
+      "stock": 50,
       "minStock": 5,
       "unit": "PCS",
       "category": "Pakaian",
@@ -97,67 +97,9 @@
       "cost": 3000
     }
   ],
-  "shipments": [
-    {
-      "id": "sale_1756207864085",
-      "user": "admin",
-      "transactionId": "KASIR-1756207864085",
-      "customerId": "cust_2",
-      "customerName": "Budi Santoso",
-      "expedition": "Langsung",
-      "packagingId": "pkg_direct",
-      "status": "Terkirim",
-      "products": [
-        {
-          "productId": "prod_1",
-          "code": "BA-001",
-          "name": "Baju Anak",
-          "quantity": 1,
-          "price": 75000,
-          "imageUrl": "https://placehold.co/100x100.png"
-        }
-      ],
-      "totalItems": 1,
-      "totalProductCost": 75000,
-      "totalPackingCost": 0,
-      "totalAmount": 75000,
-      "createdAt": "2025-08-26T11:31:04.085Z"
-    }
-  ],
+  "shipments": [],
   "checkoutHistory": [],
-  "stockMovements": [
-    {
-      "id": "sm_sale_1756207864085_prod_1",
-      "productId": "prod_1",
-      "referenceId": "sale_1756207864085",
-      "type": "Penjualan",
-      "quantityChange": -1,
-      "stockBefore": 100,
-      "stockAfter": 99,
-      "notes": "Penjualan langsung (Kasir) - KASIR-1756207864085",
-      "createdAt": "2025-08-26T11:31:04.085Z"
-    },
-    {
-      "id": "sm_opname_1756461933092_prod_2",
-      "productId": "prod_2",
-      "type": "Stok Opname",
-      "quantityChange": -2,
-      "stockBefore": 50,
-      "stockAfter": 48,
-      "notes": "Ditemukan 2 barang rusak",
-      "createdAt": "2025-08-28T10:05:33.092Z"
-    },
-    {
-      "id": "sm_opname_1756462001555_prod_1",
-      "productId": "prod_1",
-      "type": "Stok Opname",
-      "quantityChange": 1,
-      "stockBefore": 98,
-      "stockAfter": 99,
-      "notes": "Hasil opname mingguan, ada kelebihan 1",
-      "createdAt": "2025-08-28T10:06:41.555Z"
-    }
-  ],
+  "stockMovements": [],
   "customers": [
     {
       "id": "cust_1",
