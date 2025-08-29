@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -544,7 +545,7 @@ function ProductsClient() {
                                                             <DialogTitle>Stok Opname: {stockEditProduct?.name}</DialogTitle>
                                                             <DialogDescription>
                                                                 Sesuaikan jumlah stok berdasarkan perhitungan fisik di gudang.
-                                                                <p className='font-mono text-xs mt-1'>Kode: {stockEditProduct?.code}</p>
+                                                                <div className='font-mono text-xs mt-1'>Kode: {stockEditProduct?.code}</div>
                                                             </DialogDescription>
                                                         </DialogHeader>
                                                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 py-4">
@@ -813,5 +814,7 @@ export default function ProductsSettingsPage() {
         </div>
     );
 }
+
+    
 
     
