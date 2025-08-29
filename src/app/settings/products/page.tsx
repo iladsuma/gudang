@@ -107,7 +107,7 @@ function ProductsClient() {
 
     // Mock data for dropdowns
     const units = ['PCS', 'DUS', 'KODI', 'KOLI', 'PACK'];
-    const categories = ['Pakaian', 'Aksesoris', 'Elektronik', 'Makanan', 'Minuman', 'CELANA', 'SALEP', 'BAJU', 'BANTENGAN', 'ALAT MUSIK'];
+    const categories = ['Pakaian', 'Aksesoris', 'Elektronik', 'Makanan', 'Minuman', 'CELANA', 'SALEP', 'BAJU', 'BANTENGAN', 'ALAT MUSIK', 'BARONGAN'];
 
 
     const form = useForm<ProductFormValues>({
@@ -335,58 +335,106 @@ function ProductsClient() {
         toast({ title: 'Sukses', description: 'Data produk telah diekspor.' });
     };
 
-    const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+     const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
 
-        Papa.parse(file, {
-            header: true,
+        Papa.parse<string[]>(file, {
             skipEmptyLines: true,
-            transformHeader: header => header.trim().toLowerCase().replace(/\s+/g, ''),
             complete: async (results) => {
-                const headerMap = {
-                    kodeitem: 'code',
-                    namaitem: 'name',
-                    jenis: 'category',
-                    stok: 'stock',
-                    satuan: 'unit',
-                    hargapokok: 'costPrice',
-                    hargajual: 'price',
-                    stokminimal: 'minStock',
+                const rawData = results.data;
+
+                // Map of possible header names (case-insensitive) to the desired key
+                const headerMapping: { [key: string]: keyof Product } = {
+                    'kode item': 'code',
+                    'nama item': 'name',
+                    'jenis': 'category',
+                    'stok': 'stock',
+                    'satuan': 'unit',
+                    'harga pokok': 'costPrice',
+                    'harga jual': 'price',
+                    'stok minimal': 'minStock'
                 };
+
+                let headerRowIndex = -1;
+                let actualHeaders: string[] = [];
+
+                // Find the header row by looking for "Kode Item"
+                for (let i = 0; i < rawData.length; i++) {
+                    const row = rawData[i];
+                    if (row.some(cell => cell.toLowerCase().trim().includes('kode item'))) {
+                        headerRowIndex = i;
+                        actualHeaders = row.map(h => h.toLowerCase().trim());
+                        break;
+                    }
+                }
+
+                if (headerRowIndex === -1) {
+                    toast({ variant: 'destructive', title: 'Header Tidak Ditemukan', description: 'Pastikan file CSV Anda memiliki kolom "Kode Item".' });
+                    return;
+                }
+
+                // Create a map from the actual header name to our desired key
+                const headerToKeyMap = actualHeaders.reduce((acc, header, index) => {
+                    for (const [key, value] of Object.entries(headerMapping)) {
+                        if (header.includes(key)) {
+                            acc[index] = value;
+                            break;
+                        }
+                    }
+                    return acc;
+                }, {} as { [index: number]: keyof Product });
+                
+                const dataRows = rawData.slice(headerRowIndex + 1);
 
                 let successCount = 0;
                 let errorCount = 0;
 
-                const importedData = results.data as any[];
+                for (const row of dataRows) {
+                    const codeCell = actualHeaders.findIndex(h => h.includes('kode item'));
+                    const code = (codeCell !== -1) ? row[codeCell] : undefined;
 
-                for (const row of importedData) {
-                    const getVal = (key: string) => row[key] || '';
-
-                    const code = getVal('kodeitem');
                     if (!code) {
-                        continue;
+                        continue; // Skip rows without a code
                     }
 
                     try {
-                        const productData = {
-                            code: code,
-                            name: getVal('namaitem'),
-                            category: getVal('jenis'),
-                            unit: getVal('satuan') || 'PCS',
-                            stock: parseInt(getVal('stok'), 10) || 0,
-                            costPrice: parseFloat(getVal('hargapokok')) || 0,
-                            price: parseFloat(getVal('hargajual')) || 0,
-                            minStock: parseInt(getVal('stokminimal'), 10) || 0,
+                        const productData: Partial<Product> = {};
+                        for(const index in headerToKeyMap) {
+                            const key = headerToKeyMap[index];
+                            let value: any = row[index];
+                            
+                            // Clean and parse numbers and units
+                            if (key === 'stock' || key === 'minStock') {
+                                value = parseInt(value, 10) || 0;
+                            } else if (key === 'price' || key === 'costPrice') {
+                                value = parseFloat(value.replace(/,/g, '')) || 0;
+                            } else if(key === 'unit' && typeof value === 'string') {
+                                value = value.split(' ')[1] || 'PCS';
+                            }
+                            
+                            (productData as any)[key] = value;
+                        }
+                        
+                        // Default values for any missing fields
+                        const finalProductData = {
+                            code: productData.code!,
+                            name: productData.name || '',
+                            category: productData.category || 'Lainnya',
+                            unit: productData.unit || 'PCS',
+                            stock: productData.stock || 0,
+                            costPrice: productData.costPrice || 0,
+                            price: productData.price || 0,
+                            minStock: productData.minStock || 0,
                             imageUrl: 'https://placehold.co/100x100.png',
                         };
 
-                        const existingByCode = products.find(p => p.code.toLowerCase() === productData.code.toLowerCase());
+                        const existingByCode = products.find(p => p.code.toLowerCase() === finalProductData.code.toLowerCase());
                         
                         if (existingByCode) {
-                           await updateProduct(existingByCode.id, productData);
+                           await updateProduct(existingByCode.id, finalProductData);
                         } else {
-                           await addProduct(productData);
+                           await addProduct(finalProductData);
                         }
                         successCount++;
 
