@@ -611,6 +611,7 @@ function ProductsClient() {
                                     onCheckedChange={handleSelectAll}
                                 />
                             </TableHead>
+                            <TableHead className="w-[50px]">No</TableHead>
                             <TableHead className="w-40 cursor-pointer hover:bg-muted" onClick={() => handleSort('code')}>
                                 <div className='flex items-center gap-2'>
                                     Kode Item {sortBy === 'code' && <ArrowUpDown className="h-4 w-4" />}
@@ -640,9 +641,9 @@ function ProductsClient() {
                     </TableHeader>
                     <TableBody>
                         {loading ? (
-                            <TableRow><TableCell colSpan={10} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
+                            <TableRow><TableCell colSpan={11} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
                         ) : filteredProducts.length > 0 ? (
-                            filteredProducts.map((product) => (
+                            filteredProducts.map((product, index) => (
                                 <TableRow key={product.id} data-state={selection[product.id] ? "selected" : ""}>
                                     <TableCell>
                                         <Checkbox
@@ -650,6 +651,7 @@ function ProductsClient() {
                                             onCheckedChange={(checked) => handleSelectRow(product.id, !!checked)}
                                         />
                                     </TableCell>
+                                    <TableCell>{index + 1}</TableCell>
                                     <TableCell className="font-mono">{product.code}</TableCell>
                                     <TableCell className="font-medium">{product.name}</TableCell>
                                     <TableCell className={cn(product.stock <= product.minStock && 'text-red-500 font-bold')}>{product.stock}</TableCell>
@@ -777,7 +779,7 @@ function ProductsClient() {
                                 </TableRow>
                             ))
                         ) : (
-                            <TableRow><TableCell colSpan={10} className="h-24 text-center">Tidak ada produk yang cocok dengan filter.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={11} className="h-24 text-center">Tidak ada produk yang cocok dengan filter.</TableCell></TableRow>
                         )}
                     </TableBody>
                 </Table>
