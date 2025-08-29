@@ -342,33 +342,43 @@ function ProductsClient() {
         Papa.parse(file, {
             header: true,
             skipEmptyLines: true,
+            transformHeader: header => header.trim().toLowerCase().replace(/\s+/g, ''),
             complete: async (results) => {
-                const importedProducts = (results.data as any[]).sort((a, b) => {
-                    // Defensive sorting
-                    const codeA = a?.['Kode Item'] || '';
-                    const codeB = b?.['Kode Item'] || '';
-                    return codeA.localeCompare(codeB);
-                });
+                const headerMap = {
+                    kodeitem: 'code',
+                    namaitem: 'name',
+                    jenis: 'category',
+                    stok: 'stock',
+                    satuan: 'unit',
+                    hargapokok: 'costPrice',
+                    hargajual: 'price',
+                    stokminimal: 'minStock',
+                };
+
                 let successCount = 0;
                 let errorCount = 0;
 
-                for (const row of importedProducts) {
-                    const code = row['Kode Item'];
-                    if (!row || !code) {
+                const importedData = results.data as any[];
+
+                for (const row of importedData) {
+                    const getVal = (key: string) => row[key] || '';
+
+                    const code = getVal('kodeitem');
+                    if (!code) {
                         continue;
                     }
+
                     try {
-                        // Map CSV headers to product properties
                         const productData = {
                             code: code,
-                            name: row['Nama Item'] || '',
-                            category: row['Jenis'] || '',
-                            unit: row['Satuan'] || 'PCS',
-                            stock: parseInt(row['Stok'], 10) || 0,
-                            costPrice: parseFloat(row['Harga Pokok']) || 0,
-                            price: parseFloat(row['Harga Jual']) || 0,
-                            minStock: parseInt(row['Stok Minimal'], 10) || 0,
-                            imageUrl: 'https://placehold.co/100x100.png', // Default image
+                            name: getVal('namaitem'),
+                            category: getVal('jenis'),
+                            unit: getVal('satuan') || 'PCS',
+                            stock: parseInt(getVal('stok'), 10) || 0,
+                            costPrice: parseFloat(getVal('hargapokok')) || 0,
+                            price: parseFloat(getVal('hargajual')) || 0,
+                            minStock: parseInt(getVal('stokminimal'), 10) || 0,
+                            imageUrl: 'https://placehold.co/100x100.png',
                         };
 
                         const existingByCode = products.find(p => p.code.toLowerCase() === productData.code.toLowerCase());
@@ -396,7 +406,6 @@ function ProductsClient() {
             }
         });
         
-        // Reset file input
         if(importInputRef.current) {
             importInputRef.current.value = '';
         }
