@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -752,10 +751,10 @@ function ProductsClient() {
                                                     <form onSubmit={stockOpnameForm.handleSubmit(onStockOpnameSubmit)}>
                                                         <DialogHeader>
                                                             <DialogTitle>Stok Opname: {stockEditProduct?.name}</DialogTitle>
-                                                            <DialogDescription>
+                                                             <DialogDescription>
                                                                 Sesuaikan jumlah stok berdasarkan perhitungan fisik di gudang.
-                                                                <div className='font-mono text-xs mt-1'>Kode: {stockEditProduct?.code}</div>
                                                             </DialogDescription>
+                                                            <div className='font-mono text-xs pt-1 text-muted-foreground'>Kode: {stockEditProduct?.code}</div>
                                                         </DialogHeader>
                                                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 py-4">
                                                               <div className='space-y-2'>
@@ -1029,3 +1028,6 @@ export default function ProductsSettingsPage() {
     
 
 
+
+
+    
