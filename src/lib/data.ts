@@ -565,7 +565,7 @@ export async function deleteMultipleProducts(ids: string[]): Promise<void> {
 }
 
 
-export async function updateProductStock(id: string, newStock: number): Promise<Product> {
+export async function updateProductStock(id: string, newStock: number, notes: string = 'Penyesuaian stok manual'): Promise<Product> {
     const productIndex = db.products.findIndex(p => p.id === id);
     if (productIndex === -1) {
         throw new Error('Produk tidak ditemukan.');
@@ -584,7 +584,7 @@ export async function updateProductStock(id: string, newStock: number): Promise<
         quantityChange: newStock - oldStock,
         stockBefore: oldStock,
         stockAfter: newStock,
-        notes: 'Penyesuaian stok manual',
+        notes: notes,
         createdAt: new Date().toISOString(),
     };
     db.stockMovements.push(movement);

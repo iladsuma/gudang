@@ -30,7 +30,7 @@ export function Header() {
   };
 
   const isSettingsPage = pathname.startsWith('/settings');
-  const isTransactionPage = ['/cashier', '/purchases', '/returns', '/stock-opname'].includes(pathname);
+  const isTransactionPage = ['/cashier', '/purchases', '/returns'].includes(pathname);
 
 
   return (
@@ -79,7 +79,6 @@ export function Header() {
                         <DropdownMenuItem onSelect={() => router.push('/cashier')}><ShoppingBasket className="mr-2"/> Kasir</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => router.push('/purchases')}><ShoppingBag className="mr-2"/> Pembelian</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => router.push('/returns')}><Undo2 className="mr-2"/> Retur Penjualan</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => router.push('/stock-opname')}><PackageCheck className="mr-2"/> Stok Opname</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
 

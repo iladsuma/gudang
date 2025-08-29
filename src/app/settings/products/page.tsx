@@ -53,6 +53,7 @@ import { cn } from '@/lib/utils';
 import Papa from 'papaparse';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 
 
 const productFormSchema = z.object({
@@ -69,11 +70,12 @@ const productFormSchema = z.object({
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
 
-const stockFormSchema = z.object({
-    stock: z.coerce.number().int().min(0, 'Stok harus bilangan bulat non-negatif.'),
+const stockOpnameSchema = z.object({
+    physicalStock: z.coerce.number().int().min(0, 'Stok fisik harus bilangan positif.'),
+    notes: z.string().min(1, "Keterangan harus diisi (cth: 'Opname Bulanan')"),
 });
 
-type StockFormValues = z.infer<typeof stockFormSchema>;
+type StockOpnameFormValues = z.infer<typeof stockOpnameSchema>;
 
 
 function ProductsClient() {
@@ -121,9 +123,9 @@ function ProductsClient() {
         },
     });
 
-    const stockForm = useForm<StockFormValues>({
-        resolver: zodResolver(stockFormSchema),
-        defaultValues: { stock: 0 },
+    const stockOpnameForm = useForm<StockOpnameFormValues>({
+        resolver: zodResolver(stockOpnameSchema),
+        defaultValues: { physicalStock: 0, notes: '' },
     });
 
     const fetchProducts = React.useCallback(async () => {
@@ -185,7 +187,7 @@ function ProductsClient() {
 
     const handleOpenStockForm = (product: Product) => {
         setStockEditProduct(product);
-        stockForm.reset({ stock: product.stock });
+        stockOpnameForm.reset({ physicalStock: product.stock, notes: '' });
     };
 
     const handleViewHistory = async (product: Product) => {
@@ -238,11 +240,11 @@ function ProductsClient() {
         }
     };
 
-    const onStockSubmit = async (data: StockFormValues) => {
+    const onStockOpnameSubmit = async (data: StockOpnameFormValues) => {
         if (!stockEditProduct) return;
         setIsSubmitting(true);
         try {
-            await updateProductStock(stockEditProduct.id, data.stock);
+            await updateProductStock(stockEditProduct.id, data.physicalStock, data.notes);
             toast({ title: 'Sukses', description: 'Stok produk berhasil diperbarui.' });
             setStockEditProduct(null); // Close dialog
             fetchProducts();
@@ -384,6 +386,11 @@ function ProductsClient() {
             importInputRef.current.value = '';
         }
     };
+    
+    // Watch for changes in the physical stock form field to calculate the difference
+    const physicalStock = stockOpnameForm.watch('physicalStock');
+    const bookStock = stockEditProduct?.stock ?? 0;
+    const difference = physicalStock - bookStock;
 
 
     return (
@@ -526,27 +533,61 @@ function ProductsClient() {
                                     <TableCell className="text-right">
                                        <Dialog open={!!stockEditProduct && stockEditProduct.id === product.id} onOpenChange={(open) => !open && setStockEditProduct(null)}>
                                             <DialogTrigger asChild>
-                                                <Button variant="ghost" size="icon" title="Edit Stok" onClick={() => handleOpenStockForm(product)}>
+                                                <Button variant="ghost" size="icon" title="Edit Stok / Stok Opname" onClick={() => handleOpenStockForm(product)}>
                                                     <Edit className="h-4 w-4" />
                                                 </Button>
                                             </DialogTrigger>
                                             <DialogContent>
-                                                <Form {...stockForm}>
-                                                    <form onSubmit={stockForm.handleSubmit(onStockSubmit)}>
+                                                <Form {...stockOpnameForm}>
+                                                    <form onSubmit={stockOpnameForm.handleSubmit(onStockOpnameSubmit)}>
                                                         <DialogHeader>
-                                                            <DialogTitle>Edit Stok: {stockEditProduct?.name}</DialogTitle>
-                                                            <DialogDescription>Perbarui jumlah stok untuk produk ini. Ini akan tercatat sebagai stok opname.</DialogDescription>
+                                                            <DialogTitle>Stok Opname: {stockEditProduct?.name}</DialogTitle>
+                                                            <DialogDescription>
+                                                                Sesuaikan jumlah stok berdasarkan perhitungan fisik di gudang.
+                                                                <p className='font-mono text-xs mt-1'>Kode: {stockEditProduct?.code}</p>
+                                                            </DialogDescription>
                                                         </DialogHeader>
-                                                        <div className="grid gap-4 py-4">
-                                                            <FormField control={stockForm.control} name="stock" render={({ field }) => (
-                                                                <FormItem><FormLabel>Jumlah Stok Baru</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                                                            )} />
+                                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 py-4">
+                                                              <div className='space-y-2'>
+                                                                <Label>Stok Buku</Label>
+                                                                <Input value={bookStock} readOnly disabled />
+                                                             </div>
+                                                              <FormField
+                                                                control={stockOpnameForm.control}
+                                                                name="physicalStock"
+                                                                render={({ field }) => (
+                                                                  <FormItem>
+                                                                    <FormLabel>Stok Fisik</FormLabel>
+                                                                    <FormControl>
+                                                                      <Input type="number" {...field} />
+                                                                    </FormControl>
+                                                                    <FormMessage />
+                                                                  </FormItem>
+                                                                )}
+                                                              />
+                                                              <div className='space-y-2'>
+                                                                <Label>Selisih</Label>
+                                                                <Input value={difference} readOnly disabled className={difference !== 0 ? (difference > 0 ? 'text-green-600 font-bold' : 'text-red-600 font-bold') : ''} />
+                                                             </div>
                                                         </div>
+                                                        <FormField
+                                                              control={stockOpnameForm.control}
+                                                              name="notes"
+                                                              render={({ field }) => (
+                                                                <FormItem>
+                                                                  <FormLabel>Keterangan</FormLabel>
+                                                                  <FormControl>
+                                                                    <Textarea placeholder="cth: Hasil opname bulanan" {...field} />
+                                                                  </FormControl>
+                                                                  <FormMessage />
+                                                                </FormItem>
+                                                              )}
+                                                            />
                                                         <DialogFooter>
                                                             <Button type="button" variant="outline" onClick={() => setStockEditProduct(null)}>Batal</Button>
                                                             <Button type="submit" disabled={isSubmitting}>
                                                                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                                                Simpan Stok
+                                                                Simpan Penyesuaian
                                                             </Button>
                                                         </DialogFooter>
                                                     </form>
