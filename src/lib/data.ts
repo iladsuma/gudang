@@ -36,13 +36,42 @@ let db: {
 };
 
 
+// Function to remove duplicates from an array of objects based on a key
+function deDuplicate<T extends { id: string }>(arr: T[]): T[] {
+    if (!Array.isArray(arr)) return [];
+    const seen = new Set<string>();
+    return arr.filter(item => {
+        if (seen.has(item.id)) {
+            return false;
+        } else {
+            seen.add(item.id);
+            return true;
+        }
+    });
+}
+
 // Function to initialize or load data from localStorage
 function initializeDb() {
   if (typeof window !== 'undefined') {
     const storedDb = localStorage.getItem('gudangcheckout_db');
     if (storedDb) {
       try {
-        db = JSON.parse(storedDb);
+        let parsedDb = JSON.parse(storedDb);
+        
+        // --- Deduplication Logic ---
+        parsedDb.users = deDuplicate(parsedDb.users);
+        parsedDb.products = deDuplicate(parsedDb.products);
+        parsedDb.expeditions = deDuplicate(parsedDb.expeditions);
+        parsedDb.packagingOptions = deDuplicate(parsedDb.packagingOptions);
+        parsedDb.shipments = deDuplicate(parsedDb.shipments);
+        parsedDb.customers = deDuplicate(parsedDb.customers);
+        parsedDb.suppliers = deDuplicate(parsedDb.suppliers);
+        parsedDb.purchases = deDuplicate(parsedDb.purchases);
+        parsedDb.returns = deDuplicate(parsedDb.returns);
+        // --- End of Deduplication ---
+
+        db = parsedDb;
+
         // Basic validation to ensure all keys are present after parsing
         const requiredKeys: (keyof typeof db)[] = ['users', 'products', 'expeditions', 'packagingOptions', 'shipments', 'checkoutHistory', 'customers', 'suppliers', 'stockMovements', 'purchases', 'returns'];
         let needsReset = false;
@@ -57,6 +86,9 @@ function initializeDb() {
              localStorage.removeItem('gudangcheckout_db');
              db = JSON.parse(JSON.stringify(initialData));
              localStorage.setItem('gudangcheckout_db', JSON.stringify(db));
+        } else {
+             // Persist the cleaned (deduplicated) DB back to localStorage
+             persistDb();
         }
 
       } catch (error) {
@@ -707,7 +739,7 @@ export async function addPurchase(data: Omit<Purchase, 'id' | 'createdAt' | 'sta
             const stockAfter = product.stock;
 
             const movement: StockMovement = {
-                id: `sm_purch_${Date.now()}_${p.productId}`,
+                id: `sm_purch_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
                 productId: p.productId,
                 referenceId: newPurchase.id,
                 type: 'Pembelian',
@@ -778,7 +810,7 @@ export async function processDirectSale(
             const stockAfter = product.stock;
 
             const movement: StockMovement = {
-                id: `sm_sale_${Date.now()}_${p.productId}`,
+                id: `sm_sale_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
                 productId: p.productId,
                 referenceId: newShipment.id,
                 type: 'Penjualan',
@@ -839,7 +871,7 @@ export async function addReturn(data: { originalShipmentId: string, products: Re
             const stockAfter = product.stock;
 
             const movement: StockMovement = {
-                id: `sm_ret_${Date.now()}_${p.productId}`,
+                id: `sm_ret_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
                 productId: p.productId,
                 referenceId: newReturn.id,
                 type: 'Retur',
