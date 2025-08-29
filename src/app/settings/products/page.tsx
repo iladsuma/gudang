@@ -107,7 +107,7 @@ function ProductsClient() {
 
     // Mock data for dropdowns
     const units = ['PCS', 'DUS', 'KODI', 'KOLI', 'PACK'];
-    const categories = ['Pakaian', 'Aksesoris', 'Elektronik', 'Makanan', 'Minuman'];
+    const categories = ['Pakaian', 'Aksesoris', 'Elektronik', 'Makanan', 'Minuman', 'CELANA', 'SALEP', 'BAJU', 'BANTENGAN', 'ALAT MUSIK'];
 
 
     const form = useForm<ProductFormValues>({
@@ -311,7 +311,18 @@ function ProductsClient() {
     };
 
     const handleExport = () => {
-        const csv = Papa.unparse(products);
+        const dataToExport = products.map(p => ({
+            "Kode Item": p.code,
+            "Nama Item": p.name,
+            "Jenis": p.category,
+            "Stok": p.stock,
+            "Satuan": p.unit,
+            "Harga Pokok": p.costPrice,
+            "Harga Jual": p.price,
+            "Stok Minimal": p.minStock
+        }));
+
+        const csv = Papa.unparse(dataToExport);
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
@@ -334,41 +345,43 @@ function ProductsClient() {
             complete: async (results) => {
                 const importedProducts = (results.data as any[]).sort((a, b) => {
                     // Defensive sorting
-                    const codeA = a?.code || '';
-                    const codeB = b?.code || '';
+                    const codeA = a?.['Kode Item'] || '';
+                    const codeB = b?.['Kode Item'] || '';
                     return codeA.localeCompare(codeB);
                 });
                 let successCount = 0;
                 let errorCount = 0;
 
-                for (const productData of importedProducts) {
-                    // Skip if row is empty or doesn't have a code
-                    if (!productData || !productData.code) {
+                for (const row of importedProducts) {
+                    const code = row['Kode Item'];
+                    if (!row || !code) {
                         continue;
                     }
                     try {
-                        // Basic validation and type coercion
-                        const validatedData = {
-                            ...productData,
-                            price: Number(productData.price) || 0,
-                            costPrice: Number(productData.costPrice) || 0,
-                            stock: parseInt(productData.stock, 10) || 0,
-                            minStock: parseInt(productData.minStock, 10) || 0,
-                            imageUrl: productData.imageUrl || 'https://placehold.co/100x100.png',
+                        // Map CSV headers to product properties
+                        const productData = {
+                            code: code,
+                            name: row['Nama Item'] || '',
+                            category: row['Jenis'] || '',
+                            unit: row['Satuan'] || 'PCS',
+                            stock: parseInt(row['Stok'], 10) || 0,
+                            costPrice: parseFloat(row['Harga Pokok']) || 0,
+                            price: parseFloat(row['Harga Jual']) || 0,
+                            minStock: parseInt(row['Stok Minimal'], 10) || 0,
+                            imageUrl: 'https://placehold.co/100x100.png', // Default image
                         };
 
-                        // Check if product with the same code or name exists
-                        const existingByCode = products.find(p => p.code.toLowerCase() === validatedData.code.toLowerCase());
+                        const existingByCode = products.find(p => p.code.toLowerCase() === productData.code.toLowerCase());
                         
                         if (existingByCode) {
-                           await updateProduct(existingByCode.id, validatedData);
+                           await updateProduct(existingByCode.id, productData);
                         } else {
-                           await addProduct(validatedData);
+                           await addProduct(productData);
                         }
                         successCount++;
 
                     } catch (e) {
-                        console.error("Gagal mengimpor baris:", productData, e);
+                        console.error("Gagal mengimpor baris:", row, e);
                         errorCount++;
                     }
                 }
