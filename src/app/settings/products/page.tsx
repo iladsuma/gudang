@@ -151,6 +151,7 @@ function ProductsClient() {
         });
     }, [products, searchTerm, categoryFilter, unitFilter]);
 
+
     const handleOpenForm = (product: Product | null) => {
         setEditingProduct(product);
         if (product) {
@@ -591,7 +592,7 @@ function ProductsClient() {
                             <TableRow><TableCell colSpan={10} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
                         ) : filteredProducts.length > 0 ? (
                             filteredProducts.map((product) => (
-                                <TableRow key={product.id} data-state={selection[product.id] && "selected"}>
+                                <TableRow key={product.id} data-state={selection[product.id] ? "selected" : ""}>
                                     <TableCell>
                                         <Checkbox
                                             checked={selection[product.id] || false}
