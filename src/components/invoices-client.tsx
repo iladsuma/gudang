@@ -248,8 +248,8 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
           <TableBody>
             {filteredShipments.length > 0 ? (
               filteredShipments.map((shipment) => (
-                <TableRow key={shipment.id} data-state={selectedShipments.includes(shipment.id) ? "selected" : ""}>
-                    <TableCell>
+                <TableRow key={shipment.id} data-state={selectedShipments.includes(shipment.id) ? "selected" : ""} className="cursor-pointer" onClick={() => handleSelectSingle(shipment.id, !selectedShipments.includes(shipment.id))}>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                             checked={selectedShipments.includes(shipment.id)}
                             onCheckedChange={(checked) => handleSelectSingle(shipment.id, !!checked)}
@@ -260,7 +260,7 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
                   <TableCell className="font-medium">
                     <Accordion type="single" collapsible className="w-full">
                           <AccordionItem value="item-1" className='border-b-0'>
-                              <AccordionTrigger className='py-0 font-normal hover:no-underline'>
+                              <AccordionTrigger className='py-0 font-normal hover:no-underline' onClick={(e) => e.stopPropagation()}>
                                   {shipment.totalItems} item
                               </AccordionTrigger>
                               <AccordionContent className='pt-2'>

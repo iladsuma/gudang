@@ -250,8 +250,8 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
           <TableBody>
             {filteredShipments.length > 0 ? (
               filteredShipments.map((shipment) => (
-                <TableRow key={shipment.id} data-state={selectedShipments.includes(shipment.id) ? 'selected' : ''}>
-                  <TableCell>
+                <TableRow key={shipment.id} data-state={selectedShipments.includes(shipment.id) ? 'selected' : ''} className={isAdminView && shipment.status === 'Proses' ? "cursor-pointer" : ""} onClick={() => isAdminView && shipment.status === 'Proses' && handleSelectSingle(shipment.id, !selectedShipments.includes(shipment.id))}>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     {shipment.status === 'Proses' && isAdminView && (
                         <Checkbox
                             checked={selectedShipments.includes(shipment.id)}
@@ -270,7 +270,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
                   </TableCell>
                   <TableCell>
                     {shipment.receipt ? (
-                      <Button variant="link" className="p-0 h-auto" onClick={() => openPdf(shipment.receipt!.dataUrl)}>
+                      <Button variant="link" className="p-0 h-auto" onClick={(e) => { e.stopPropagation(); openPdf(shipment.receipt!.dataUrl);}}>
                           <FileText className="mr-2 h-4 w-4" />
                           {shipment.receipt.fileName}
                       </Button>
@@ -307,7 +307,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
                         <Skeleton className="h-4 w-3/4" />
                     )}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                      {shipment.status === 'Proses' && (
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(shipment)}>
                             <Pencil className="h-4 w-4" />

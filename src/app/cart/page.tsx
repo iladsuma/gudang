@@ -125,7 +125,7 @@ export default function CartPage() {
                                         onClick={() => handleSelectionChange(item.id, !selection[item.id])}
                                         className="cursor-pointer"
                                     >
-                                        <TableCell>
+                                        <TableCell onClick={(e) => e.stopPropagation()}>
                                             <Checkbox
                                                 checked={selection[item.id] || false}
                                                 onCheckedChange={(checked) => handleSelectionChange(item.id, !!checked)}

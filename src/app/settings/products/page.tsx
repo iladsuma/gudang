@@ -724,8 +724,8 @@ function ProductsClient() {
                             <TableRow><TableCell colSpan={10} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
                         ) : filteredProducts.length > 0 ? (
                             filteredProducts.map((product) => (
-                                <TableRow key={product.id} data-state={selection[product.id] ? "selected" : ""}>
-                                    <TableCell>
+                                <TableRow key={product.id} data-state={selection[product.id] ? "selected" : ""} onClick={() => handleSelectRow(product.id, !selection[product.id])} className="cursor-pointer">
+                                    <TableCell onClick={(e) => e.stopPropagation()}>
                                         <Checkbox
                                             checked={selection[product.id] || false}
                                             onCheckedChange={(checked) => handleSelectRow(product.id, !!checked)}
@@ -739,7 +739,7 @@ function ProductsClient() {
                                     <TableCell>{formatRupiah(product.costPrice)}</TableCell>
                                     <TableCell>{formatRupiah(product.price)}</TableCell>
                                     <TableCell>{product.minStock}</TableCell>
-                                    <TableCell className="text-right">
+                                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                                        <Dialog open={!!stockEditProduct && stockEditProduct.id === product.id} onOpenChange={(open) => !open && setStockEditProduct(null)}>
                                             <DialogTrigger asChild>
                                                 <Button variant="ghost" size="icon" title="Edit Stok / Stok Opname" onClick={() => handleOpenStockForm(product)}>
@@ -754,7 +754,7 @@ function ProductsClient() {
                                                              <DialogDescription>
                                                                 Sesuaikan jumlah stok berdasarkan perhitungan fisik di gudang.
                                                             </DialogDescription>
-                                                            <div className='font-mono text-xs pt-1 text-muted-foreground'>Kode: {stockEditProduct?.code}</div>
+                                                             <div className='font-mono text-xs pt-1 text-muted-foreground'>Kode: {stockEditProduct?.code}</div>
                                                         </DialogHeader>
                                                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 py-4">
                                                               <div className='space-y-2'>
@@ -1022,12 +1022,3 @@ export default function ProductsSettingsPage() {
         </div>
     );
 }
-
-    
-
-    
-
-
-
-
-    

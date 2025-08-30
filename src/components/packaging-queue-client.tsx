@@ -124,8 +124,8 @@ export function PackagingQueueClient({ shipments, onUpdate }: { shipments: Shipm
           <TableBody>
             {filteredShipments.length > 0 ? (
               filteredShipments.map((shipment) => (
-                <TableRow key={shipment.id} data-state={selectedShipments.includes(shipment.id) ? "selected" : ""}>
-                  <TableCell>
+                <TableRow key={shipment.id} data-state={selectedShipments.includes(shipment.id) ? "selected" : ""} className="cursor-pointer" onClick={() => handleSelectSingle(shipment.id, !selectedShipments.includes(shipment.id))}>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <Checkbox
                       checked={selectedShipments.includes(shipment.id)}
                       onCheckedChange={(checked) => handleSelectSingle(shipment.id, !!checked)}
