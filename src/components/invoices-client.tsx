@@ -59,18 +59,19 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
   }, [initialShipments]);
   
   const uniqueUsers = React.useMemo(() => {
-    const users = new Set(shipments.map(s => s.user));
+    const users = new Set(shipments.map(s => s.user).filter(Boolean)); // Filter out null/undefined users
     return ['all', ...Array.from(users)];
   }, [shipments]);
 
 
   const filteredShipments = React.useMemo(() => {
     return shipments.filter(shipment => {
+        const lowercasedFilter = searchTerm.toLowerCase();
         const matchesSearch = searchTerm === '' ||
-            shipment.transactionId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            shipment.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            shipment.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            shipment.products.some(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+            shipment.transactionId.toLowerCase().includes(lowercasedFilter) ||
+            shipment.customerName.toLowerCase().includes(lowercasedFilter) ||
+            (shipment.user && shipment.user.toLowerCase().includes(lowercasedFilter)) ||
+            shipment.products.some(p => p.name.toLowerCase().includes(lowercasedFilter));
 
         const matchesUser = userFilter === 'all' || shipment.user === userFilter;
         
@@ -149,7 +150,7 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
         doc.text(`Pelanggan    : ${shipment.customerName}`, rightX, 55, { align: 'right' });
         doc.text(`Alamat       : ${customer?.address || ''}`, rightX, 65, { align: 'right' });
         doc.text(`Tgl    : ${format(new Date(shipment.createdAt), 'dd/MM/yyyy HH:mm')}`, rightX, 75, { align: 'right' });
-        doc.text(`Kasir  : ${shipment.user.toUpperCase()}`, rightX, 85, { align: 'right' });
+        doc.text(`Kasir  : ${shipment.user ? shipment.user.toUpperCase() : 'N/A'}`, rightX, 85, { align: 'right' });
 
 
         // Table
@@ -384,7 +385,7 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
                  </div>
              </div>
             <div className="flex w-full md:w-auto gap-2">
-                <Button onClick={handlePrintCombinedInvoice} disabled={isPrintingCombined} variant="outline">
+                <Button onClick={handlePrintCombinedInvoice} disabled={isPrintingCombined || filteredShipments.length === 0} variant="outline">
                      {isPrintingCombined ? <Loader2 className='mr-2' /> : <FileDown className='mr-2' />}
                     Cetak Rekap Gabungan
                 </Button>
@@ -466,5 +467,3 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
     </div>
   );
 }
-
-    
