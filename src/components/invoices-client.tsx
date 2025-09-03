@@ -28,7 +28,7 @@ import 'jspdf-autotable';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
-import { getCustomers, getUsers } from '@/lib/data';
+import { getUsers } from '@/lib/data';
 
 
 // Extend jsPDF with autoTable, which is a plugin.
@@ -93,7 +93,6 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
     setIsPrinting(true);
 
     try {
-      const allCustomers = await getCustomers();
       const allUsers = await getUsers();
       const doc = new jsPDF('p', 'pt', 'a4') as jsPDFWithAutoTable;
       const pageWidth = doc.internal.pageSize.getWidth();
@@ -103,8 +102,7 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
         if (!isFirstPage) {
           doc.addPage();
         }
-
-        const customer = allCustomers.find(c => c.id === shipment.customerId);
+        
         const user = allUsers.find(u => u.id === shipment.userId);
 
         // Header
@@ -121,9 +119,8 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
         const rightX = pageWidth - 20;
         doc.text(`No Transaksi : ${shipment.transactionId}`, rightX, 45, { align: 'right' });
         doc.text(`Pelanggan    : ${shipment.customerName}`, rightX, 55, { align: 'right' });
-        doc.text(`Alamat       : ${customer?.address || ''}`, rightX, 65, { align: 'right' });
-        doc.text(`Tgl    : ${format(new Date(shipment.createdAt), 'dd/MM/yyyy HH:mm')}`, rightX, 75, { align: 'right' });
-        doc.text(`Kasir  : ${user ? user.username.toUpperCase() : 'N/A'}`, rightX, 85, { align: 'right' });
+        doc.text(`Tgl    : ${format(new Date(shipment.createdAt), 'dd/MM/yyyy HH:mm')}`, rightX, 65, { align: 'right' });
+        doc.text(`Kasir  : ${user ? user.username.toUpperCase() : 'N/A'}`, rightX, 75, { align: 'right' });
 
 
         // Table
@@ -144,7 +141,7 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
         });
 
         doc.autoTable({
-            startY: 100,
+            startY: 90,
             head: [tableColumn],
             body: tableRows,
             theme: 'striped',
@@ -173,10 +170,6 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
         summaryY += 12;
         doc.text('Sub Total', summaryLeftX, summaryY);
         doc.text(formatRupiah(shipment.totalProductCost), summaryRightX, summaryY, { align: 'right' });
-
-        summaryY += 12;
-        doc.text('Potongan', summaryLeftX, summaryY);
-        doc.text('0', summaryRightX, summaryY, { align: 'right' });
         
         summaryY += 12;
         doc.text('Biaya Lain', summaryLeftX, summaryY);
@@ -191,14 +184,6 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
         doc.text(formatRupiah(shipment.totalAmount), summaryRightX, summaryY, { align: 'right' });
         doc.setFont('helvetica', 'normal');
         
-        summaryY += 12;
-        doc.text('Tunai', summaryLeftX, summaryY);
-        doc.text('0', summaryRightX, summaryY, { align: 'right' });
-
-        summaryY += 12;
-        doc.text('Transfer', summaryLeftX, summaryY);
-        doc.text('0', summaryRightX, summaryY, { align: 'right' });
-
 
         // Footer
         let footerY = finalY + 15;
