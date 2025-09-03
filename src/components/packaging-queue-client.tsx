@@ -103,9 +103,12 @@ export function PackagingQueueClient({ shipments, onUpdate }: { shipments: Shipm
         let resiCounter = 1;
 
         for (const shipment of shipmentsWithPdf) {
-            if (shipment.receipt) {
-                const pdfBytes = atob(shipment.receipt.dataUrl.split(',')[1]);
-                const pdfToMerge = await PDFDocument.load(pdfBytes);
+            if (shipment.receipt?.dataUrl) {
+                // Correctly handle the base64 data URL
+                const base64Data = shipment.receipt.dataUrl.split(',')[1];
+                if (!base64Data) continue;
+                
+                const pdfToMerge = await PDFDocument.load(base64Data);
                 
                 const copiedPages = await mergedPdf.copyPages(pdfToMerge, pdfToMerge.getPageIndices());
                 for (const page of copiedPages) {
@@ -140,7 +143,8 @@ export function PackagingQueueClient({ shipments, onUpdate }: { shipments: Shipm
 
     } catch (error) {
         console.error("Error creating merged PDF", error);
-        toast({ variant: "destructive", title: "Gagal membuat PDF", description: "Terjadi kesalahan saat menggabungkan resi." });
+        const message = error instanceof Error ? error.message : "Terjadi kesalahan saat menggabungkan resi.";
+        toast({ variant: "destructive", title: "Gagal membuat PDF", description: message });
     } finally {
         setIsPrinting(false);
     }
