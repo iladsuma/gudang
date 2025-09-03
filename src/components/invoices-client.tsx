@@ -3,7 +3,7 @@
 'use client';
 
 import * as React from 'react';
-import type { Shipment } from '@/lib/types';
+import type { Customer, Shipment } from '@/lib/types';
 import {
   Table,
   TableBody,
@@ -29,6 +29,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
 import { Input } from './ui/input';
+import { getCustomers } from '@/lib/data';
 
 
 // Extend jsPDF with autoTable, which is a plugin.
@@ -39,6 +40,7 @@ interface jsPDFWithAutoTable extends jsPDF {
 
 export function InvoicesClient({ shipments: initialShipments }: { shipments: Shipment[] }) {
   const [shipments, setShipments] = React.useState(initialShipments);
+  const [allCustomers, setAllCustomers] = React.useState<Customer[]>([]);
   const [selectedShipments, setSelectedShipments] = React.useState<string[]>([]);
   const [isPrinting, setIsPrinting] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -46,6 +48,7 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
 
   React.useEffect(() => {
     setShipments(initialShipments);
+    getCustomers().then(setAllCustomers);
   }, [initialShipments]);
 
   const filteredShipments = React.useMemo(() => {
@@ -61,9 +64,6 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
   
   const formatRupiah = (number: number) => {
     return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
     }).format(number);
   };
   
@@ -106,7 +106,8 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
     setIsPrinting(true);
 
     try {
-      const doc = new jsPDF() as jsPDFWithAutoTable;
+      const doc = new jsPDF('p', 'pt', 'a4') as jsPDFWithAutoTable;
+      const pageWidth = doc.internal.pageSize.getWidth();
       let isFirstPage = true;
 
       shipmentsToPrint.forEach(shipment => {
@@ -114,71 +115,116 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
           doc.addPage();
         }
 
+        const customer = allCustomers.find(c => c.id === shipment.customerId);
+
         // Header
-        doc.setFontSize(16);
+        doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
-        doc.text('FAKTUR PENJUALAN', 14, 20);
-
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
+        doc.text('FAKTUR PENJUALAN', 20, 30);
         
-        doc.text(`No. Transaksi: ${shipment.transactionId}`, 14, 30);
-        doc.text(`Tanggal: ${format(new Date(shipment.createdAt), 'dd MMMM yyyy, HH:mm', { locale: id })}`, 14, 35);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text("Fam's Warehouse", 20, 45);
+        doc.text("Srengat", 20, 55);
 
-        doc.text(`Pelanggan: ${shipment.customerName}`, 120, 30);
-        doc.text(`Kasir: ${shipment.user}`, 120, 35);
+        // Right side header
+        const rightX = pageWidth - 20;
+        doc.text(`No Transaksi : ${shipment.transactionId}`, rightX, 45, { align: 'right' });
+        doc.text(`Pelanggan    : ${shipment.customerName}`, rightX, 55, { align: 'right' });
+        doc.text(`Alamat       : ${customer?.address || ''}`, rightX, 65, { align: 'right' });
+        doc.text(`Tgl    : ${format(new Date(shipment.createdAt), 'dd/MM/yyyy HH:mm')}`, rightX, 75, { align: 'right' });
+        doc.text(`Kasir  : ${shipment.user.toUpperCase()}`, rightX, 85, { align: 'right' });
 
 
         // Table
-        const tableColumn = ["No.", "Kode Item", "Nama Item", "Jml", "Harga Satuan (Rp)", "Subtotal (Rp)"];
+        const tableColumn = ["No.", "Nama Item", "Jml Satuan", "Harga", "Diskon", "Total"];
         const tableRows: any[] = [];
         
         shipment.products.forEach((product, index) => {
             const subtotal = product.quantity * product.price;
             const productData = [
                 index + 1,
-                product.code,
                 product.name,
-                product.quantity,
-                product.price.toLocaleString('id-ID'),
-                subtotal.toLocaleString('id-ID'),
+                `${product.quantity} PCS`, // Assuming unit is PCS
+                formatRupiah(product.price),
+                0, // Discount is 0 for now
+                formatRupiah(subtotal),
             ];
             tableRows.push(productData);
         });
 
         doc.autoTable({
-            startY: 45,
+            startY: 100,
             head: [tableColumn],
             body: tableRows,
-            theme: 'grid',
-            headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+            theme: 'striped',
+            headStyles: { fillColor: [255, 255, 255], textColor: 0, lineWidth: 0.5, lineColor: [0,0,0] },
+            styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
             columnStyles: {
-                0: { halign: 'center' },
-                3: { halign: 'center' },
-                4: { halign: 'right' },
-                5: { halign: 'right' },
+                0: { cellWidth: 25, halign: 'center' },
+                1: { cellWidth: 'auto' },
+                2: { cellWidth: 50, halign: 'center' },
+                3: { cellWidth: 60, halign: 'right' },
+                4: { cellWidth: 40, halign: 'right' },
+                5: { cellWidth: 70, halign: 'right' },
             },
         });
 
         // Summary
         const finalY = doc.autoTable.previous.finalY;
-        doc.setFontSize(10);
+        let summaryY = finalY + 15;
+        const summaryRightX = pageWidth - 20;
+        const summaryLeftX = pageWidth - 150;
         
-        let summaryY = finalY + 8;
-        const rightAlignX = 196;
+        doc.setFontSize(9);
+        doc.text('Jml Item', summaryLeftX, summaryY);
+        doc.text(String(shipment.totalItems), summaryRightX, summaryY, { align: 'right' });
 
-        doc.text('Total Belanja Produk', 140, summaryY);
-        doc.text(shipment.totalProductCost.toLocaleString('id-ID'), rightAlignX, summaryY, { align: 'right' });
+        summaryY += 12;
+        doc.text('Sub Total', summaryLeftX, summaryY);
+        doc.text(formatRupiah(shipment.totalProductCost), summaryRightX, summaryY, { align: 'right' });
+
+        summaryY += 12;
+        doc.text('Potongan', summaryLeftX, summaryY);
+        doc.text('0', summaryRightX, summaryY, { align: 'right' });
         
-        summaryY += 6;
-        doc.text('Biaya Pengemasan', 140, summaryY);
-        doc.text(shipment.totalPackingCost.toLocaleString('id-ID'), rightAlignX, summaryY, { align: 'right' });
+        summaryY += 12;
+        doc.text('Biaya Lain', summaryLeftX, summaryY);
+        doc.text(formatRupiah(shipment.totalPackingCost), summaryRightX, summaryY, { align: 'right' });
 
-        summaryY += 6;
+        doc.setLineWidth(0.5);
+        doc.line(summaryLeftX - 5, summaryY + 5, summaryRightX, summaryY + 5);
+
+        summaryY += 18;
         doc.setFont('helvetica', 'bold');
-        doc.text('Total Keseluruhan', 140, summaryY);
-        doc.text(shipment.totalAmount.toLocaleString('id-ID'), rightAlignX, summaryY, { align: 'right' });
+        doc.text('Total Akhir', summaryLeftX, summaryY);
+        doc.text(formatRupiah(shipment.totalAmount), summaryRightX, summaryY, { align: 'right' });
+        doc.setFont('helvetica', 'normal');
+        
+        summaryY += 12;
+        doc.text('Tunai', summaryLeftX, summaryY);
+        doc.text('0', summaryRightX, summaryY, { align: 'right' });
 
+        summaryY += 12;
+        doc.text('Transfer', summaryLeftX, summaryY);
+        doc.text('0', summaryRightX, summaryY, { align: 'right' });
+
+
+        // Footer
+        let footerY = finalY + 15;
+        doc.text("Keterangan:", 20, footerY);
+        footerY += 25;
+        doc.text("Hormat Kami", 20, footerY);
+        doc.text("Penerima", 120, footerY);
+        footerY += 40;
+        doc.text("(..................)", 20, footerY);
+        doc.text("(..................)", 120, footerY);
+
+        footerY += 15;
+        doc.text("Rek Transfer SEABANK : 901597813837 A.N MOCH. MIFTAKHUL RIZAL", 20, footerY, {
+            maxWidth: 200,
+        });
+        
         isFirstPage = false;
       });
       

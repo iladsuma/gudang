@@ -58,6 +58,7 @@ export interface ShipmentProduct {
 
 export interface Shipment {
     id: string;
+    userId: string;
     user: string;
     transactionId: string;
     customerId: string;
