@@ -5,9 +5,11 @@ import * as schema from './schema';
 
 const connectionString = process.env.POSTGRES_URL!;
 
-// This is the simplest and most robust way to connect,
-// letting the connection string from Supabase (via environment variables)
-// handle the pooling and network configuration.
-const client = postgres(connectionString);
+// Disable prefetch as it is not supported for "Transaction" pool mode
+// Set a connection timeout to prevent hanging connections
+const client = postgres(connectionString, {
+    prepare: false,
+    connect_timeout: 10
+});
 
 export const db = drizzle(client, { schema, logger: true });
