@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import type { Shipment } from '@/lib/types';
+import type { Shipment, User } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Trash2, Loader2, FileText, Package, Pencil, Send } from 'lucide-react';
 import {
@@ -36,7 +36,7 @@ import { Badge } from './ui/badge';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { deleteShipment, processShipmentsToPackaging } from '@/lib/data';
+import { deleteShipment, processShipmentsToPackaging, getUsers } from '@/lib/data';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/context/auth-context';
@@ -47,6 +47,7 @@ import { Input } from './ui/input';
 export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shipments: Shipment[], onUpdate: () => void; }) {
   const { user } = useAuth();
   const [shipments, setShipments] = useState(initialShipments);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [editingShipment, setEditingShipment] = useState<Shipment | undefined>(undefined);
@@ -67,6 +68,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
 
   useEffect(() => {
     setIsClient(true);
+    getUsers().then(setAllUsers);
   }, []);
   
   const filteredShipments = useMemo(() => {
@@ -190,6 +192,10 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
   const shipmentsInProcess = filteredShipments.filter(s => s.status === 'Proses');
   const isAdminView = user?.role === 'admin';
 
+  const getUserName = (userId: string) => {
+    return allUsers.find(u => u.id === userId)?.username || '...';
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
@@ -234,6 +240,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
                 )}
               </TableHead>
               <TableHead>No. Transaksi</TableHead>
+              <TableHead>User</TableHead>
               <TableHead>Pelanggan</TableHead>
               <TableHead>Ekspedisi</TableHead>
                <TableHead>Status</TableHead>
@@ -261,6 +268,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
                     )}
                   </TableCell>
                   <TableCell>{shipment.transactionId}</TableCell>
+                  <TableCell>{getUserName(shipment.userId)}</TableCell>
                   <TableCell>{shipment.customerName}</TableCell>
                   <TableCell>{shipment.expedition}</TableCell>
                   <TableCell>
@@ -342,7 +350,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={13} className="h-24 text-center">
+                <TableCell colSpan={14} className="h-24 text-center">
                   Tidak ada data pengiriman yang cocok dengan filter.
                 </TableCell>
               </TableRow>

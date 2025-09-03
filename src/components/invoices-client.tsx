@@ -28,7 +28,7 @@ import 'jspdf-autotable';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
-import { getCustomers } from '@/lib/data';
+import { getCustomers, getUsers } from '@/lib/data';
 
 
 // Extend jsPDF with autoTable, which is a plugin.
@@ -94,6 +94,7 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
 
     try {
       const allCustomers = await getCustomers();
+      const allUsers = await getUsers();
       const doc = new jsPDF('p', 'pt', 'a4') as jsPDFWithAutoTable;
       const pageWidth = doc.internal.pageSize.getWidth();
       let isFirstPage = true;
@@ -104,6 +105,7 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
         }
 
         const customer = allCustomers.find(c => c.id === shipment.customerId);
+        const user = allUsers.find(u => u.id === shipment.userId);
 
         // Header
         doc.setFontSize(14);
@@ -121,7 +123,7 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
         doc.text(`Pelanggan    : ${shipment.customerName}`, rightX, 55, { align: 'right' });
         doc.text(`Alamat       : ${customer?.address || ''}`, rightX, 65, { align: 'right' });
         doc.text(`Tgl    : ${format(new Date(shipment.createdAt), 'dd/MM/yyyy HH:mm')}`, rightX, 75, { align: 'right' });
-        doc.text(`Kasir  : ${shipment.user ? shipment.user.toUpperCase() : 'N/A'}`, rightX, 85, { align: 'right' });
+        doc.text(`Kasir  : ${user ? user.username.toUpperCase() : 'N/A'}`, rightX, 85, { align: 'right' });
 
 
         // Table
@@ -256,7 +258,6 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
                   />
               </TableHead>
               <TableHead>No. Transaksi</TableHead>
-              <TableHead>User Pemroses</TableHead>
               <TableHead>Detail Pengiriman</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Tanggal Diproses</TableHead>
@@ -274,7 +275,6 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
                         />
                     </TableCell>
                   <TableCell className='font-medium'>{shipment.transactionId}</TableCell>
-                  <TableCell>{shipment.user}</TableCell>
                   <TableCell className="font-medium">
                     <Accordion type="single" collapsible className="w-full">
                           <AccordionItem value="item-1" className='border-b-0'>
@@ -305,7 +305,7 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
+                <TableCell colSpan={6} className="h-24 text-center">
                   Belum ada pengiriman yang diarsipkan.
                 </TableCell>
               </TableRow>

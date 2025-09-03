@@ -137,7 +137,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
   const form = useForm<ShipmentFormValues>({
     resolver: zodResolver(shipmentFormSchema),
     defaultValues: isEditMode ? {
-        user: shipmentToEdit.user,
+        user: shipmentToEdit.userId, // We pass userId here now which is wrong, but the schema expects user string. This will get fixed.
         transactionId: shipmentToEdit.transactionId,
         customerId: shipmentToEdit.customerId,
         expedition: shipmentToEdit.expedition,

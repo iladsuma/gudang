@@ -54,7 +54,6 @@ export const suppliers = pgTable('suppliers', {
 export const shipments = pgTable('shipments', {
   id: text('id').primaryKey().$defaultFn(() => `ship_${Date.now()}`),
   userId: text('user_id').notNull().references(() => users.id),
-  user: varchar('user', { length: 255 }), // Made nullable for now
   transactionId: varchar('transaction_id', { length: 255 }).notNull(),
   customerId: text('customer_id').notNull().references(() => customers.id),
   customerName: varchar('customer_name', { length: 255 }).notNull(),

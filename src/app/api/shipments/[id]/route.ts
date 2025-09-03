@@ -24,7 +24,6 @@ export async function PUT(request: NextRequest, {params}: { params: { id: string
         const updatedShipmentData: Partial<Shipment> = {
             ...restOfBody,
             userId: user.id,
-            user: user.username, // Save username explicitly
             customerName: customer.name,
             customerId: customer.id,
             totalItems,

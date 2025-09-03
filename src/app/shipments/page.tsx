@@ -10,12 +10,13 @@ import {
 } from '@/components/ui/card';
 import { useAuth } from '@/context/auth-context';
 import { Suspense, useEffect, useState } from 'react';
-import type { Shipment } from '@/lib/types';
+import type { Shipment, User } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
 function ShipmentsPageContent() {
   const { user, loading: authLoading } = useAuth();
   const [shipments, setShipments] = useState<Shipment[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [pageTitle, setPageTitle] = useState('Rekapitulasi Pengiriman');
   const [pageDescription, setPageDescription] = useState("Kelola semua data pengiriman barang masuk Anda.");
@@ -24,12 +25,15 @@ function ShipmentsPageContent() {
     if (!user) return;
       setLoading(true);
       const data = await getShipments();
+      
+      const userToFilter = allUsers.find(u => u.username === user.username)
+
       if(user?.role === 'admin') {
           setShipments(data.filter(s => s.status === 'Proses'));
           setPageTitle('Antrian Kemas');
           setPageDescription("Pilih pengiriman yang akan diproses. Stok akan dikurangi dan status akan diubah menjadi 'Pengemasan'.");
-      } else if (user) {
-          setShipments(data.filter(s => s.user === user.username));
+      } else if (userToFilter) {
+          setShipments(data.filter(s => s.userId === userToFilter.id));
           setPageTitle('Riwayat Pengiriman Saya');
           setPageDescription("Lacak semua pengiriman yang telah Anda buat dan statusnya saat ini.");
       }
@@ -42,7 +46,7 @@ function ShipmentsPageContent() {
     } else if (!authLoading) {
         setLoading(false);
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, allUsers]);
 
   // Show skeleton while either auth or data is loading.
   if (authLoading || (loading && user)) {

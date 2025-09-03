@@ -32,7 +32,6 @@ export async function POST(request: NextRequest) {
         const newShipmentData: Omit<Shipment, 'id' | 'createdAt'> = {
             ...restOfBody,
             userId: user.id,
-            user: user.username, // Save username explicitly
             customerName: customer.name,
             customerId: customer.id,
             status: 'Proses',
