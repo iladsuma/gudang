@@ -15,12 +15,6 @@ import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Input } from './ui/input';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-
-interface jsPDFWithAutoTable extends jsPDF {
-  autoTable: (options: any) => jsPDF;
-}
 
 
 export function PackagingQueueClient({ shipments, onUpdate }: { shipments: Shipment[]; onUpdate: () => void }) {
@@ -83,7 +77,7 @@ export function PackagingQueueClient({ shipments, onUpdate }: { shipments: Shipm
 
   const handlePrintLabels = async () => {
     const shipmentsToPrint = shipments.filter(s => selectedShipments.includes(s.id));
-    const shipmentsWithPdf = shipmentsToPrint.filter(s => s.receipt && s.receipt.dataUrl);
+    const shipmentsWithPdf = shipmentsToPrint.filter(s => s.receipt?.dataUrl);
 
     if (shipmentsToPrint.length === 0) {
         toast({ variant: "destructive", title: "Tidak ada data terpilih." });
@@ -107,25 +101,45 @@ export function PackagingQueueClient({ shipments, onUpdate }: { shipments: Shipm
                 const base64Data = shipment.receipt.dataUrl.split(',')[1];
                 if (!base64Data) continue;
                 
-                const pdfToMerge = await PDFDocument.load(base64Data);
-                const copiedPages = await mergedPdf.copyPages(pdfToMerge, pdfToMerge.getPageIndices());
+                try {
+                    const pdfToMerge = await PDFDocument.load(base64Data);
+                    const copiedPages = await mergedPdf.copyPages(pdfToMerge, pdfToMerge.getPageIndices());
 
-                // Add a marker only to the first page of each unique receipt
-                if (copiedPages.length > 0) {
-                    const firstPage = copiedPages[0];
-                    const { width, height } = firstPage.getSize();
-                    firstPage.drawText(`Resi-Ke-${resiCounter}`, {
-                        x: 20,
-                        y: height - 20,
-                        size: 10,
-                        font: await mergedPdf.embedFont(StandardFonts.Helvetica),
-                        color: rgb(0.5, 0.5, 0.5),
-                    });
+                    // Add a marker only to the first page of each unique receipt
+                    if (copiedPages.length > 0) {
+                        const firstPage = copiedPages[0];
+                        const { width, height } = firstPage.getSize();
+                        firstPage.drawText(`Resi-Ke-${resiCounter}`, {
+                            x: 20,
+                            y: height - 20,
+                            size: 10,
+                            font: await mergedPdf.embedFont(StandardFonts.Helvetica),
+                            color: rgb(0.5, 0.5, 0.5),
+                        });
+                    }
+                    
+                    copiedPages.forEach(page => mergedPdf.addPage(page));
+                    resiCounter++;
+                } catch (e) {
+                    console.error(`Gagal memproses PDF untuk transaksi ${shipment.transactionId}:`, e)
+                    toast({
+                        variant: 'destructive',
+                        title: `Gagal Proses Resi`,
+                        description: `File PDF untuk transaksi ${shipment.transactionId} sepertinya rusak atau tidak valid.`
+                    })
+                    continue; // Skip to the next PDF
                 }
-                
-                copiedPages.forEach(page => mergedPdf.addPage(page));
-                resiCounter++;
             }
+        }
+        
+        if(mergedPdf.getPageCount() === 0){
+            toast({
+                variant: 'destructive',
+                title: 'Tidak Ada Resi Valid',
+                description: 'Semua resi yang dipilih gagal diproses. Periksa kembali file PDF Anda.'
+            });
+            setIsPrinting(false);
+            return;
         }
 
         const mergedPdfBytes = await mergedPdf.save();
