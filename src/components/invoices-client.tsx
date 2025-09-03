@@ -95,119 +95,108 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
   const handlePrintInvoices = () => {
     const shipmentsToPrint = shipments.filter(s => selectedShipments.includes(s.id));
     if (shipmentsToPrint.length === 0) {
-        toast({
-            variant: 'destructive',
-            title: "Tidak ada data terpilih",
-            description: "Silakan pilih setidaknya satu pengiriman untuk dicetak."
-        });
-        return;
+      toast({
+        variant: 'destructive',
+        title: "Tidak ada data terpilih",
+        description: "Silakan pilih setidaknya satu pengiriman untuk dicetak."
+      });
+      return;
     }
-    
+
     setIsPrinting(true);
 
     try {
-        const doc = new jsPDF() as jsPDFWithAutoTable;
+      const doc = new jsPDF() as jsPDFWithAutoTable;
+      let isFirstPage = true;
+
+      shipmentsToPrint.forEach(shipment => {
+        if (!isFirstPage) {
+          doc.addPage();
+        }
 
         // Header
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
-        doc.text('Faktur Gabungan Penjualan', 14, 20);
+        doc.text('FAKTUR PENJUALAN', 14, 20);
 
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         
-        // Date Range
-        const dates = shipmentsToPrint.map(s => new Date(s.createdAt));
-        const minDate = new Date(Math.min.apply(null, dates.map(d => d.getTime())));
-        const maxDate = new Date(Math.max.apply(null, dates.map(d => d.getTime())));
-        const dateDisplay = `Periode: ${format(minDate, 'dd/MM/yyyy')} - ${format(maxDate, 'dd/MM/yyyy')}`;
-        doc.text(dateDisplay, 14, 26);
+        doc.text(`No. Transaksi: ${shipment.transactionId}`, 14, 30);
+        doc.text(`Tanggal: ${format(new Date(shipment.createdAt), 'dd MMMM yyyy, HH:mm', { locale: id })}`, 14, 35);
+
+        doc.text(`Pelanggan: ${shipment.customerName}`, 120, 30);
+        doc.text(`Kasir: ${shipment.user}`, 120, 35);
 
 
         // Table
-        const tableColumn = ["No.", "No. Transaksi", "Nama Item", "Jml", "Harga", "Total"];
+        const tableColumn = ["No.", "Kode Item", "Nama Item", "Jml", "Harga Satuan (Rp)", "Subtotal (Rp)"];
         const tableRows: any[] = [];
-        let grandTotalProduct = 0;
-        let grandTotalPacking = 0;
-        let grandTotalAmount = 0;
-        let itemCounter = 0;
-
-
-        shipmentsToPrint.forEach((shipment) => {
-            shipment.products.forEach((product) => {
-                itemCounter++;
-                const subtotal = product.quantity * product.price;
-                const productData = [
-                    itemCounter,
-                    shipment.transactionId,
-                    product.name,
-                    product.quantity,
-                    product.price.toLocaleString('id-ID'),
-                    subtotal.toLocaleString('id-ID'),
-                ];
-                tableRows.push(productData);
-            });
-            grandTotalProduct += shipment.totalProductCost;
-            grandTotalPacking += shipment.totalPackingCost;
-            grandTotalAmount += shipment.totalAmount;
+        
+        shipment.products.forEach((product, index) => {
+            const subtotal = product.quantity * product.price;
+            const productData = [
+                index + 1,
+                product.code,
+                product.name,
+                product.quantity,
+                product.price.toLocaleString('id-ID'),
+                subtotal.toLocaleString('id-ID'),
+            ];
+            tableRows.push(productData);
         });
 
         doc.autoTable({
-            startY: 35,
+            startY: 45,
             head: [tableColumn],
             body: tableRows,
             theme: 'grid',
-            headStyles: {
-                fillColor: [22, 160, 133], // A nice teal color
-                textColor: [255, 255, 255],
-                fontStyle: 'bold',
-            },
+            headStyles: { fillColor: [41, 128, 185], textColor: 255 },
             columnStyles: {
-                0: { halign: 'center', cellWidth: 10 }, // No.
-                1: { cellWidth: 40 }, // No. Transaksi
-                2: { cellWidth: 60 }, // Nama Item
-                3: { halign: 'center', cellWidth: 10 }, // Jml
-                4: { halign: 'right', cellWidth: 25 }, // Harga
-                5: { halign: 'right', cellWidth: 25 }, // Total
+                0: { halign: 'center' },
+                3: { halign: 'center' },
+                4: { halign: 'right' },
+                5: { halign: 'right' },
             },
         });
 
-        // Summary below table
+        // Summary
         const finalY = doc.autoTable.previous.finalY;
         doc.setFontSize(10);
+        
+        let summaryY = finalY + 8;
+        const rightAlignX = 196;
 
-        let summaryY = finalY + 10;
-        const rightAlignX = 190;
-
-        doc.text('Sub Total Produk', 140, summaryY);
-        doc.text(grandTotalProduct.toLocaleString('id-ID'), rightAlignX, summaryY, { align: 'right' });
+        doc.text('Total Belanja Produk', 140, summaryY);
+        doc.text(shipment.totalProductCost.toLocaleString('id-ID'), rightAlignX, summaryY, { align: 'right' });
         
         summaryY += 6;
-        doc.text('Total Biaya Pengemasan', 140, summaryY);
-        doc.text(grandTotalPacking.toLocaleString('id-ID'), rightAlignX, summaryY, { align: 'right' });
+        doc.text('Biaya Pengemasan', 140, summaryY);
+        doc.text(shipment.totalPackingCost.toLocaleString('id-ID'), rightAlignX, summaryY, { align: 'right' });
 
         summaryY += 6;
         doc.setFont('helvetica', 'bold');
         doc.text('Total Keseluruhan', 140, summaryY);
-        doc.text(grandTotalAmount.toLocaleString('id-ID'), rightAlignX, summaryY, { align: 'right' });
+        doc.text(shipment.totalAmount.toLocaleString('id-ID'), rightAlignX, summaryY, { align: 'right' });
 
-        const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
-        doc.save(`faktur_gabungan_${timestamp}.pdf`);
-
-        toast({
-            title: 'Sukses!',
-            description: 'Faktur gabungan berhasil dibuat dan diunduh.'
-        });
-
+        isFirstPage = false;
+      });
+      
+      const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
+      doc.save(`faktur_penjualan_${timestamp}.pdf`);
+      toast({
+        title: 'Sukses!',
+        description: 'Faktur berhasil dibuat dan diunduh.'
+      });
     } catch (err) {
-        console.error("Error creating PDF", err);
-        toast({
-            variant: 'destructive',
-            title: "Gagal membuat PDF",
-            description: "Terjadi kesalahan saat membuat file faktur."
-        });
+      console.error("Error creating PDF", err);
+      toast({
+        variant: 'destructive',
+        title: "Gagal membuat PDF",
+        description: "Terjadi kesalahan saat membuat file faktur."
+      });
     } finally {
-        setIsPrinting(false);
+      setIsPrinting(false);
     }
   };
   
