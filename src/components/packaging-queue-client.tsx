@@ -92,47 +92,21 @@ export function PackagingQueueClient({ shipments, onUpdate }: { shipments: Shipm
 
     setIsPrinting(true);
     try {
-        const doc = new jsPDF() as jsPDFWithAutoTable;
+        const doc = new jsPDF();
         const shipmentsToPrint = shipments.filter(s => selectedShipments.includes(s.id));
 
         shipmentsToPrint.forEach((shipment, index) => {
-            if (index > 0) doc.addPage();
-
-            doc.setLineWidth(0.5);
-            doc.rect(10, 10, 190, 80); // Main rectangle for the label
-
-            // Big sequential number
-            doc.setFontSize(30);
+            if (index > 0) {
+                doc.addPage();
+            }
+            doc.setFontSize(80);
             doc.setFont('helvetica', 'bold');
-            doc.text(`PAKET NO: ${index + 1}`, 105, 30, { align: 'center' });
-
-            // Sender details
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'bold');
-            doc.text('PENGIRIM:', 15, 45);
-            doc.setFont('helvetica', 'normal');
-            doc.text("GudangCheckout", 15, 50);
-
-            // Recipient details
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'bold');
-            doc.text('PENERIMA:', 105, 45, { align: 'center' });
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(12);
-            doc.text(shipment.customerName, 105, 52, { align: 'center' });
-
-            doc.setLineWidth(0.2);
-            doc.line(10, 65, 200, 65); // Separator line
-
-            // Shipping details
-            doc.setFontSize(10);
-            doc.text(`Ekspedisi: ${shipment.expedition}`, 15, 72);
-            doc.text(`No. Transaksi: ${shipment.transactionId}`, 15, 78);
+            doc.text(`Resi ${index + 1}`, doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() / 2, { align: 'center', baseline: 'middle' });
         });
 
         const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
-        doc.save(`resi_pengiriman_${timestamp}.pdf`);
-        toast({ title: 'Sukses!', description: 'File resi pengiriman berhasil dibuat.' });
+        doc.save(`penomoran_resi_${timestamp}.pdf`);
+        toast({ title: 'Sukses!', description: 'File penomoran resi berhasil dibuat.' });
 
     } catch (error) {
         console.error("Error creating shipping label PDF", error);
