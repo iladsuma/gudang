@@ -104,24 +104,26 @@ export function PackagingQueueClient({ shipments, onUpdate }: { shipments: Shipm
 
         for (const shipment of shipmentsWithPdf) {
             if (shipment.receipt?.dataUrl) {
-                // Correctly handle the base64 data URL
                 const base64Data = shipment.receipt.dataUrl.split(',')[1];
                 if (!base64Data) continue;
                 
                 const pdfToMerge = await PDFDocument.load(base64Data);
-                
                 const copiedPages = await mergedPdf.copyPages(pdfToMerge, pdfToMerge.getPageIndices());
-                for (const page of copiedPages) {
-                    const { width, height } = page.getSize();
-                    page.drawText(`Resi-Ke-${resiCounter}`, {
+
+                // Add a marker only to the first page of each unique receipt
+                if (copiedPages.length > 0) {
+                    const firstPage = copiedPages[0];
+                    const { width, height } = firstPage.getSize();
+                    firstPage.drawText(`Resi-Ke-${resiCounter}`, {
                         x: 20,
                         y: height - 20,
                         size: 10,
                         font: await mergedPdf.embedFont(StandardFonts.Helvetica),
                         color: rgb(0.5, 0.5, 0.5),
                     });
-                    mergedPdf.addPage(page);
                 }
+                
+                copiedPages.forEach(page => mergedPdf.addPage(page));
                 resiCounter++;
             }
         }
