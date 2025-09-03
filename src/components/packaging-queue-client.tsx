@@ -8,16 +8,24 @@ import type { Shipment } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Send } from 'lucide-react';
+import { Loader2, Send, Printer } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Input } from './ui/input';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+
+interface jsPDFWithAutoTable extends jsPDF {
+  autoTable: (options: any) => jsPDF;
+}
+
 
 export function PackagingQueueClient({ shipments, onUpdate }: { shipments: Shipment[]; onUpdate: () => void }) {
   const [selectedShipments, setSelectedShipments] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
   
@@ -71,6 +79,72 @@ export function PackagingQueueClient({ shipments, onUpdate }: { shipments: Shipm
       setIsProcessing(false);
     }
   };
+
+  const handlePrintLabels = () => {
+    if (selectedShipments.length === 0) {
+        toast({
+            variant: 'destructive',
+            title: "Tidak ada data terpilih",
+            description: "Silakan pilih pengiriman untuk mencetak resi."
+        });
+        return;
+    }
+
+    setIsPrinting(true);
+    try {
+        const doc = new jsPDF() as jsPDFWithAutoTable;
+        const shipmentsToPrint = shipments.filter(s => selectedShipments.includes(s.id));
+
+        shipmentsToPrint.forEach((shipment, index) => {
+            if (index > 0) doc.addPage();
+
+            doc.setLineWidth(0.5);
+            doc.rect(10, 10, 190, 80); // Main rectangle for the label
+
+            // Big sequential number
+            doc.setFontSize(30);
+            doc.setFont('helvetica', 'bold');
+            doc.text(`PAKET NO: ${index + 1}`, 105, 30, { align: 'center' });
+
+            // Sender details
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.text('PENGIRIM:', 15, 45);
+            doc.setFont('helvetica', 'normal');
+            doc.text("GudangCheckout", 15, 50);
+
+            // Recipient details
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.text('PENERIMA:', 105, 45, { align: 'center' });
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(12);
+            doc.text(shipment.customerName, 105, 52, { align: 'center' });
+
+            doc.setLineWidth(0.2);
+            doc.line(10, 65, 200, 65); // Separator line
+
+            // Shipping details
+            doc.setFontSize(10);
+            doc.text(`Ekspedisi: ${shipment.expedition}`, 15, 72);
+            doc.text(`No. Transaksi: ${shipment.transactionId}`, 15, 78);
+        });
+
+        const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
+        doc.save(`resi_pengiriman_${timestamp}.pdf`);
+        toast({ title: 'Sukses!', description: 'File resi pengiriman berhasil dibuat.' });
+
+    } catch (error) {
+        console.error("Error creating shipping label PDF", error);
+        toast({
+            variant: 'destructive',
+            title: "Gagal membuat PDF",
+            description: "Terjadi kesalahan saat membuat file resi."
+        });
+    } finally {
+        setIsPrinting(false);
+    }
+  };
   
   const getStatusVariant = (status: Shipment['status']) => {
     switch (status) {
@@ -98,10 +172,16 @@ export function PackagingQueueClient({ shipments, onUpdate }: { shipments: Shipm
                 onChange={e => setSearchTerm(e.target.value)}
                 className="w-full md:w-80"
             />
-            <Button onClick={handleProcessToDelivered} disabled={selectedShipments.length === 0 || isProcessing} className="w-full md:w-auto">
-              {isProcessing ? <Loader2 className='mr-2' /> : <Send className='mr-2' />}
-              Tandai Terkirim ({selectedShipments.length})
-            </Button>
+            <div className="flex w-full md:w-auto gap-2">
+                <Button onClick={handlePrintLabels} disabled={selectedShipments.length === 0 || isPrinting} className="w-full" variant="outline">
+                    {isPrinting ? <Loader2 className='mr-2' /> : <Printer className='mr-2' />}
+                    Cetak Resi ({selectedShipments.length})
+                </Button>
+                <Button onClick={handleProcessToDelivered} disabled={selectedShipments.length === 0 || isProcessing} className="w-full">
+                  {isProcessing ? <Loader2 className='mr-2' /> : <Send className='mr-2' />}
+                  Tandai Terkirim ({selectedShipments.length})
+                </Button>
+            </div>
         </div>
       <div className="rounded-md border">
         <Table>
