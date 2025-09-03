@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Input } from './ui/input';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
@@ -80,41 +81,66 @@ export function PackagingQueueClient({ shipments, onUpdate }: { shipments: Shipm
     }
   };
 
-  const handlePrintLabels = () => {
-    if (selectedShipments.length === 0) {
-        toast({
-            variant: 'destructive',
-            title: "Tidak ada data terpilih",
-            description: "Silakan pilih pengiriman untuk mencetak resi."
-        });
+  const handlePrintLabels = async () => {
+    const shipmentsToPrint = shipments.filter(s => selectedShipments.includes(s.id));
+    const shipmentsWithPdf = shipmentsToPrint.filter(s => s.receipt && s.receipt.dataUrl);
+
+    if (shipmentsToPrint.length === 0) {
+        toast({ variant: "destructive", title: "Tidak ada data terpilih." });
         return;
+    }
+    if (shipmentsWithPdf.length === 0) {
+        toast({ variant: "destructive", title: "Tidak ada resi PDF yang bisa dicetak.", description: "Pastikan pengiriman yang dipilih memiliki file resi PDF yang sudah diunggah." });
+        return;
+    }
+    if (shipmentsWithPdf.length < shipmentsToPrint.length) {
+         toast({ title: "Informasi", description: `${shipmentsToPrint.length - shipmentsWithPdf.length} pengiriman tanpa PDF akan dilewati.` });
     }
 
     setIsPrinting(true);
     try {
-        const doc = new jsPDF();
-        const shipmentsToPrint = shipments.filter(s => selectedShipments.includes(s.id));
+        const mergedPdf = await PDFDocument.create();
+        let resiCounter = 1;
 
-        shipmentsToPrint.forEach((shipment, index) => {
-            if (index > 0) {
-                doc.addPage();
+        for (const shipment of shipmentsWithPdf) {
+            if (shipment.receipt) {
+                const pdfBytes = atob(shipment.receipt.dataUrl.split(',')[1]);
+                const pdfToMerge = await PDFDocument.load(pdfBytes);
+                
+                const copiedPages = await mergedPdf.copyPages(pdfToMerge, pdfToMerge.getPageIndices());
+                for (const page of copiedPages) {
+                    const { width, height } = page.getSize();
+                    page.drawText(`Resi-Ke-${resiCounter}`, {
+                        x: 20,
+                        y: height - 20,
+                        size: 10,
+                        font: await mergedPdf.embedFont(StandardFonts.Helvetica),
+                        color: rgb(0.5, 0.5, 0.5),
+                    });
+                    mergedPdf.addPage(page);
+                }
+                resiCounter++;
             }
-            doc.setFontSize(80);
-            doc.setFont('helvetica', 'bold');
-            doc.text(`Resi ${index + 1}`, doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() / 2, { align: 'center', baseline: 'middle' });
-        });
+        }
 
+        const mergedPdfBytes = await mergedPdf.save();
+        const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        
+        const link = document.createElement('a');
+        link.href = url;
         const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
-        doc.save(`penomoran_resi_${timestamp}.pdf`);
-        toast({ title: 'Sukses!', description: 'File penomoran resi berhasil dibuat.' });
+        link.download = `resi_gabungan_${timestamp}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        toast({ title: 'Sukses!', description: 'File resi gabungan berhasil dibuat.' });
 
     } catch (error) {
-        console.error("Error creating shipping label PDF", error);
-        toast({
-            variant: 'destructive',
-            title: "Gagal membuat PDF",
-            description: "Terjadi kesalahan saat membuat file resi."
-        });
+        console.error("Error creating merged PDF", error);
+        toast({ variant: "destructive", title: "Gagal membuat PDF", description: "Terjadi kesalahan saat menggabungkan resi." });
     } finally {
         setIsPrinting(false);
     }
