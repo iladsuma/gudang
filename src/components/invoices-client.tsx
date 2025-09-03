@@ -93,7 +93,8 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
   }
 
   const handlePrintInvoices = () => {
-    if (selectedShipments.length === 0) {
+    const shipmentsToPrint = shipments.filter(s => selectedShipments.includes(s.id));
+    if (shipmentsToPrint.length === 0) {
         toast({
             variant: 'destructive',
             title: "Tidak ada data terpilih",
@@ -106,99 +107,96 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
 
     try {
         const doc = new jsPDF() as jsPDFWithAutoTable;
-        const shipmentsToPrint = shipments.filter(s => selectedShipments.includes(s.id));
 
-        shipmentsToPrint.forEach((shipment, index) => {
-            if (index > 0) {
-                doc.addPage();
-            }
+        // Header
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Faktur Gabungan Penjualan', 14, 20);
 
-            // Header
-            doc.setFontSize(16);
-            doc.setFont('helvetica', 'bold');
-            doc.text('FAKTUR PENJUALAN', 14, 20);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        
+        // Date Range
+        const dates = shipmentsToPrint.map(s => new Date(s.createdAt));
+        const minDate = new Date(Math.min.apply(null, dates.map(d => d.getTime())));
+        const maxDate = new Date(Math.max.apply(null, dates.map(d => d.getTime())));
+        const dateDisplay = `Periode: ${format(minDate, 'dd/MM/yyyy')} - ${format(maxDate, 'dd/MM/yyyy')}`;
+        doc.text(dateDisplay, 14, 26);
 
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'normal');
-            doc.text("Fam's Warehouse", 14, 26);
-            doc.text("Srengat", 14, 30);
-            
-            // Right-side info
-            const tgl = format(new Date(shipment.createdAt), 'dd/MM/yyyy HH:mm');
-            doc.text(`No Transaksi: ${shipment.transactionId}`, 140, 20);
-            doc.text(`Tgl: ${tgl}`, 140, 30);
-            doc.text(`Kasir: ${shipment.user}`, 140, 35);
-            
 
-            // Table
-            const tableColumn = ["No.", "Nama Item", "Jml", "Satuan", "Harga", "Total"];
-            const tableRows: any[] = [];
+        // Table
+        const tableColumn = ["No.", "No. Transaksi", "Nama Item", "Jml", "Harga", "Total"];
+        const tableRows: any[] = [];
+        let grandTotalProduct = 0;
+        let grandTotalPacking = 0;
+        let grandTotalAmount = 0;
+        let itemCounter = 0;
 
-            shipment.products.forEach((product, i) => {
+
+        shipmentsToPrint.forEach((shipment) => {
+            shipment.products.forEach((product) => {
+                itemCounter++;
+                const subtotal = product.quantity * product.price;
                 const productData = [
-                    i + 1,
+                    itemCounter,
+                    shipment.transactionId,
                     product.name,
                     product.quantity,
-                    'PCS',
                     product.price.toLocaleString('id-ID'),
-                    (product.quantity * product.price).toLocaleString('id-ID'),
+                    subtotal.toLocaleString('id-ID'),
                 ];
                 tableRows.push(productData);
             });
-
-            doc.autoTable({
-                startY: 45,
-                head: [tableColumn],
-                body: tableRows,
-                theme: 'plain',
-                headStyles: {
-                    fillColor: [255, 255, 255],
-                    textColor: [0, 0, 0],
-                    fontStyle: 'bold',
-                    lineWidth: { bottom: 0.5 },
-                    lineColor: [0, 0, 0]
-                },
-                styles: {
-                    cellPadding: { top: 1, right: 2, bottom: 1, left: 2 },
-                    fontSize: 9,
-                },
-                 columnStyles: {
-                    0: { cellWidth: 10, halign: 'center' }, // No.
-                    1: { cellWidth: 70 }, // Nama Item
-                    2: { cellWidth: 15, halign: 'center' }, // Jml
-                    3: { cellWidth: 15, halign: 'center' }, // Satuan
-                    4: { cellWidth: 30, halign: 'right' }, // Harga
-                    5: { cellWidth: 30, halign: 'right' }, // Total
-                },
-            });
-
-            // Summary below table
-            const finalY = doc.autoTable.previous.finalY;
-            doc.setFontSize(10);
-
-            let summaryY = finalY + 10;
-            const rightAlignX = 190;
-
-            doc.text('Sub Total', 140, summaryY);
-            doc.text(shipment.totalProductCost.toLocaleString('id-ID'), rightAlignX, summaryY, { align: 'right' });
-            
-            summaryY += 6;
-            doc.text('Biaya Pengemasan', 140, summaryY);
-            doc.text(shipment.totalPackingCost.toLocaleString('id-ID'), rightAlignX, summaryY, { align: 'right' });
-
-            summaryY += 6;
-            doc.setFont('helvetica', 'bold');
-            doc.text('Total Akhir', 140, summaryY);
-            doc.text(shipment.totalAmount.toLocaleString('id-ID'), rightAlignX, summaryY, { align: 'right' });
-
+            grandTotalProduct += shipment.totalProductCost;
+            grandTotalPacking += shipment.totalPackingCost;
+            grandTotalAmount += shipment.totalAmount;
         });
 
+        doc.autoTable({
+            startY: 35,
+            head: [tableColumn],
+            body: tableRows,
+            theme: 'grid',
+            headStyles: {
+                fillColor: [22, 160, 133], // A nice teal color
+                textColor: [255, 255, 255],
+                fontStyle: 'bold',
+            },
+            columnStyles: {
+                0: { halign: 'center', cellWidth: 10 }, // No.
+                1: { cellWidth: 40 }, // No. Transaksi
+                2: { cellWidth: 60 }, // Nama Item
+                3: { halign: 'center', cellWidth: 10 }, // Jml
+                4: { halign: 'right', cellWidth: 25 }, // Harga
+                5: { halign: 'right', cellWidth: 25 }, // Total
+            },
+        });
+
+        // Summary below table
+        const finalY = doc.autoTable.previous.finalY;
+        doc.setFontSize(10);
+
+        let summaryY = finalY + 10;
+        const rightAlignX = 190;
+
+        doc.text('Sub Total Produk', 140, summaryY);
+        doc.text(grandTotalProduct.toLocaleString('id-ID'), rightAlignX, summaryY, { align: 'right' });
+        
+        summaryY += 6;
+        doc.text('Total Biaya Pengemasan', 140, summaryY);
+        doc.text(grandTotalPacking.toLocaleString('id-ID'), rightAlignX, summaryY, { align: 'right' });
+
+        summaryY += 6;
+        doc.setFont('helvetica', 'bold');
+        doc.text('Total Keseluruhan', 140, summaryY);
+        doc.text(grandTotalAmount.toLocaleString('id-ID'), rightAlignX, summaryY, { align: 'right' });
+
         const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
-        doc.save(`faktur_${timestamp}.pdf`);
+        doc.save(`faktur_gabungan_${timestamp}.pdf`);
 
         toast({
             title: 'Sukses!',
-            description: 'Faktur berhasil dibuat dan diunduh.'
+            description: 'Faktur gabungan berhasil dibuat dan diunduh.'
         });
 
     } catch (err) {
