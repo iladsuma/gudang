@@ -1,11 +1,10 @@
 
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import type { User } from '@/lib/types';
-import { login as apiLogin, getDummyUsers } from '@/lib/data';
+import { login as apiLogin } from '@/lib/data';
 
 interface AuthContextType {
   user: User | null;
@@ -26,13 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const storedUser = localStorage.getItem('gudangcheckout_user');
       if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        const dummyUsers = getDummyUsers();
-        if(dummyUsers.find(u => u.username === parsedUser.username && u.password === parsedUser.password)){
-            setUser(parsedUser);
-        } else {
-            localStorage.removeItem('gudangcheckout_user');
-        }
+        setUser(JSON.parse(storedUser));
       }
     } catch (error) {
       console.error("Failed to parse user from localStorage", error);

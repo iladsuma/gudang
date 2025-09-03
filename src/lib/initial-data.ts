@@ -1,4 +1,9 @@
 
+'use client';
+
+// This file is no longer used for direct data access.
+// The new architecture uses API routes and a database.
+// This file is kept for reference or potential seeding scripts.
 
 import type { User, Product, Expedition, Packaging, Shipment, Checkout, Customer, StockMovement, Supplier, Purchase, Return } from './types';
 
