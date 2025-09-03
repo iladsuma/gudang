@@ -30,6 +30,8 @@ import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
 import { Input } from './ui/input';
 import { getCustomers } from '@/lib/data';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Label }from './ui/label';
 
 
 // Extend jsPDF with autoTable, which is a plugin.
@@ -43,24 +45,38 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
   const [allCustomers, setAllCustomers] = React.useState<Customer[]>([]);
   const [selectedShipments, setSelectedShipments] = React.useState<string[]>([]);
   const [isPrinting, setIsPrinting] = React.useState(false);
+  const [isPrintingCombined, setIsPrintingCombined] = React.useState(false);
+
+  // Filters
   const [searchTerm, setSearchTerm] = React.useState('');
+  const [userFilter, setUserFilter] = React.useState('all');
+
   const { toast } = useToast();
 
   React.useEffect(() => {
     setShipments(initialShipments);
     getCustomers().then(setAllCustomers);
   }, [initialShipments]);
+  
+  const uniqueUsers = React.useMemo(() => {
+    const users = new Set(shipments.map(s => s.user));
+    return ['all', ...Array.from(users)];
+  }, [shipments]);
+
 
   const filteredShipments = React.useMemo(() => {
-    if (!searchTerm) return shipments;
-    const lowercasedFilter = searchTerm.toLowerCase();
-    return shipments.filter(shipment =>
-        shipment.transactionId.toLowerCase().includes(lowercasedFilter) ||
-        shipment.customerName.toLowerCase().includes(lowercasedFilter) ||
-        shipment.user.toLowerCase().includes(lowercasedFilter) ||
-        shipment.products.some(p => p.name.toLowerCase().includes(lowercasedFilter))
-    );
-  }, [shipments, searchTerm]);
+    return shipments.filter(shipment => {
+        const matchesSearch = searchTerm === '' ||
+            shipment.transactionId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            shipment.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            shipment.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            shipment.products.some(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+        const matchesUser = userFilter === 'all' || shipment.user === userFilter;
+        
+        return matchesSearch && matchesUser;
+    });
+  }, [shipments, searchTerm, userFilter]);
   
   const formatRupiah = (number: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -246,19 +262,137 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
     }
   };
   
+  const handlePrintCombinedInvoice = () => {
+    const shipmentsToPrint = filteredShipments;
+    if (shipmentsToPrint.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Tidak ada data untuk dicetak',
+        description: 'Tidak ada pengiriman yang cocok dengan filter saat ini.',
+      });
+      return;
+    }
+
+    setIsPrintingCombined(true);
+    try {
+      const doc = new jsPDF('p', 'pt', 'a4') as jsPDFWithAutoTable;
+      const pageWidth = doc.internal.pageSize.getWidth();
+
+      // Header
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Faktur Gabungan Penjualan', pageWidth / 2, 30, { align: 'center' });
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      const user = userFilter === 'all' ? 'Semua User' : userFilter;
+      const dateFrom = format(new Date(Math.min(...shipmentsToPrint.map(s => new Date(s.createdAt).getTime()))), 'dd MMM yyyy');
+      const dateTo = format(new Date(Math.max(...shipmentsToPrint.map(s => new Date(s.createdAt).getTime()))), 'dd MMM yyyy');
+      doc.text(`Kasir: ${user}`, pageWidth / 2, 45, { align: 'center' });
+      doc.text(`Periode: ${dateFrom} - ${dateTo}`, pageWidth / 2, 57, { align: 'center' });
+
+
+      // Table
+      const tableColumn = ["No.", "No. Transaksi", "Nama Item", "Jml", "Harga", "Subtotal"];
+      const tableRows: any[] = [];
+      let grandTotal = 0;
+      let totalItems = 0;
+      
+      let itemCounter = 1;
+      shipmentsToPrint.forEach(shipment => {
+        shipment.products.forEach(product => {
+          const subtotal = product.quantity * product.price;
+          const productData = [
+            itemCounter++,
+            shipment.transactionId,
+            product.name,
+            product.quantity,
+            formatRupiah(product.price),
+            formatRupiah(subtotal),
+          ];
+          tableRows.push(productData);
+        });
+        grandTotal += shipment.totalAmount;
+        totalItems += shipment.totalItems;
+      });
+
+      doc.autoTable({
+        startY: 70,
+        head: [tableColumn],
+        body: tableRows,
+        theme: 'striped',
+        headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+        styles: { fontSize: 8, cellPadding: 3, overflow: 'linebreak' },
+        columnStyles: {
+            0: { cellWidth: 25, halign: 'center' },
+            1: { cellWidth: 'auto' }, // transactionId
+            2: { cellWidth: 150 }, // name
+            3: { cellWidth: 30, halign: 'center' },
+            4: { cellWidth: 60, halign: 'right' },
+            5: { cellWidth: 70, halign: 'right' },
+        },
+      });
+
+      // Summary
+      const finalY = doc.autoTable.previous.finalY;
+      const summaryRightX = pageWidth - 20;
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Total Keseluruhan:`, summaryRightX - 100, finalY + 20, { align: 'right' });
+      doc.text(`${formatRupiah(grandTotal)}`, summaryRightX, finalY + 20, { align: 'right' });
+      
+      const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
+      doc.save(`faktur_gabungan_${user}_${timestamp}.pdf`);
+      toast({ title: 'Sukses!', description: 'Faktur gabungan berhasil dibuat.' });
+
+    } catch (error) {
+      console.error("Error creating combined PDF", error);
+      toast({
+        variant: 'destructive',
+        title: "Gagal membuat PDF",
+        description: "Terjadi kesalahan saat membuat file faktur gabungan."
+      });
+    } finally {
+      setIsPrintingCombined(false);
+    }
+  };
+
+
   return (
     <div className='space-y-4'>
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-             <Input 
-                placeholder="Cari No. Transaksi, User, Pelanggan..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className="w-full md:w-80"
-            />
-            <Button onClick={handlePrintInvoices} disabled={selectedShipments.length === 0 || isPrinting} className="w-full md:w-auto">
-                {isPrinting ? <Loader2 className='mr-2' /> : <FileDown className='mr-2' />}
-                Cetak Faktur Terpilih ({selectedShipments.length})
-            </Button>
+             <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+                <Input 
+                    placeholder="Cari No. Transaksi, User, Pelanggan..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    className="w-full md:w-80"
+                />
+                 <div className="grid gap-2">
+                    <Label htmlFor="filter-user" className="sr-only">Filter User</Label>
+                    <Select value={userFilter} onValueChange={setUserFilter}>
+                        <SelectTrigger id="filter-user" className="w-full md:w-[180px]">
+                            <SelectValue placeholder="Filter by User" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {uniqueUsers.map(user => (
+                                <SelectItem key={user} value={user}>{user === 'all' ? 'Semua User' : user}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                 </div>
+             </div>
+            <div className="flex w-full md:w-auto gap-2">
+                <Button onClick={handlePrintCombinedInvoice} disabled={isPrintingCombined} variant="outline">
+                     {isPrintingCombined ? <Loader2 className='mr-2' /> : <FileDown className='mr-2' />}
+                    Cetak Rekap Gabungan
+                </Button>
+                <Button onClick={handlePrintInvoices} disabled={selectedShipments.length === 0 || isPrinting}>
+                    {isPrinting ? <Loader2 className='mr-2' /> : <FileDown className='mr-2' />}
+                    Cetak Faktur Terpilih ({selectedShipments.length})
+                </Button>
+            </div>
         </div>
       <div className="rounded-md border">
         <Table>
@@ -332,3 +466,5 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
     </div>
   );
 }
+
+    
