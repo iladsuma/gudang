@@ -1,3 +1,4 @@
+
 import { defineConfig } from "drizzle-kit";
 import { config } from "dotenv";
 
@@ -10,4 +11,7 @@ export default defineConfig({
   dbCredentials: {
     url: process.env.POSTGRES_URL!,
   },
+  migrations: {
+    table: 'migrations'
+  }
 });
