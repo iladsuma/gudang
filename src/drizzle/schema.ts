@@ -139,5 +139,9 @@ export const purchasesRelations = relations(purchases, ({ one }) => ({
     }),
 }));
 
-// No relations needed for returns or stockMovements on their own tables for now.
-// The reference back to them from other tables is sufficient.
+export const stockMovementsRelations = relations(stockMovements, ({ one }) => ({
+    product: one(products, {
+        fields: [stockMovements.productId],
+        references: [products.id],
+    }),
+}));
