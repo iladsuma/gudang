@@ -32,7 +32,6 @@ export function Header() {
   const isSettingsPage = pathname.startsWith('/settings');
   const isTransactionPage = ['/cashier', '/purchases', '/returns'].includes(pathname);
   const isAccountingPage = pathname.startsWith('/accounting');
-  const isReportPage = pathname.startsWith('/reports');
 
 
   return (
@@ -88,7 +87,7 @@ export function Header() {
                       href="/accounting"
                       className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", isAccountingPage ? 'text-foreground' : 'text-foreground/60')}
                     >
-                      <Banknote className="h-4 w-4" /> Akuntansi
+                      <Banknote className="h-4 w-4" /> Laba Rugi
                     </Link>
 
                     <Link
@@ -97,18 +96,6 @@ export function Header() {
                     >
                       <Archive className="h-4 w-4" /> Arsip & Pengiriman
                     </Link>
-                    
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className={cn("gap-1 px-2 h-auto text-sm transition-colors hover:text-foreground/80", isReportPage ? 'text-foreground' : 'text-foreground/60')}>
-                            <FileBarChart className="h-4 w-4" /> Laporan
-                            <ChevronDown className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem onSelect={() => router.push('/reports/sales-profit')}>Laporan Laba Jual</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                     
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
