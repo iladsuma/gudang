@@ -109,10 +109,6 @@ export const usersRelations = relations(users, ({ many }) => ({
   shipments: many(shipments),
 }));
 
-export const productsRelations = relations(products, ({ many }) => ({
-    stockMovements: many(stockMovements),
-}));
-
 export const customersRelations = relations(customers, ({ many }) => ({
     shipments: many(shipments),
 }));
@@ -137,6 +133,10 @@ export const purchasesRelations = relations(purchases, ({ one }) => ({
         fields: [purchases.supplierId],
         references: [suppliers.id],
     }),
+}));
+
+export const productsRelations = relations(products, ({ many }) => ({
+    stockMovements: many(stockMovements),
 }));
 
 export const stockMovementsRelations = relations(stockMovements, ({ one }) => ({
