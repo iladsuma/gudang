@@ -1,5 +1,6 @@
+
 import { pgTable, text, varchar, real, integer, timestamp, pgEnum, jsonb, boolean, date } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+// import { relations } from 'drizzle-orm';
 
 export const userRoleEnum = pgEnum('user_role', ['admin', 'user']);
 export const shipmentStatusEnum = pgEnum('shipment_status', ['Proses', 'Pengemasan', 'Terkirim']);
@@ -68,7 +69,7 @@ export const shipments = pgTable('shipments', {
   totalProductCost: real('total_product_cost').notNull(),
   totalPackingCost: real('total_packing_cost').notNull(),
   totalAmount: real('total_amount').notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
 export const purchases = pgTable('purchases', {
@@ -79,7 +80,7 @@ export const purchases = pgTable('purchases', {
     status: purchaseStatusEnum('status').notNull(),
     products: jsonb('products').notNull(), // PurchaseProduct[]
     totalAmount: real('total_amount').notNull(),
-    createdAt: timestamp('created_at').defaultNow().notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
 export const returns = pgTable('returns', {
@@ -90,7 +91,7 @@ export const returns = pgTable('returns', {
     products: jsonb('products').notNull(), // ReturnedProduct[]
     reason: text('reason').notNull(),
     totalAmount: real('total_amount').notNull(),
-    createdAt: timestamp('created_at').defaultNow().notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
 
@@ -103,7 +104,7 @@ export const stockMovements = pgTable('stock_movements', {
     stockBefore: integer('stock_before').notNull(),
     stockAfter: integer('stock_after').notNull(),
     notes: text('notes'),
-    createdAt: timestamp('created_at').defaultNow().notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
 export const financialTransactions = pgTable('financial_transactions', {
@@ -113,7 +114,7 @@ export const financialTransactions = pgTable('financial_transactions', {
   category: varchar('category', { length: 255 }).notNull(),
   description: text('description').notNull(),
   transactionDate: date('transaction_date').notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
 
@@ -164,3 +165,5 @@ export const financialTransactionsRelations = relations(financialTransactions, (
   // No direct relations, but defining it is good practice
 }));
 */
+
+    
