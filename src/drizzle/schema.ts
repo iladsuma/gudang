@@ -118,6 +118,7 @@ export const financialTransactions = pgTable('financial_transactions', {
 
 
 // Relations
+/*
 export const usersRelations = relations(users, ({ many }) => ({
   shipments: many(shipments),
 }));
@@ -162,3 +163,4 @@ export const stockMovementsRelations = relations(stockMovements, ({ one }) => ({
 export const financialTransactionsRelations = relations(financialTransactions, () => ({
   // No direct relations, but defining it is good practice
 }));
+*/
