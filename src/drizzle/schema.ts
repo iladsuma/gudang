@@ -105,6 +105,8 @@ export const stockMovements = pgTable('stock_movements', {
 });
 
 // Relations
+// Temporarily commented out to resolve build issues with drizzle-kit
+/*
 export const usersRelations = relations(users, ({ many }) => ({
   shipments: many(shipments),
 }));
@@ -145,3 +147,4 @@ export const stockMovementsRelations = relations(stockMovements, ({ one }) => ({
         references: [products.id],
     }),
 }));
+*/
