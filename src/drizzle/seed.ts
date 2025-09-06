@@ -3,29 +3,41 @@ import { config } from "dotenv";
 import { db } from "./db";
 import * as schema from "./schema";
 import initialData from '../../db.json';
+import { PgTable } from "drizzle-orm/pg-core";
 import { count } from "drizzle-orm";
 
 config({ path: ".env" });
 
-async function seedTable<T extends pgTable>(
+async function seedTable<T extends PgTable>(
     tableName: string,
     table: T,
     data: any[],
 ) {
     console.log(`Checking table: ${tableName}`);
-    const tableCountResult = await db.select({ value: count() }).from(table);
-    const tableCount = tableCountResult[0].value;
+    try {
+        const tableCountResult = await db.select({ value: count() }).from(table);
+        const tableCount = tableCountResult[0].value;
 
-    if (tableCount > 0) {
-        console.log(`Table ${tableName} already seeded. Skipping.`);
-        return;
-    }
+        if (tableCount > 0) {
+            console.log(`Table ${tableName} already seeded. Skipping.`);
+            return;
+        }
 
-    if (data.length > 0) {
-        console.log(`Seeding ${tableName}...`);
-        await db.insert(table).values(data).onConflictDoNothing();
-    } else {
-        console.log(`No data to seed for ${tableName}.`);
+        if (data.length > 0) {
+            console.log(`Seeding ${tableName}...`);
+            await db.insert(table).values(data).onConflictDoNothing();
+        } else {
+            console.log(`No data to seed for ${tableName}.`);
+        }
+    } catch (error) {
+        // This can happen if the table doesn't exist yet, which is fine on the first run
+        // after manual schema creation. The important part is that subsequent builds don't re-seed.
+        if (error instanceof Error && error.message.includes('does not exist')) {
+            console.warn(`🟡 Table ${tableName} does not exist. This is expected if you just created the schema. Seeding will be skipped for now.`);
+        } else {
+            console.error(`🔴 Error while checking/seeding table ${tableName}:`, error);
+            // We don't exit the process to allow the build to continue
+        }
     }
 }
 
