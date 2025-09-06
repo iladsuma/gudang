@@ -1,3 +1,5 @@
+'use server';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/drizzle/db';
 import { financialTransactions as ftTable } from '@/drizzle/schema';

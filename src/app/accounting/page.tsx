@@ -234,9 +234,14 @@ export default function AccountingPage() {
     
     const fetchData = React.useCallback(async () => {
         setDataLoading(true);
-        const data = await getFinancialTransactions();
-        setTransactions(data);
-        setDataLoading(false);
+        try {
+          const data = await getFinancialTransactions();
+          setTransactions(data);
+        } catch (error) {
+          console.error(error);
+        } finally {
+          setDataLoading(false);
+        }
     }, []);
 
     React.useEffect(() => {
