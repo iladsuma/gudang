@@ -3,7 +3,6 @@
 'use client';
 
 import type { User, Shipment, Checkout, Expedition, Product, Packaging, Customer, StockMovement, Supplier, Purchase, Return, SortableProductField, SortOrder, FinancialTransaction } from './types';
-import type { SalesProfitReportData } from '@/app/api/reports/sales-profit/route';
 // =================================================================
 // API Client Functions
 // =================================================================
@@ -336,14 +335,16 @@ export async function getStockOpnameMovements(startDate?: Date, endDate?: Date):
 }
 
 // --- Financial Transaction Functions ---
-export async function getFinancialTransactions(type?: 'in' | 'out'): Promise<FinancialTransaction[]> {
-    let url = `${API_BASE_URL}/financial-transactions`;
-    if (type) {
-        url += `?type=${type}`;
-    }
-    const response = await fetch(url);
+export async function getFinancialTransactions(type?: 'in' | 'out', startDate?: string, endDate?: string): Promise<FinancialTransaction[]> {
+    const params = new URLSearchParams();
+    if (type) params.append('type', type);
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    
+    const response = await fetch(`${API_BASE_URL}/financial-transactions?${params.toString()}`);
     return handleResponse<FinancialTransaction[]>(response);
 }
+
 
 export async function addFinancialTransaction(data: Omit<FinancialTransaction, 'id' | 'createdAt'>): Promise<FinancialTransaction> {
     const response = await fetch(`${API_BASE_URL}/financial-transactions`, {
@@ -354,7 +355,7 @@ export async function addFinancialTransaction(data: Omit<FinancialTransaction, '
     return handleResponse<FinancialTransaction>(response);
 }
 
-export async function updateFinancialTransaction(id: string, data: Omit<FinancialTransaction, 'id' | 'createdAt'>): Promise<FinancialTransaction> {
+export async function updateFinancialTransaction(id: string, data: Partial<Omit<FinancialTransaction, 'id' | 'createdAt'>>): Promise<FinancialTransaction> {
     const response = await fetch(`${API_BASE_URL}/financial-transactions/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -368,9 +369,9 @@ export async function deleteFinancialTransaction(id: string): Promise<void> {
 }
 
 // --- Report Functions ---
-export async function getSalesProfitReport(startDate: Date, endDate: Date): Promise<SalesProfitReportData[]> {
+export async function getSalesProfitReport(startDate: Date, endDate: Date): Promise<any[]> {
     const response = await fetch(`${API_BASE_URL}/reports/sales-profit?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`);
-    return handleResponse<SalesProfitReportData[]>(response);
+    return handleResponse<any[]>(response);
 }
 
 

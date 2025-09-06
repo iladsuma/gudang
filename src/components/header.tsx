@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, Settings, Truck, ShoppingBag, ShoppingBasket, Undo2, ArrowRightLeft, PackageCheck, Banknote, FileBarChart } from 'lucide-react';
+import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, Settings, Truck, ShoppingBag, ShoppingBasket, Undo2, ArrowRightLeft, PackageCheck, Banknote, FileBarChart, BookUser } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { Button } from './ui/button';
 import { useRouter, usePathname } from 'next/navigation';
@@ -87,7 +87,7 @@ export function Header() {
                       href="/accounting"
                       className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", isAccountingPage ? 'text-foreground' : 'text-foreground/60')}
                     >
-                      <Banknote className="h-4 w-4" /> Laba Rugi
+                      <BookUser className="h-4 w-4" /> Buku Kas
                     </Link>
 
                     <Link

@@ -3,27 +3,43 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/drizzle/db';
 import { financialTransactions as ftTable } from '@/drizzle/schema';
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, and, gte, lte } from 'drizzle-orm';
 import type { FinancialTransaction } from '@/lib/types';
 
 export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type') as 'in' | 'out' | null;
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
 
     try {
-        let query = db.select().from(ftTable).orderBy(desc(ftTable.transactionDate), desc(ftTable.createdAt)).$dynamic();
+        let conditions = [];
 
         if (type) {
-            query = db.select().from(ftTable).where(eq(ftTable.type, type)).orderBy(desc(ftTable.transactionDate), desc(ftTable.createdAt));
+            conditions.push(eq(ftTable.type, type));
         }
 
-        const transactions = await query;
+        if (startDate) {
+            conditions.push(gte(ftTable.transactionDate, startDate));
+        }
+        if (endDate) {
+            conditions.push(lte(ftTable.transactionDate, endDate));
+        }
+        
+        const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+        const transactions = await db.select()
+            .from(ftTable)
+            .where(whereClause)
+            .orderBy(desc(ftTable.transactionDate), desc(ftTable.createdAt));
+            
         return NextResponse.json(transactions);
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Failed to fetch financial transactions';
         return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }
+
 
 export async function POST(request: NextRequest) {
     try {
