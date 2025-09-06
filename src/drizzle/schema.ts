@@ -94,7 +94,7 @@ export const returns = pgTable('returns', {
 
 export const stockMovements = pgTable('stock_movements', {
     id: text('id').primaryKey().$defaultFn(() => `sm_${Date.now()}`),
-    productId: text('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
+    productId: text('product_id').notNull().references(() => products.id),
     referenceId: text('reference_id'),
     type: stockMovementTypeEnum('type').notNull(),
     quantityChange: integer('quantity_change').notNull(),
