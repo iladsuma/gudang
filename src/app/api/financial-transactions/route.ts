@@ -11,10 +11,10 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type') as 'in' | 'out' | null;
 
     try {
-        let query = db.select().from(ftTable).orderBy(desc(ftTable.transactionDate), desc(ftTable.createdAt));
+        let query = db.select().from(ftTable).orderBy(desc(ftTable.transactionDate), desc(ftTable.createdAt)).$dynamic();
 
         if (type) {
-            query.where(eq(ftTable.type, type));
+            query = db.select().from(ftTable).where(eq(ftTable.type, type)).orderBy(desc(ftTable.transactionDate), desc(ftTable.createdAt));
         }
 
         const transactions = await query;
