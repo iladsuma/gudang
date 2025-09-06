@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import { getFinancialTransactions, addFinancialTransaction } from '@/lib/data';
+import { getFinancialTransactions, addFinancialTransaction, updateFinancialTransaction, deleteFinancialTransaction } from '@/lib/data';
 import type { FinancialTransaction } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -12,18 +12,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter as TableSummaryFooter } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, Loader2, PlusCircle, Download, FileText } from 'lucide-react';
+import { CalendarIcon, Loader2, PlusCircle, Download, FileText, Pencil, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { format, subDays } from 'date-fns';
+import { format, subDays, parseISO } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
@@ -61,42 +62,68 @@ const formatRupiah = (number: number) => {
 };
 
 // =======================
-// Add Transaction Form Component
+// Add/Edit Transaction Form Component
 // =======================
-function AddTransactionForm({ type, onFormSuccess }: { type: 'in' | 'out', onFormSuccess: () => void }) {
+function TransactionForm({ 
+    mode, 
+    initialData, 
+    onFormSuccess 
+}: { 
+    mode: 'add' | 'edit', 
+    initialData?: Partial<FinancialTransaction> & { type: 'in' | 'out' }, 
+    onFormSuccess: () => void 
+}) {
     const { toast } = useToast();
     const [isFormOpen, setIsFormOpen] = React.useState(false);
     const [isSubmitting, setIsSubmitting] = React.useState(false);
-    
-    // Define categories based on type
+    const type = mode === 'add' ? initialData!.type : initialData?.type || 'in';
+
     const cashInCategories = ['Penjualan Tunai', 'Penerimaan Piutang', 'Modal Masuk', 'Lainnya'];
     const cashOutCategories = ['Pembelian Stok', 'Biaya Operasional', 'Gaji Karyawan', 'Sewa', 'Listrik & Air', 'Transportasi', 'Lainnya'];
     const categories = type === 'in' ? cashInCategories : cashOutCategories;
 
     const form = useForm<TransactionFormValues>({
         resolver: zodResolver(transactionFormSchema),
-        defaultValues: {
-            type,
-            transactionDate: new Date(),
-            amount: 0,
-            category: '',
-            description: '',
-        },
     });
+
+    React.useEffect(() => {
+        if (mode === 'edit' && initialData?.id) {
+            form.reset({
+                type: initialData.type,
+                transactionDate: parseISO(initialData.transactionDate!),
+                amount: initialData.amount,
+                category: initialData.category,
+                description: initialData.description,
+            });
+        } else {
+             form.reset({
+                type: type,
+                transactionDate: new Date(),
+                amount: 0,
+                category: '',
+                description: '',
+            });
+        }
+    }, [isFormOpen, mode, initialData, form, type]);
 
     const onSubmit = async (data: TransactionFormValues) => {
         setIsSubmitting(true);
         try {
             const payload = {
                 ...data,
-                // Format date to 'YYYY-MM-DD' string for the database
                 transactionDate: format(data.transactionDate, 'yyyy-MM-dd'),
             };
-            await addFinancialTransaction(payload as any);
-            toast({ title: 'Sukses!', description: 'Transaksi berhasil dicatat.' });
+
+            if (mode === 'edit' && initialData?.id) {
+                await updateFinancialTransaction(initialData.id, payload as any);
+                toast({ title: 'Sukses!', description: 'Transaksi berhasil diperbarui.' });
+            } else {
+                await addFinancialTransaction(payload as any);
+                toast({ title: 'Sukses!', description: 'Transaksi berhasil dicatat.' });
+            }
+
             setIsFormOpen(false);
             onFormSuccess();
-            form.reset({ type, transactionDate: new Date(), amount: 0, category: '', description: '' });
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Terjadi kesalahan.';
             toast({ variant: 'destructive', title: 'Gagal Menyimpan', description: message });
@@ -108,14 +135,19 @@ function AddTransactionForm({ type, onFormSuccess }: { type: 'in' | 'out', onFor
     return (
          <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
             <DialogTrigger asChild>
-                <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    {type === 'in' ? 'Tambah Kas Masuk' : 'Tambah Kas Keluar'}
-                </Button>
+                {mode === 'add' ? (
+                     <Button>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        {type === 'in' ? 'Tambah Kas Masuk' : 'Tambah Kas Keluar'}
+                    </Button>
+                ) : (
+                    <Button variant="ghost" size="icon"><Pencil className="h-4 w-4" /></Button>
+                )}
+               
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>{type === 'in' ? 'Catat Kas Masuk' : 'Catat Kas Keluar'}</DialogTitle>
+                    <DialogTitle>{mode === 'add' ? (type === 'in' ? 'Catat Kas Masuk' : 'Catat Kas Keluar') : 'Edit Transaksi'}</DialogTitle>
                     <DialogDescription>
                         Isi detail transaksi keuangan yang terjadi.
                     </DialogDescription>
@@ -195,7 +227,17 @@ function AddTransactionForm({ type, onFormSuccess }: { type: 'in' | 'out', onFor
 // =======================
 // Transaction Table Component
 // =======================
-function TransactionTable({ transactions, type }: { transactions: FinancialTransaction[], type: 'in' | 'out' }) {
+function TransactionTable({ 
+    transactions, 
+    type, 
+    onEdit, 
+    onDelete 
+}: { 
+    transactions: FinancialTransaction[], 
+    type: 'in' | 'out',
+    onEdit: (tx: FinancialTransaction) => void,
+    onDelete: (tx: FinancialTransaction) => void,
+}) {
     const totalAmount = transactions.reduce((sum, tx) => sum + tx.amount, 0);
 
     return (
@@ -207,6 +249,7 @@ function TransactionTable({ transactions, type }: { transactions: FinancialTrans
                         <TableHead>Kategori</TableHead>
                         <TableHead>Deskripsi</TableHead>
                         <TableHead className="text-right">Jumlah</TableHead>
+                        <TableHead className="w-[100px] text-center">Aksi</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -219,11 +262,29 @@ function TransactionTable({ transactions, type }: { transactions: FinancialTrans
                                 <TableCell className={cn("text-right font-medium", type === 'in' ? 'text-green-600' : 'text-red-600')}>
                                     {formatRupiah(tx.amount)}
                                 </TableCell>
+                                <TableCell className="text-center">
+                                    <TransactionForm mode="edit" initialData={tx} onFormSuccess={onEdit} />
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4" /></Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Hapus Transaksi?</AlertDialogTitle>
+                                                <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan. Anda yakin ingin menghapus transaksi ini?</AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Batal</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => onDelete(tx)}>Hapus</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </TableCell>
                             </TableRow>
                         ))
                     ) : (
                          <TableRow>
-                            <TableCell colSpan={4} className="h-24 text-center">
+                            <TableCell colSpan={5} className="h-24 text-center">
                                 Belum ada data kas {type === 'in' ? 'masuk' : 'keluar'} pada periode ini.
                             </TableCell>
                         </TableRow>
@@ -231,7 +292,7 @@ function TransactionTable({ transactions, type }: { transactions: FinancialTrans
                 </TableBody>
                  <TableSummaryFooter>
                     <TableRow>
-                        <TableCell colSpan={3} className="text-right font-bold">Total</TableCell>
+                        <TableCell colSpan={4} className="text-right font-bold">Total</TableCell>
                         <TableCell className={cn("text-right font-bold", type === 'in' ? 'text-green-600' : 'text-red-600')}>{formatRupiah(totalAmount)}</TableCell>
                     </TableRow>
                 </TableSummaryFooter>
@@ -249,7 +310,8 @@ export default function AccountingPage() {
     const { toast } = useToast();
     const [transactions, setTransactions] = React.useState<FinancialTransaction[]>([]);
     const [dataLoading, setDataLoading] = React.useState(true);
-     const [isPrinting, setIsPrinting] = React.useState(false);
+    const [isPrinting, setIsPrinting] = React.useState(false);
+    const [isDeleting, setIsDeleting] = React.useState(false);
     const [dateRange, setDateRange] = React.useState<DateRange | undefined>({
         from: subDays(new Date(), 29),
         to: new Date(),
@@ -283,7 +345,11 @@ export default function AccountingPage() {
             const txDate = new Date(tx.transactionDate);
             const fromDate = dateRange.from!;
             const toDate = dateRange.to || fromDate;
-            return txDate >= fromDate && txDate <= toDate;
+            
+            // Adjust dates to ignore time component
+            const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+            
+            return txDate >= startOfDay(fromDate) && txDate <= startOfDay(toDate);
         });
     }, [transactions, dateRange]);
 
@@ -296,6 +362,21 @@ export default function AccountingPage() {
         const netChange = totalIn - totalOut;
         return { totalIn, totalOut, netChange };
     }, [cashInTransactions, cashOutTransactions]);
+
+
+    const handleDeleteTransaction = async (tx: FinancialTransaction) => {
+        setIsDeleting(true);
+        try {
+            await deleteFinancialTransaction(tx.id);
+            toast({ title: 'Sukses', description: 'Transaksi berhasil dihapus.' });
+            fetchData(); // Refresh data
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Terjadi kesalahan.';
+            toast({ variant: 'destructive', title: 'Gagal Menghapus', description: message });
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     const handlePrintPDF = () => {
         setIsPrinting(true);
@@ -431,11 +512,11 @@ export default function AccountingPage() {
                         <CardHeader>
                             <div className="flex justify-between items-center">
                                 <div><CardTitle>Buku Kas Masuk</CardTitle><CardDescription>Daftar semua pemasukan uang ke dalam bisnis.</CardDescription></div>
-                                <AddTransactionForm type="in" onFormSuccess={fetchData} />
+                                <TransactionForm mode="add" initialData={{ type: 'in' }} onFormSuccess={fetchData} />
                             </div>
                         </CardHeader>
                         <CardContent>
-                             {dataLoading ? <Skeleton className="h-64 w-full" /> : <TransactionTable transactions={cashInTransactions} type="in" />}
+                             {dataLoading ? <Skeleton className="h-64 w-full" /> : <TransactionTable transactions={cashInTransactions} type="in" onEdit={fetchData} onDelete={handleDeleteTransaction} />}
                         </CardContent>
                     </Card>
                 </TabsContent>
@@ -444,11 +525,11 @@ export default function AccountingPage() {
                         <CardHeader>
                             <div className="flex justify-between items-center">
                                 <div><CardTitle>Buku Kas Keluar</CardTitle><CardDescription>Daftar semua pengeluaran uang dari bisnis.</CardDescription></div>
-                                <AddTransactionForm type="out" onFormSuccess={fetchData} />
+                                <TransactionForm mode="add" initialData={{ type: 'out' }} onFormSuccess={fetchData} />
                             </div>
                         </CardHeader>
                         <CardContent>
-                             {dataLoading ? <Skeleton className="h-64 w-full" /> : <TransactionTable transactions={cashOutTransactions} type="out" />}
+                             {dataLoading ? <Skeleton className="h-64 w-full" /> : <TransactionTable transactions={cashOutTransactions} type="out" onEdit={fetchData} onDelete={handleDeleteTransaction} />}
                         </CardContent>
                     </Card>
                 </TabsContent>
@@ -456,5 +537,7 @@ export default function AccountingPage() {
         </div>
     );
 }
+
+    
 
     

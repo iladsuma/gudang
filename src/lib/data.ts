@@ -354,6 +354,19 @@ export async function addFinancialTransaction(data: Omit<FinancialTransaction, '
     return handleResponse<FinancialTransaction>(response);
 }
 
+export async function updateFinancialTransaction(id: string, data: Omit<FinancialTransaction, 'id' | 'createdAt'>): Promise<FinancialTransaction> {
+    const response = await fetch(`${API_BASE_URL}/financial-transactions/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    return handleResponse<FinancialTransaction>(response);
+}
+
+export async function deleteFinancialTransaction(id: string): Promise<void> {
+    await fetch(`${API_BASE_URL}/financial-transactions/${id}`, { method: 'DELETE' });
+}
+
 // --- Report Functions ---
 export async function getSalesProfitReport(startDate: Date, endDate: Date): Promise<SalesProfitReportData[]> {
     const response = await fetch(`${API_BASE_URL}/reports/sales-profit?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`);
@@ -365,3 +378,5 @@ export async function getSalesProfitReport(startDate: Date, endDate: Date): Prom
 export function getDummyUsers(): User[] {
   return [];
 }
+
+    
