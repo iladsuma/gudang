@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, Settings, Truck, ShoppingBag, ShoppingBasket, Undo2, ArrowRightLeft, PackageCheck, FileText } from 'lucide-react';
+import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, Settings, Truck, ShoppingBag, ShoppingBasket, Undo2, ArrowRightLeft, PackageCheck, FileText, Banknote } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { Button } from './ui/button';
 import { useRouter, usePathname } from 'next/navigation';
@@ -32,6 +32,7 @@ export function Header() {
   const isSettingsPage = pathname.startsWith('/settings');
   const isTransactionPage = ['/cashier', '/purchases', '/returns'].includes(pathname);
   const isReportsPage = pathname.startsWith('/reports');
+  const isAccountingPage = pathname.startsWith('/accounting');
 
 
   return (
@@ -82,6 +83,13 @@ export function Header() {
                         <DropdownMenuItem onSelect={() => router.push('/returns')}><Undo2 className="mr-2"/> Retur Penjualan</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
+
+                     <Link
+                      href="/accounting"
+                      className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", isAccountingPage ? 'text-foreground' : 'text-foreground/60')}
+                    >
+                      <Banknote className="h-4 w-4" /> Akuntansi
+                    </Link>
 
                     <Link
                       href="/invoices"

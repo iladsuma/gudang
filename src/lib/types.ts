@@ -166,3 +166,13 @@ export interface ProductSelection {
 
 export type SortableProductField = 'code' | 'name' | 'category' | 'stock';
 export type SortOrder = 'asc' | 'desc';
+
+export interface FinancialTransaction {
+  id: string;
+  type: 'in' | 'out';
+  amount: number;
+  category: string;
+  description: string;
+  transactionDate: string; // Should be a string in 'YYYY-MM-DD' format
+  createdAt: string;
+}

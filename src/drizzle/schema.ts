@@ -1,10 +1,12 @@
-import { pgTable, text, varchar, real, integer, timestamp, pgEnum, jsonb, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, text, varchar, real, integer, timestamp, pgEnum, jsonb, boolean, date } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 export const userRoleEnum = pgEnum('user_role', ['admin', 'user']);
 export const shipmentStatusEnum = pgEnum('shipment_status', ['Proses', 'Pengemasan', 'Terkirim']);
 export const purchaseStatusEnum = pgEnum('purchase_status', ['Selesai', 'Draf']);
 export const stockMovementTypeEnum = pgEnum('stock_movement_type', ['Stok Awal', 'Penjualan', 'Stok Opname', 'Pembelian', 'Retur']);
+export const transactionTypeEnum = pgEnum('transaction_type', ['in', 'out']);
+
 
 export const users = pgTable('users', {
   id: text('id').primaryKey().$defaultFn(() => `usr_${Date.now()}`),
@@ -103,6 +105,17 @@ export const stockMovements = pgTable('stock_movements', {
     notes: text('notes'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
 });
+
+export const financialTransactions = pgTable('financial_transactions', {
+  id: text('id').primaryKey().$defaultFn(() => `ft_${Date.now()}`),
+  type: transactionTypeEnum('type').notNull(), // 'in' or 'out'
+  amount: real('amount').notNull(),
+  category: varchar('category', { length: 255 }).notNull(),
+  description: text('description').notNull(),
+  transactionDate: date('transaction_date').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 
 // Relations
 // Temporarily commented out to resolve build issues with drizzle-kit

@@ -1,7 +1,8 @@
 
+
 'use client';
 
-import type { User, Shipment, Checkout, Expedition, Product, Packaging, Customer, StockMovement, Supplier, Purchase, Return, SortableProductField, SortOrder } from './types';
+import type { User, Shipment, Checkout, Expedition, Product, Packaging, Customer, StockMovement, Supplier, Purchase, Return, SortableProductField, SortOrder, FinancialTransaction } from './types';
 
 // =================================================================
 // API Client Functions
@@ -333,6 +334,26 @@ export async function getStockOpnameMovements(startDate?: Date, endDate?: Date):
     const response = await fetch(`${API_BASE_URL}/stock-movements/opname?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`);
     return handleResponse<(StockMovement & { productCode: string, productName: string })[]>(response);
 }
+
+// --- Financial Transaction Functions ---
+export async function getFinancialTransactions(type?: 'in' | 'out'): Promise<FinancialTransaction[]> {
+    let url = `${API_BASE_URL}/financial-transactions`;
+    if (type) {
+        url += `?type=${type}`;
+    }
+    const response = await fetch(url);
+    return handleResponse<FinancialTransaction[]>(response);
+}
+
+export async function addFinancialTransaction(data: Omit<FinancialTransaction, 'id' | 'createdAt'>): Promise<FinancialTransaction> {
+    const response = await fetch(`${API_BASE_URL}/financial-transactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    return handleResponse<FinancialTransaction>(response);
+}
+
 
 // This function is no longer needed in the new architecture
 export function getDummyUsers(): User[] {
