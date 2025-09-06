@@ -4,12 +4,12 @@
 import * as React from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import { getProducts, getShipments } from '@/lib/data';
-import type { Product, Shipment, ShipmentProduct } from '@/lib/types';
+import { getProducts, getShipments, getFinancialTransactions } from '@/lib/data';
+import type { Product, Shipment, FinancialTransaction } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Boxes, Package, DollarSign, Truck, CheckCircle, Expand, Send, AlertTriangle, Settings } from 'lucide-react';
+import { Boxes, Package, DollarSign, Truck, CheckCircle, Expand, Send, AlertTriangle, Settings, PiggyBank, Warehouse } from 'lucide-react';
 import Link from 'next/link';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Brush } from 'recharts';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -37,9 +37,10 @@ export default function DashboardPage() {
     const [stats, setStats] = React.useState({
         totalValueInProcess: 0,
         shipmentsInProcess: 0,
-        totalProducts: 0,
         shipmentsDeliveredInRange: 0,
         lowStockCount: 0,
+        totalAssetValue: 0,
+        cashBalance: 0,
     });
     const [popularProducts, setPopularProducts] = React.useState<PopularProduct[]>([]);
     const [recentActivity, setRecentActivity] = React.useState<Shipment[]>([]);
@@ -62,40 +63,46 @@ export default function DashboardPage() {
         if (user?.role === 'admin') {
             const fetchData = async () => {
                 setLoadingData(true);
-                const [products, shipments] = await Promise.all([getProducts(), getShipments()]);
+                const [products, shipments, financialTransactions] = await Promise.all([
+                    getProducts(), 
+                    getShipments(),
+                    getFinancialTransactions()
+                ]);
                 
                 const fromDate = dateRange?.from;
                 const toDate = dateRange?.to;
                 
-                // Filter shipments by date range for analytics
                 const shipmentsInRange = shipments.filter(s => {
                     const shipmentDate = new Date(s.createdAt);
                     if (fromDate && toDate) {
                         return shipmentDate >= fromDate && shipmentDate <= toDate;
                     }
-                    return true; // if no date range, include all for now
+                    return true;
                 });
                 
-                // Stats that are NOT date-range dependent
                 const inProcess = shipments.filter(s => s.status === 'Proses');
                 const totalValueInProcess = inProcess.reduce((sum, s) => sum + s.totalAmount, 0);
 
-                // Stats that ARE date-range dependent
                 const deliveredInRange = shipmentsInRange.filter(s => s.status === 'Terkirim');
                 
-                // Low stock calculation
                 const lowStockItems = products.filter(p => p.stock <= p.minStock);
                 setLowStockProducts(lowStockItems);
+
+                const totalAssetValue = products.reduce((sum, p) => sum + (p.costPrice * p.stock), 0);
+
+                const cashBalance = financialTransactions.reduce((balance, tx) => {
+                    return tx.type === 'in' ? balance + tx.amount : balance - tx.amount;
+                }, 0);
 
                 setStats({
                     totalValueInProcess,
                     shipmentsInProcess: inProcess.length,
-                    totalProducts: products.length,
                     shipmentsDeliveredInRange: deliveredInRange.length,
                     lowStockCount: lowStockItems.length,
+                    totalAssetValue,
+                    cashBalance
                 });
 
-                // Calculate popular products from delivered shipments WITHIN DATE RANGE
                 const productMetrics: { [productId: string]: { name: string, count: number, value: number } } = {};
                 deliveredInRange.forEach(shipment => {
                     shipment.products.forEach(product => {
@@ -116,7 +123,6 @@ export default function DashboardPage() {
                 
                 setPopularProducts(sortedPopularProducts);
 
-                // Recent activity is not strictly date-range dependent, but shows most recent overall
                 const recentActivityShipments = [...shipments]
                     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                     .slice(0, 5);
@@ -278,14 +284,24 @@ export default function DashboardPage() {
             )}
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card>
+                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Nilai (Antrian Proses)</CardTitle>
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-sm font-medium">Estimasi Saldo Kas</CardTitle>
+                        <PiggyBank className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{formatRupiah(stats.totalValueInProcess)}</div>
-                        <p className="text-xs text-muted-foreground">Total nilai dari semua pengiriman yang sedang diproses.</p>
+                        <div className="text-2xl font-bold">{formatRupiah(stats.cashBalance)}</div>
+                        <p className="text-xs text-muted-foreground">Total dari semua kas masuk & keluar.</p>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Nilai Aset Gudang</CardTitle>
+                        <Warehouse className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{formatRupiah(stats.totalAssetValue)}</div>
+                        <p className="text-xs text-muted-foreground">Berdasarkan Harga Pokok x Stok.</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -306,16 +322,6 @@ export default function DashboardPage() {
                     <CardContent>
                         <div className="text-2xl font-bold">{stats.shipmentsDeliveredInRange}</div>
                         <p className="text-xs text-muted-foreground">Total pengiriman selesai dalam rentang tanggal terpilih.</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Jumlah Produk</CardTitle>
-                        <Boxes className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.totalProducts}</div>
-                        <p className="text-xs text-muted-foreground">Total item unik yang terdaftar di database.</p>
                     </CardContent>
                 </Card>
             </div>
@@ -432,3 +438,5 @@ export default function DashboardPage() {
         </div>
     );
 }
+
+    

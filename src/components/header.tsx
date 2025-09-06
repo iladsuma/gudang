@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, Settings, Truck, ShoppingBag, ShoppingBasket, Undo2, ArrowRightLeft, PackageCheck, FileText, Banknote } from 'lucide-react';
+import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, Settings, Truck, ShoppingBag, ShoppingBasket, Undo2, ArrowRightLeft, PackageCheck, Banknote } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { Button } from './ui/button';
 import { useRouter, usePathname } from 'next/navigation';
@@ -31,7 +31,6 @@ export function Header() {
 
   const isSettingsPage = pathname.startsWith('/settings');
   const isTransactionPage = ['/cashier', '/purchases', '/returns'].includes(pathname);
-  const isReportsPage = pathname.startsWith('/reports');
   const isAccountingPage = pathname.startsWith('/accounting');
 
 
@@ -97,14 +96,7 @@ export function Header() {
                     >
                       <Archive className="h-4 w-4" /> Arsip & Pengiriman
                     </Link>
-
-                     <Link
-                        href="/reports"
-                        className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", isReportsPage ? 'text-foreground' : 'text-foreground/60')}
-                    >
-                       <FileText className="h-4 w-4" /> Laporan
-                    </Link>
-
+                    
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className={cn("gap-1 px-2 h-auto text-sm transition-colors hover:text-foreground/80", isSettingsPage ? 'text-foreground' : 'text-foreground/60')}>
@@ -164,3 +156,5 @@ export function Header() {
     </header>
   );
 }
+
+    
