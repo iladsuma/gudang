@@ -58,7 +58,7 @@ export const shipments = pgTable('shipments', {
   customerId: text('customer_id').notNull().references(() => customers.id),
   customerName: varchar('customer_name', { length: 255 }).notNull(),
   expedition: varchar('expedition', { length: 255 }).notNull(),
-  packagingId: text('packaging_id').references(() => packagingOptions.id),
+  packagingId: text('packaging_id'),
   status: shipmentStatusEnum('status').notNull(),
   receipt: jsonb('receipt'), // { fileName: string, dataUrl: string }
   products: jsonb('products').notNull(), // ShipmentProduct[]
@@ -82,7 +82,7 @@ export const purchases = pgTable('purchases', {
 
 export const returns = pgTable('returns', {
     id: text('id').primaryKey().$defaultFn(() => `ret_${Date.now()}`),
-    originalShipmentId: text('original_shipment_id').notNull().references(() => shipments.id),
+    originalShipmentId: text('original_shipment_id').notNull(),
     originalTransactionId: varchar('original_transaction_id', { length: 255 }).notNull(),
     customerName: varchar('customer_name', { length: 255 }).notNull(),
     products: jsonb('products').notNull(), // ReturnedProduct[]
@@ -94,7 +94,7 @@ export const returns = pgTable('returns', {
 
 export const stockMovements = pgTable('stock_movements', {
     id: text('id').primaryKey().$defaultFn(() => `sm_${Date.now()}`),
-    productId: text('product_id').notNull().references(() => products.id),
+    productId: text('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
     referenceId: text('reference_id'),
     type: stockMovementTypeEnum('type').notNull(),
     quantityChange: integer('quantity_change').notNull(),
@@ -121,7 +121,7 @@ export const suppliersRelations = relations(suppliers, ({ many }) => ({
     purchases: many(purchases),
 }));
 
-export const shipmentsRelations = relations(shipments, ({ one, many }) => ({
+export const shipmentsRelations = relations(shipments, ({ one }) => ({
     user: one(users, {
         fields: [shipments.userId],
         references: [users.id],
@@ -130,7 +130,6 @@ export const shipmentsRelations = relations(shipments, ({ one, many }) => ({
         fields: [shipments.customerId],
         references: [customers.id],
     }),
-    returns: many(returns),
 }));
 
 export const purchasesRelations = relations(purchases, ({ one }) => ({
@@ -140,16 +139,5 @@ export const purchasesRelations = relations(purchases, ({ one }) => ({
     }),
 }));
 
-export const returnsRelations = relations(returns, ({ one }) => ({
-    originalShipment: one(shipments, {
-        fields: [returns.originalShipmentId],
-        references: [shipments.id],
-    }),
-}));
-
-export const stockMovementsRelations = relations(stockMovements, ({ one }) => ({
-    product: one(products, {
-        fields: [stockMovements.productId],
-        references: [products.id],
-    }),
-}));
+// No relations needed for returns or stockMovements on their own tables for now.
+// The reference back to them from other tables is sufficient.
