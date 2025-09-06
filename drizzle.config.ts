@@ -12,6 +12,6 @@ export default defineConfig({
     url: process.env.POSTGRES_URL!,
   },
    migrations: {
-    table: 'migrations'
+    table: 'migrations_v2'
   }
 });
