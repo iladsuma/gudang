@@ -32,6 +32,7 @@ export function Header() {
   const isSettingsPage = pathname.startsWith('/settings');
   const isTransactionPage = ['/cashier', '/purchases', '/returns'].includes(pathname);
   const isAccountingPage = pathname.startsWith('/accounting');
+  const isReportPage = pathname.startsWith('/reports');
 
 
   return (
@@ -89,6 +90,18 @@ export function Header() {
                     >
                       <BookUser className="h-4 w-4" /> Buku Kas
                     </Link>
+                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className={cn("gap-1 px-2 h-auto text-sm transition-colors hover:text-foreground/80", isReportPage ? 'text-foreground' : 'text-foreground/60')}>
+                            <FileBarChart className="h-4 w-4" /> Laporan
+                            <ChevronDown className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onSelect={() => router.push('/reports/sales-profit')}>Laba Kotor Penjualan</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
 
                     <Link
                       href="/invoices"

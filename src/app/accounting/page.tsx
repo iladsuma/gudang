@@ -10,7 +10,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -31,6 +31,8 @@ import type { DateRange } from 'react-day-picker';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import Papa from 'papaparse';
+import { Badge } from '@/components/ui/badge';
+
 
 interface jsPDFWithAutoTable extends jsPDF {
   autoTable: (options: any) => jsPDF;
@@ -59,7 +61,7 @@ function TransactionForm({
     initialData, 
     onFormSuccess 
 }: { 
-    initialData?: Partial<FinancialTransaction> & { type: 'in' | 'out' }, 
+    initialData?: FinancialTransaction, 
     onFormSuccess: () => void 
 }) {
     const { toast } = useToast();
@@ -218,13 +220,13 @@ function TransactionForm({
 
 function TransactionTable({
     transactions,
-    onEdit,
-    onDelete,
+    onSuccess,
     isDeleting,
-    dataLoading
+    dataLoading,
+    onDelete,
 }: {
     transactions: FinancialTransaction[],
-    onEdit: (tx: FinancialTransaction) => void,
+    onSuccess: () => void,
     onDelete: (tx: FinancialTransaction) => void,
     isDeleting: boolean,
     dataLoading: boolean
@@ -262,7 +264,7 @@ function TransactionTable({
                             {tx.type === 'in' ? '+' : '-'} {formatRupiah(tx.amount)}
                         </TableCell>
                         <TableCell className="text-center">
-                            <TransactionForm initialData={tx} onFormSuccess={onEdit} />
+                            <TransactionForm initialData={tx} onFormSuccess={onSuccess} />
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                     <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4" /></Button>
@@ -300,6 +302,7 @@ export default function AccountingPage() {
     });
     
     const fetchData = React.useCallback(async () => {
+        if (!user || user.role !== 'admin') return;
         setDataLoading(true);
         try {
             const startDate = dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined;
@@ -312,7 +315,7 @@ export default function AccountingPage() {
         } finally {
           setDataLoading(false);
         }
-    }, [toast, dateRange]);
+    }, [toast, dateRange, user]);
 
     React.useEffect(() => {
         if (!authLoading && user?.role !== 'admin') {
@@ -462,7 +465,7 @@ export default function AccountingPage() {
                     <div className="rounded-md border">
                         <TransactionTable 
                             transactions={transactions} 
-                            onEdit={fetchData}
+                            onSuccess={fetchData}
                             onDelete={handleDeleteTransaction}
                             isDeleting={isDeleting}
                             dataLoading={dataLoading}
