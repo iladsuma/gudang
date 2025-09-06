@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, Settings, Truck, ShoppingBag, ShoppingBasket, Undo2, ArrowRightLeft, PackageCheck, Banknote } from 'lucide-react';
+import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, Settings, Truck, ShoppingBag, ShoppingBasket, Undo2, ArrowRightLeft, PackageCheck, Banknote, FileBarChart } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { Button } from './ui/button';
 import { useRouter, usePathname } from 'next/navigation';
@@ -32,6 +32,7 @@ export function Header() {
   const isSettingsPage = pathname.startsWith('/settings');
   const isTransactionPage = ['/cashier', '/purchases', '/returns'].includes(pathname);
   const isAccountingPage = pathname.startsWith('/accounting');
+  const isReportPage = pathname.startsWith('/reports');
 
 
   return (
@@ -99,6 +100,18 @@ export function Header() {
                     
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className={cn("gap-1 px-2 h-auto text-sm transition-colors hover:text-foreground/80", isReportPage ? 'text-foreground' : 'text-foreground/60')}>
+                            <FileBarChart className="h-4 w-4" /> Laporan
+                            <ChevronDown className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onSelect={() => router.push('/reports/sales-profit')}>Laporan Laba Jual</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className={cn("gap-1 px-2 h-auto text-sm transition-colors hover:text-foreground/80", isSettingsPage ? 'text-foreground' : 'text-foreground/60')}>
                             <Settings className="h-4 w-4" /> Pengaturan
                             <ChevronDown className="h-4 w-4" />
@@ -156,5 +169,3 @@ export function Header() {
     </header>
   );
 }
-
-    
