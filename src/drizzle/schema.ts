@@ -69,7 +69,8 @@ export const shipments = pgTable('shipments', {
   totalProductCost: real('total_product_cost').notNull(),
   totalPackingCost: real('total_packing_cost').notNull(),
   totalAmount: real('total_amount').notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
+  totalRevenue: real('total_revenue').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
 export const purchases = pgTable('purchases', {
@@ -80,7 +81,7 @@ export const purchases = pgTable('purchases', {
     status: purchaseStatusEnum('status').notNull(),
     products: jsonb('products').notNull(), // PurchaseProduct[]
     totalAmount: real('total_amount').notNull(),
-    createdAt: timestamp('created_at').defaultNow().notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
 export const returns = pgTable('returns', {
@@ -91,7 +92,7 @@ export const returns = pgTable('returns', {
     products: jsonb('products').notNull(), // ReturnedProduct[]
     reason: text('reason').notNull(),
     totalAmount: real('total_amount').notNull(),
-    createdAt: timestamp('created_at').defaultNow().notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
 
@@ -104,7 +105,7 @@ export const stockMovements = pgTable('stock_movements', {
     stockBefore: integer('stock_before').notNull(),
     stockAfter: integer('stock_after').notNull(),
     notes: text('notes'),
-    createdAt: timestamp('created_at').defaultNow().notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
 export const financialTransactions = pgTable('financial_transactions', {
@@ -115,5 +116,5 @@ export const financialTransactions = pgTable('financial_transactions', {
   description: text('description').notNull(),
   transactionDate: date('transaction_date').notNull(),
   referenceId: text('reference_id'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
 });
