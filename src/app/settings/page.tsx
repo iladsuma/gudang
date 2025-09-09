@@ -82,7 +82,7 @@ export default function SettingsPage() {
                         <CardTitle>Manajemen Produk</CardTitle>
                         <CardDescription>
                             Kelola semua data item yang ada di gudang. Tambah, hapus, atau edit produk.
-                        </Description>
+                        </CardDescription>
                     </CardHeader>
                     <CardContent className="flex-grow">
                        <p className="text-sm text-muted-foreground">Atur kode, nama, harga jual, dan stok awal untuk setiap item.</p>
@@ -100,7 +100,7 @@ export default function SettingsPage() {
                         <CardTitle>Manajemen Pelanggan</CardTitle>
                         <CardDescription>
                             Kelola daftar pelanggan yang bertransaksi. Tambah, edit, dan hapus data pelanggan.
-                        </Description>
+                        </CardDescription>
                     </CardHeader>
                     <CardContent className="flex-grow">
                        <p className="text-sm text-muted-foreground">Simpan informasi nama, alamat, dan nomor telepon pelanggan.</p>
@@ -118,7 +118,7 @@ export default function SettingsPage() {
                         <CardTitle>Manajemen Supplier</CardTitle>
                         <CardDescription>
                             Kelola daftar pemasok barang. Tambah, edit, dan hapus data supplier.
-                        </Description>
+                        </CardDescription>
                     </CardHeader>
                     <CardContent className="flex-grow">
                        <p className="text-sm text-muted-foreground">Simpan informasi nama, alamat, dan nomor telepon supplier.</p>
@@ -136,7 +136,7 @@ export default function SettingsPage() {
                         <CardTitle>Manajemen Ekspedisi</CardTitle>
                         <CardDescription>
                             Kelola daftar ekspedisi yang tersedia untuk dipilih saat menambah data pengiriman.
-                        </Description>
+                        </CardDescription>
                     </CardHeader>
                     <CardContent className="flex-grow">
                        <p className="text-sm text-muted-foreground">Tambah, hapus, atau edit daftar ekspedisi.</p>
@@ -154,7 +154,7 @@ export default function SettingsPage() {
                         <CardTitle>Manajemen Kemasan</CardTitle>
                         <CardDescription>
                             Kelola tipe kemasan dan biayanya yang dapat dipilih saat membuat pengiriman.
-                        </Description>
+                        </CardDescription>
                     </CardHeader>
                     <CardContent className="flex-grow">
                        <p className="text-sm text-muted-foreground">Tambah, hapus, atau edit tipe kemasan dan biayanya.</p>
@@ -172,7 +172,7 @@ export default function SettingsPage() {
                         <CardTitle>Manajemen Pengguna</CardTitle>
                         <CardDescription>
                             Kelola akun yang dapat mengakses aplikasi. Tambah, edit, dan hapus pengguna.
-                        </Description>
+                        </CardDescription>
                     </CardHeader>
                     <CardContent className="flex-grow">
                        <p className="text-sm text-muted-foreground">Atur username, password, dan peran (admin/user) untuk setiap akun.</p>
