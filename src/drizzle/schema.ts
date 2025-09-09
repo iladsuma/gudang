@@ -91,7 +91,7 @@ export const purchases = pgTable('purchases', {
     supplierId: text('supplier_id').notNull().references(() => suppliers.id),
     supplierName: varchar('supplier_name', { length: 255 }).notNull(),
     purchaseNumber: varchar('purchase_number', { length: 255 }).notNull(),
-    accountId: text('account_id').notNull().references(() => accounts.id),
+    accountId: text('account_id'),
     status: purchaseStatusEnum('status').notNull(),
     paymentStatus: paymentStatusEnum('payment_status').notNull().default('Lunas'),
     products: jsonb('products').notNull(), // PurchaseProduct[]

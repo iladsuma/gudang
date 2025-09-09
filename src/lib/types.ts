@@ -40,7 +40,7 @@ export interface Purchase {
     supplierId: string;
     supplierName: string;
     purchaseNumber: string; // Nomor faktur pembelian
-    accountId: string; // Akun yang digunakan untuk membayar
+    accountId: string | null; // Akun yang digunakan untuk membayar, bisa null jika belum lunas
     status: 'Selesai' | 'Draf';
     paymentStatus: PaymentStatus;
     products: PurchaseProduct[];

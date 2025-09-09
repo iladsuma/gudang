@@ -1,12 +1,11 @@
 
+
 'use client';
 
 import * as React from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import { getProducts, getFinancialTransactions, getSalesProfitReport } from '@/lib/data';
-import type { Product, FinancialTransaction } from '@/lib/types';
-import type { SalesProfitReportData } from '@/app/api/reports/sales-profit/route';
+import { getPurchases, getShipments, getFinancialTransactions } from '@/lib/data';
 import {
   Card,
   CardContent,
@@ -20,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { format, subDays, startOfYear } from 'date-fns';
+import { format, startOfYear } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Loader2, FileText, Scale, Landmark, PiggyBank, Package, HandCoins, BookUser, CircleHelp, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -49,17 +48,17 @@ interface BalanceSheetData {
     assets: {
         cash: number;
         inventory: number;
-        accountsReceivable: number; // Piutang Usaha - Manual for now
+        accountsReceivable: number;
         total: number;
     };
     liabilities: {
-        accountsPayable: number; // Utang Usaha - Manual
-        bankLoans: number; // Utang Bank - Manual
+        accountsPayable: number;
+        bankLoans: number;
         total: number;
     };
     equity: {
-        ownerCapital: number; // Modal Disetor - Manual
-        retainedEarnings: number; // Laba Ditahan - Calculated
+        ownerCapital: number;
+        retainedEarnings: number;
         total: number;
     };
 }
@@ -74,48 +73,64 @@ export default function BalanceSheetPage() {
     const [dataLoading, setDataLoading] = React.useState(true);
     
     // Manual inputs
-    const [accountsPayable, setAccountsPayable] = React.useState(0);
     const [bankLoans, setBankLoans] = React.useState(0);
     const [ownerCapital, setOwnerCapital] = React.useState(0);
 
     const fetchData = React.useCallback(async () => {
         setDataLoading(true);
         try {
-            // Fetch all necessary data in parallel
             const today = new Date();
             const yearStart = startOfYear(today);
             
-            const [products, financialTransactions, salesReport] = await Promise.all([
-                getProducts(),
-                getFinancialTransactions(),
-                getSalesProfitReport(yearStart, today)
+            const [allPurchases, allShipments, allTransactions] = await Promise.all([
+                getPurchases(),
+                getShipments(),
+                getFinancialTransactions()
             ]);
 
-            // Calculate Assets
-            const cash = financialTransactions.reduce((acc, tx) => tx.type === 'in' ? acc + tx.amount : acc - tx.amount, 0);
-            const inventory = products.reduce((acc, p) => acc + (p.stock * p.costPrice), 0);
-            const totalAssets = cash + inventory; // Piutang still 0 for now
+            // ===== ASET LANCAR (CURRENT ASSETS) =====
+            const cash = allTransactions.reduce((acc, tx) => tx.type === 'in' ? acc + tx.amount : acc - tx.amount, 0);
+            
+            const accountsReceivable = allShipments
+                .filter(s => s.paymentStatus === 'Belum Lunas')
+                .reduce((sum, s) => sum + s.totalAmount, 0);
+            
+            // Note: This inventory calculation is based on current stock, not historical.
+            // It's an approximation for the balance sheet date.
+            const productsResponse = await fetch('/api/products');
+            const products = await productsResponse.json();
+            const inventory = products.reduce((acc:number, p:any) => acc + (p.stock * p.costPrice), 0);
 
-            // Calculate Equity
-            const retainedEarnings = salesReport.netProfit;
+            const totalAssets = cash + accountsReceivable + inventory;
 
+            // ===== KEWAJIBAN (LIABILITIES) =====
+            const accountsPayable = allPurchases
+                .filter(p => p.paymentStatus === 'Belum Lunas')
+                .reduce((sum, p) => sum + p.totalAmount, 0);
+                
+            const totalLiabilities = accountsPayable + bankLoans;
+
+            // ===== EKUITAS (EQUITY) =====
+            const deliveredShipments = allShipments.filter(s => s.status === 'Terkirim');
+            const totalRevenue = deliveredShipments.reduce((sum, s) => sum + s.totalRevenue, 0);
+            const totalCOGS = deliveredShipments.reduce((sum, s) => {
+                const cogs = s.products.reduce((c, p) => c + (p.costPrice * p.quantity), 0);
+                return sum + cogs;
+            }, 0);
+            
+            const grossProfit = totalRevenue - totalCOGS;
+
+            const operationalExpenses = allTransactions
+                .filter(tx => tx.type === 'out' && tx.category !== 'Pembelian Stok')
+                .reduce((sum, tx) => sum + tx.amount, 0);
+            
+            const retainedEarnings = grossProfit - operationalExpenses;
+            const totalEquity = ownerCapital + retainedEarnings;
+            
             setBalanceSheetData({
-                assets: {
-                    cash: cash,
-                    inventory: inventory,
-                    accountsReceivable: 0,
-                    total: totalAssets,
-                },
-                liabilities: {
-                    accountsPayable: accountsPayable,
-                    bankLoans: bankLoans,
-                    total: accountsPayable + bankLoans,
-                },
-                equity: {
-                    ownerCapital: ownerCapital,
-                    retainedEarnings: retainedEarnings,
-                    total: ownerCapital + retainedEarnings,
-                }
+                assets: { cash, inventory, accountsReceivable, total: totalAssets },
+                liabilities: { accountsPayable, bankLoans, total: totalLiabilities },
+                equity: { ownerCapital, retainedEarnings, total: totalEquity }
             });
 
         } catch (error) {
@@ -124,15 +139,19 @@ export default function BalanceSheetPage() {
         } finally {
             setDataLoading(false);
         }
-    }, [toast, accountsPayable, bankLoans, ownerCapital]);
+    }, [toast, bankLoans, ownerCapital]);
     
-    // Re-calculate when manual inputs change
      React.useEffect(() => {
         if (user?.role === 'admin') {
             fetchData();
         }
-    }, [user, fetchData]);
+     }, [user, fetchData]);
 
+    React.useEffect(() => {
+        if (!authLoading && user?.role !== 'admin') {
+            router.push('/shipments');
+        }
+    }, [user, authLoading, router]);
 
     if (authLoading || (dataLoading && user?.role === 'admin')) {
         return (
@@ -184,7 +203,7 @@ export default function BalanceSheetPage() {
                 <Card className="lg:col-span-1">
                      <CardHeader>
                         <CardTitle>Input Data Manual</CardTitle>
-                        <CardDescription>Masukkan nilai untuk akun yang belum terlacak otomatis oleh sistem.</CardDescription>
+                        <CardDescription>Masukkan nilai untuk akun yang tidak terlacak otomatis oleh sistem.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className='space-y-2'>
@@ -192,16 +211,15 @@ export default function BalanceSheetPage() {
                            <Input type="number" id="ownerCapital" value={ownerCapital} onChange={(e) => setOwnerCapital(Number(e.target.value))} placeholder="Modal awal dari pemilik" />
                         </div>
                          <div className='space-y-2'>
-                           <Label htmlFor="accountsPayable" className="flex items-center gap-2"><BookUser /> Utang Usaha</Label>
-                           <Input type="number" id="accountsPayable" value={accountsPayable} onChange={(e) => setAccountsPayable(Number(e.target.value))} placeholder="Total tagihan supplier" />
-                        </div>
-                         <div className='space-y-2'>
                            <Label htmlFor="bankLoans" className="flex items-center gap-2"><Landmark /> Utang Bank</Label>
                            <Input type="number" id="bankLoans" value={bankLoans} onChange={(e) => setBankLoans(Number(e.target.value))} placeholder="Total pinjaman bank" />
                         </div>
                     </CardContent>
                     <CardFooter>
-                        <p className='text-xs text-muted-foreground flex items-center gap-2'><CircleHelp size={14}/> Perubahan pada input ini akan otomatis memperbarui laporan neraca.</p>
+                         <Button onClick={fetchData}>
+                            {dataLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Hitung Ulang Neraca
+                        </Button>
                     </CardFooter>
                 </Card>
 
@@ -217,8 +235,8 @@ export default function BalanceSheetPage() {
                                     </TableHeader>
                                     <TableBody>
                                         <TableRow><TableCell className='flex items-center gap-2'><PiggyBank size={16}/> Kas & Setara Kas</TableCell><TableCell className="text-right">{formatRupiah(balanceSheetData.assets.cash)}</TableCell></TableRow>
+                                        <TableRow><TableCell className='flex items-center gap-2'><BookUser size={16}/> Piutang Usaha</TableCell><TableCell className="text-right">{formatRupiah(balanceSheetData.assets.accountsReceivable)}</TableCell></TableRow>
                                         <TableRow><TableCell className='flex items-center gap-2'><Package size={16}/> Persediaan Barang</TableCell><TableCell className="text-right">{formatRupiah(balanceSheetData.assets.inventory)}</TableCell></TableRow>
-                                        <TableRow><TableCell className='flex items-center gap-2 text-muted-foreground'><BookUser size={16}/> Piutang Usaha</TableCell><TableCell className="text-right text-muted-foreground">{formatRupiah(balanceSheetData.assets.accountsReceivable)}</TableCell></TableRow>
                                     </TableBody>
                                 </Table>
                                 <CardFooter className="flex justify-between font-bold text-lg p-4 mt-2 bg-muted">

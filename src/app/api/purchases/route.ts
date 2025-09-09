@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
 
             const totalAmount = products.reduce((sum: number, p: PurchaseProduct) => sum + p.costPrice * p.quantity, 0);
 
-            const purchaseData: Omit<Purchase, 'id' | 'createdAt'> = {
+            const purchaseData = {
                 supplierId,
                 supplierName,
                 purchaseNumber,
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
                 paymentStatus,
                 products,
                 totalAmount,
-                accountId,
+                accountId: accountId || null,
             };
 
             const [insertedPurchase] = await tx.insert(purchasesTable).values(purchaseData as any).returning();
