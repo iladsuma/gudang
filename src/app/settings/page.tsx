@@ -15,7 +15,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, Database } from 'lucide-react';
+import { ChevronRight, Database, Landmark } from 'lucide-react';
 
 export default function SettingsPage() {
     const { user, loading } = useAuth();
@@ -59,12 +59,30 @@ export default function SettingsPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                 <Card className="flex flex-col">
+                    <CardHeader>
+                        <CardTitle>Akun Kas & Bank</CardTitle>
+                        <CardDescription>
+                            Kelola semua akun keuangan Anda, seperti kas tunai, rekening bank, atau e-wallet.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-grow">
+                       <p className="text-sm text-muted-foreground">Atur daftar akun untuk pencatatan transaksi di Buku Kas.</p>
+                    </CardContent>
+                    <CardFooter>
+                       <Button asChild>
+                           <Link href="/settings/accounts">
+                                Kelola Akun <ChevronRight className="ml-2 h-4 w-4" />
+                           </Link>
+                       </Button>
+                    </CardFooter>
+                </Card>
                 <Card className="flex flex-col">
                     <CardHeader>
                         <CardTitle>Manajemen Produk</CardTitle>
                         <CardDescription>
                             Kelola semua data item yang ada di gudang. Tambah, hapus, atau edit produk.
-                        </CardDescription>
+                        </Description>
                     </CardHeader>
                     <CardContent className="flex-grow">
                        <p className="text-sm text-muted-foreground">Atur kode, nama, harga jual, dan stok awal untuk setiap item.</p>
@@ -82,7 +100,7 @@ export default function SettingsPage() {
                         <CardTitle>Manajemen Pelanggan</CardTitle>
                         <CardDescription>
                             Kelola daftar pelanggan yang bertransaksi. Tambah, edit, dan hapus data pelanggan.
-                        </CardDescription>
+                        </Description>
                     </CardHeader>
                     <CardContent className="flex-grow">
                        <p className="text-sm text-muted-foreground">Simpan informasi nama, alamat, dan nomor telepon pelanggan.</p>
@@ -100,7 +118,7 @@ export default function SettingsPage() {
                         <CardTitle>Manajemen Supplier</CardTitle>
                         <CardDescription>
                             Kelola daftar pemasok barang. Tambah, edit, dan hapus data supplier.
-                        </CardDescription>
+                        </Description>
                     </CardHeader>
                     <CardContent className="flex-grow">
                        <p className="text-sm text-muted-foreground">Simpan informasi nama, alamat, dan nomor telepon supplier.</p>
@@ -136,7 +154,7 @@ export default function SettingsPage() {
                         <CardTitle>Manajemen Kemasan</CardTitle>
                         <CardDescription>
                             Kelola tipe kemasan dan biayanya yang dapat dipilih saat membuat pengiriman.
-                        </CardDescription>
+                        </Description>
                     </CardHeader>
                     <CardContent className="flex-grow">
                        <p className="text-sm text-muted-foreground">Tambah, hapus, atau edit tipe kemasan dan biayanya.</p>

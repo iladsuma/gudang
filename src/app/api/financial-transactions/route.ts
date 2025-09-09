@@ -1,9 +1,10 @@
+
 'use server';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/drizzle/db';
-import { financialTransactions as ftTable } from '@/drizzle/schema';
-import { desc, eq, and, gte, lte } from 'drizzle-orm';
+import { financialTransactions as ftTable, accounts as accountsTable } from '@/drizzle/schema';
+import { desc, eq, and, gte, lte, sql } from 'drizzle-orm';
 import type { FinancialTransaction } from '@/lib/types';
 
 export async function GET(request: NextRequest) {
@@ -28,10 +29,17 @@ export async function GET(request: NextRequest) {
         
         const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-        const transactions = await db.select()
-            .from(ftTable)
-            .where(whereClause)
-            .orderBy(desc(ftTable.transactionDate), desc(ftTable.createdAt));
+        const transactions = await db.query.financialTransactions.findMany({
+             with: {
+                account: {
+                    columns: {
+                        name: true,
+                    },
+                },
+            },
+            where: whereClause,
+            orderBy: [desc(ftTable.transactionDate), desc(ftTable.createdAt)],
+        });
             
         return NextResponse.json(transactions);
     } catch (error) {
@@ -44,7 +52,21 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json() as Omit<FinancialTransaction, 'id' | 'createdAt'>;
-        const [newTransaction] = await db.insert(ftTable).values(body).returning();
+        let newTransaction;
+
+        await db.transaction(async (tx) => {
+            // Insert the new financial transaction
+            [newTransaction] = await tx.insert(ftTable).values(body).returning();
+
+            // Update the balance of the associated account
+            const amountChange = body.type === 'in' ? body.amount : -body.amount;
+            await tx.update(accountsTable)
+                .set({
+                    balance: sql`${accountsTable.balance} + ${amountChange}`
+                })
+                .where(eq(accountsTable.id, body.accountId));
+        });
+
         return NextResponse.json(newTransaction, { status: 201 });
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Failed to create financial transaction';

@@ -1,7 +1,7 @@
 
 'use client';
 
-import type { User, Shipment, Checkout, Expedition, Product, Packaging, Customer, StockMovement, Supplier, Purchase, Return, SortableProductField, SortOrder, FinancialTransaction, ShipmentProduct } from './types';
+import type { User, Shipment, Checkout, Expedition, Product, Packaging, Customer, StockMovement, Supplier, Purchase, Return, SortableProductField, SortOrder, FinancialTransaction, ShipmentProduct, Account } from './types';
 import type { SalesProfitReportData } from '@/app/api/reports/sales-profit/route';
 // =================================================================
 // API Client Functions
@@ -338,6 +338,39 @@ export async function getStockOpnameMovements(startDate?: Date, endDate?: Date):
     const response = await fetch(`${API_BASE_URL}/stock-movements/opname?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`);
     return handleResponse<(StockMovement & { productCode: string, productName: string })[]>(response);
 }
+
+// --- Financial Account Functions ---
+export async function getAccounts(): Promise<Account[]> {
+    const response = await fetch(`${API_BASE_URL}/accounts`);
+    return handleResponse<Account[]>(response);
+}
+
+export async function addAccount(data: Omit<Account, 'id' | 'createdAt'>): Promise<Account> {
+    const response = await fetch(`${API_BASE_URL}/accounts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    return handleResponse<Account>(response);
+}
+
+export async function updateAccount(id: string, data: Partial<Omit<Account, 'id' | 'createdAt' | 'balance'>>): Promise<Account> {
+    const response = await fetch(`${API_BASE_URL}/accounts/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    return handleResponse<Account>(response);
+}
+
+export async function deleteAccount(id: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/accounts/${id}`, { method: 'DELETE' });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete account');
+    }
+}
+
 
 // --- Financial Transaction Functions ---
 export async function getFinancialTransactions(type?: 'in' | 'out', startDate?: string, endDate?: string): Promise<FinancialTransaction[]> {

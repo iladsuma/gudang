@@ -7,6 +7,7 @@ export const shipmentStatusEnum = pgEnum('shipment_status', ['Proses', 'Pengemas
 export const purchaseStatusEnum = pgEnum('purchase_status', ['Selesai', 'Draf']);
 export const stockMovementTypeEnum = pgEnum('stock_movement_type', ['Stok Awal', 'Penjualan', 'Stok Opname', 'Pembelian', 'Retur']);
 export const transactionTypeEnum = pgEnum('transaction_type', ['in', 'out']);
+export const accountTypeEnum = pgEnum('account_type', ['Cash', 'Bank', 'E-Wallet', 'Other']);
 
 
 export const users = pgTable('users', {
@@ -14,6 +15,15 @@ export const users = pgTable('users', {
   username: varchar('username', { length: 255 }).notNull().unique(),
   role: userRoleEnum('role').notNull(),
   password: text('password').notNull(),
+});
+
+export const accounts = pgTable('accounts', {
+    id: text('id').primaryKey().$defaultFn(() => `acc_${Date.now()}`),
+    name: varchar('name', { length: 255 }).notNull(),
+    type: accountTypeEnum('type').notNull().default('Bank'),
+    balance: real('balance').notNull().default(0),
+    notes: text('notes'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
 export const products = pgTable('products', {
@@ -110,6 +120,7 @@ export const stockMovements = pgTable('stock_movements', {
 
 export const financialTransactions = pgTable('financial_transactions', {
   id: text('id').primaryKey().$defaultFn(() => `ft_${Date.now()}`),
+  accountId: text('account_id').notNull().references(() => accounts.id),
   type: transactionTypeEnum('type').notNull(), // 'in' or 'out'
   amount: real('amount').notNull(),
   category: varchar('category', { length: 255 }).notNull(),

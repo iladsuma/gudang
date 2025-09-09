@@ -1,4 +1,5 @@
 
+
 export interface Product {
     id: string;
     code: string; // Kode Item
@@ -168,8 +169,18 @@ export interface ProductSelection {
 export type SortableProductField = 'code' | 'name' | 'category' | 'stock';
 export type SortOrder = 'asc' | 'desc';
 
+export interface Account {
+    id: string;
+    name: string;
+    type: 'Cash' | 'Bank' | 'E-Wallet' | 'Other';
+    balance: number;
+    notes?: string;
+    createdAt: string;
+}
+
 export interface FinancialTransaction {
   id: string;
+  accountId: string;
   type: 'in' | 'out';
   amount: number;
   category: string;
