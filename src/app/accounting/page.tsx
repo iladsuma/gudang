@@ -4,8 +4,8 @@
 import * as React from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import { getFinancialTransactions, addFinancialTransaction, updateFinancialTransaction, deleteFinancialTransaction, getAccounts } from '@/lib/data';
-import type { FinancialTransaction, Account } from '@/lib/types';
+import { getFinancialTransactions, addFinancialTransaction, updateFinancialTransaction, deleteFinancialTransaction, getAccounts, addInternalTransfer } from '@/lib/data';
+import type { FinancialTransaction, Account, Transfer } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -18,9 +18,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, Loader2, PlusCircle, ArrowUpCircle, ArrowDownCircle, Pencil, Trash2, Wallet, FileText, Download, Landmark, Smartphone } from 'lucide-react';
+import { CalendarIcon, Loader2, PlusCircle, ArrowUpCircle, ArrowDownCircle, Pencil, Trash2, Wallet, FileText, Download, Landmark, Smartphone, Repeat, Scale } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format, subDays } from 'date-fns';
@@ -50,6 +50,27 @@ const transactionFormSchema = z.object({
 
 type TransactionFormValues = z.infer<typeof transactionFormSchema>;
 
+const transferFormSchema = z.object({
+    fromAccountId: z.string().min(1, "Akun sumber harus dipilih."),
+    toAccountId: z.string().min(1, "Akun tujuan harus dipilih."),
+    amount: z.coerce.number().min(1, "Jumlah harus lebih dari 0."),
+    transferDate: z.date({ required_error: "Tanggal transfer harus diisi." }),
+    description: z.string().min(1, "Deskripsi harus diisi."),
+}).refine(data => data.fromAccountId !== data.toAccountId, {
+    message: "Akun sumber dan tujuan tidak boleh sama.",
+    path: ["toAccountId"],
+});
+
+type TransferFormValues = z.infer<typeof transferFormSchema>;
+
+const reconciliationSchema = z.object({
+    actualBalance: z.coerce.number(),
+    notes: z.string().min(1, "Catatan penyesuaian harus diisi."),
+});
+
+type ReconciliationFormValues = z.infer<typeof reconciliationSchema>;
+
+
 const formatRupiah = (number: number) => {
     if (isNaN(number)) return 'Rp 0';
     return new Intl.NumberFormat('id-ID', {
@@ -58,6 +79,263 @@ const formatRupiah = (number: number) => {
         minimumFractionDigits: 0,
     }).format(number);
 };
+
+function ReconciliationForm({
+    account,
+    onSuccess,
+}: {
+    account: Account,
+    onSuccess: () => void,
+}) {
+    const { toast } = useToast();
+    const [isOpen, setIsOpen] = React.useState(false);
+    const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+    const form = useForm<ReconciliationFormValues>({
+        resolver: zodResolver(reconciliationSchema),
+        defaultValues: {
+            actualBalance: account.balance,
+            notes: `Rekonsiliasi per ${format(new Date(), 'dd/MM/yyyy')}`
+        }
+    });
+
+    const appBalance = account.balance;
+    const actualBalance = form.watch('actualBalance');
+    const difference = actualBalance - appBalance;
+    
+    const onSubmit = async (data: ReconciliationFormValues) => {
+        if (difference === 0) {
+            toast({ title: 'Tidak Ada Selisih', description: 'Saldo aplikasi sudah sesuai dengan saldo aktual.' });
+            setIsOpen(false);
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const transaction: Omit<FinancialTransaction, 'id' | 'createdAt' | 'account'> = {
+                accountId: account.id,
+                type: difference > 0 ? 'in' : 'out',
+                amount: Math.abs(difference),
+                category: 'Penyesuaian',
+                description: data.notes,
+                transactionDate: new Date().toISOString().split('T')[0],
+            };
+            await addFinancialTransaction(transaction);
+            toast({ title: 'Sukses!', description: 'Transaksi penyesuaian berhasil dibuat.' });
+            onSuccess();
+            setIsOpen(false);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Terjadi kesalahan.';
+            toast({ variant: 'destructive', title: 'Gagal Menyimpan', description: message });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                 <Button variant="ghost" size="icon" title="Rekonsiliasi Saldo">
+                    <Scale className="h-4 w-4" />
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Rekonsiliasi Akun: {account.name}</DialogTitle>
+                    <DialogDescription>
+                        Cocokkan saldo di aplikasi dengan saldo rekening koran atau kas fisik Anda.
+                    </DialogDescription>
+                </DialogHeader>
+                 <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                             <div className="space-y-2">
+                                <FormLabel>Saldo Menurut Aplikasi</FormLabel>
+                                <Input value={formatRupiah(appBalance)} readOnly disabled />
+                            </div>
+                             <FormField
+                                control={form.control}
+                                name="actualBalance"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Saldo Aktual (Bank/Fisik)</FormLabel>
+                                    <FormControl><Input type="number" {...field} /></FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                        <div className="space-y-2 p-3 bg-muted rounded-md text-center">
+                            <p className="text-sm text-muted-foreground">Selisih</p>
+                            <p className={cn("text-2xl font-bold", difference !== 0 ? (difference > 0 ? 'text-green-600' : 'text-red-600') : '')}>
+                                {formatRupiah(difference)}
+                            </p>
+                        </div>
+                         {difference !== 0 && (
+                            <FormField
+                                control={form.control}
+                                name="notes"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Catatan Penyesuaian</FormLabel>
+                                        <FormControl>
+                                            <Input {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        )}
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Batal</Button>
+                             <Button type="submit" disabled={isSubmitting || difference === 0}>
+                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Buat Penyesuaian
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+
+function TransferForm({
+    accounts,
+    onFormSuccess,
+}: {
+    accounts: Account[],
+    onFormSuccess: () => void,
+}) {
+    const { toast } = useToast();
+    const [isOpen, setIsOpen] = React.useState(false);
+    const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+    const form = useForm<TransferFormValues>({
+        resolver: zodResolver(transferFormSchema),
+        defaultValues: {
+            fromAccountId: '',
+            toAccountId: '',
+            amount: 0,
+            transferDate: new Date(),
+            description: 'Transfer antar akun',
+        }
+    });
+
+    React.useEffect(() => {
+        if (isOpen) {
+            form.reset({
+                fromAccountId: '',
+                toAccountId: '',
+                amount: 0,
+                transferDate: new Date(),
+                description: 'Transfer antar akun',
+            });
+        }
+    }, [isOpen, form]);
+
+    const onSubmit = async (data: TransferFormValues) => {
+        setIsSubmitting(true);
+        try {
+            await addInternalTransfer(data);
+            toast({ title: 'Sukses!', description: 'Transfer internal berhasil dicatat.' });
+            setIsOpen(false);
+            onFormSuccess();
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Terjadi kesalahan.';
+            toast({ variant: 'destructive', title: 'Gagal Menyimpan', description: message });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                <Button variant="outline"><Repeat className="mr-2 h-4 w-4" /> Transfer</Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Transfer Antar Akun</DialogTitle>
+                </DialogHeader>
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                         <FormField control={form.control} name="fromAccountId" render={({ field }) => (
+                            <FormItem><FormLabel>Dari Akun</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Pilih akun sumber" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        {accounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name} ({formatRupiah(acc.balance)})</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            <FormMessage /></FormItem>
+                        )} />
+                        <FormField control={form.control} name="toAccountId" render={({ field }) => (
+                            <FormItem><FormLabel>Ke Akun</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Pilih akun tujuan" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        {accounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name} ({formatRupiah(acc.balance)})</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            <FormMessage /></FormItem>
+                        )} />
+                        <FormField control={form.control} name="amount" render={({ field }) => (
+                            <FormItem><FormLabel>Jumlah (Rp)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                        <FormField
+                            control={form.control}
+                            name="transferDate"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-col">
+                                <FormLabel>Tanggal Transfer</FormLabel>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                    <FormControl>
+                                        <Button
+                                        variant={"outline"}
+                                        className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                                        >
+                                        {field.value ? (
+                                            format(field.value, "PPP", {locale: id})
+                                        ) : (
+                                            <span>Pilih tanggal</span>
+                                        )}
+                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                        </Button>
+                                    </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                        mode="single"
+                                        selected={field.value}
+                                        onSelect={field.onChange}
+                                        disabled={(date) => date > new Date()}
+                                        initialFocus
+                                    />
+                                    </PopoverContent>
+                                </Popover>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField control={form.control} name="description" render={({ field }) => (
+                            <FormItem><FormLabel>Deskripsi</FormLabel><FormControl><Textarea placeholder="Catatan singkat mengenai transaksi..." {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Batal</Button>
+                            <Button type="submit" disabled={isSubmitting}>
+                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Simpan Transfer
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+        </Dialog>
+    )
+}
 
 function TransactionForm({ 
     initialData, 
@@ -455,6 +733,7 @@ export default function AccountingPage() {
                 <div className="flex items-center gap-2">
                     <Button onClick={handleExportCSV} variant="outline" disabled={transactions.length === 0}><Download className="mr-2 h-4 w-4" /> Ekspor CSV</Button>
                     <Button onClick={handlePrintPDF} disabled={transactions.length === 0}><FileText className="mr-2 h-4 w-4" /> Cetak PDF</Button>
+                    <TransferForm accounts={accounts} onFormSuccess={fetchData} />
                     <TransactionForm onFormSuccess={fetchData} accounts={accounts} />
                 </div>
             </div>
@@ -473,6 +752,9 @@ export default function AccountingPage() {
                                     <div className="text-2xl font-bold">{formatRupiah(acc.balance)}</div>
                                     <p className="text-xs text-muted-foreground">{acc.notes}</p>
                                 </CardContent>
+                                <CardFooter className="pt-0">
+                                    <ReconciliationForm account={acc} onSuccess={fetchData} />
+                                </CardFooter>
                             </Card>
                         ))}
                     </div>

@@ -1,5 +1,4 @@
 
-
 export interface Product {
     id: string;
     code: string; // Kode Item
@@ -196,4 +195,12 @@ export interface FinancialTransaction {
   transactionDate: string; // Should be a string in 'YYYY-MM-DD' format
   referenceId?: string; // Optional reference to a sale, purchase, etc.
   createdAt: string;
+}
+
+export interface Transfer {
+    fromAccountId: string;
+    toAccountId: string;
+    amount: number;
+    transferDate: Date;
+    description: string;
 }

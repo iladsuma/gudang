@@ -5,7 +5,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/drizzle/db';
 import { financialTransactions as ftTable, accounts as accountsTable } from '@/drizzle/schema';
 import { desc, eq, and, gte, lte, sql } from 'drizzle-orm';
-import type { FinancialTransaction } from '@/lib/types';
+import type { FinancialTransaction, Transfer } from '@/lib/types';
+import { format } from 'date-fns';
 
 export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);

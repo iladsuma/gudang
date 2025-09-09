@@ -1,7 +1,7 @@
 
 'use client';
 
-import type { User, Shipment, Checkout, Expedition, Product, Packaging, Customer, StockMovement, Supplier, Purchase, Return, SortableProductField, SortOrder, FinancialTransaction, ShipmentProduct, Account } from './types';
+import type { User, Shipment, Checkout, Expedition, Product, Packaging, Customer, StockMovement, Supplier, Purchase, Return, SortableProductField, SortOrder, FinancialTransaction, ShipmentProduct, Account, Transfer, PaymentStatus } from './types';
 import type { SalesProfitReportData } from '@/app/api/reports/sales-profit/route';
 // =================================================================
 // API Client Functions
@@ -312,12 +312,13 @@ export async function processDirectSale(
     user: User, 
     customerId: string,
     products: ShipmentProduct[],
-    accountId: string
+    accountId: string,
+    paymentStatus: PaymentStatus,
 ): Promise<Shipment> {
      const response = await fetch(`${API_BASE_URL}/sales/direct`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user, customerId, products, accountId }),
+        body: JSON.stringify({ user, customerId, products, accountId, paymentStatus }),
     });
     return handleResponse<Shipment>(response);
 }
@@ -414,6 +415,16 @@ export async function deleteFinancialTransaction(id: string): Promise<void> {
         throw new Error(errorData.error || 'Failed to delete transaction');
     }
 }
+
+export async function addInternalTransfer(data: Transfer): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE_URL}/financial-transactions/transfer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    return handleResponse<{ message: string }>(response);
+}
+
 
 // --- Report Functions ---
 export async function getSalesProfitReport(startDate: Date, endDate: Date): Promise<SalesProfitReportData> {
