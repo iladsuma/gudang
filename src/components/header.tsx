@@ -109,7 +109,6 @@ export function Header() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
                         <DropdownMenuItem onSelect={() => router.push('/reports/sales-profit')}>Laba Rugi</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => router.push('/reports/balance-sheet')}>Neraca</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
 
