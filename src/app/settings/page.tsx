@@ -167,25 +167,6 @@ export default function SettingsPage() {
                        </Button>
                     </CardFooter>
                 </Card>
-                <Card className="flex flex-col">
-                    <CardHeader>
-                        <CardTitle>Skema Database</CardTitle>
-                        <CardDescription>
-                            Lihat kode definisi (SQL) dari struktur tabel database yang digunakan oleh aplikasi.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex-grow">
-                       <p className="text-sm text-muted-foreground">Halaman ini hanya untuk tujuan informasi teknis bagi developer.</p>
-                    </CardContent>
-                    <CardFooter>
-                       <Button asChild>
-                           <Link href="/settings/database">
-                                <Database className="mr-2 h-4 w-4" />
-                                Lihat Skema <ChevronRight className="ml-2 h-4 w-4" />
-                           </Link>
-                       </Button>
-                    </CardFooter>
-                </Card>
             </div>
         </div>
     );
