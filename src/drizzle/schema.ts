@@ -1,6 +1,6 @@
 
 import { pgTable, text, varchar, real, integer, timestamp, pgEnum, jsonb, boolean, date } from 'drizzle-orm/pg-core';
-// import { relations } from 'drizzle-orm';
+import { relations } from 'drizzle-orm';
 
 export const userRoleEnum = pgEnum('user_role', ['admin', 'user']);
 export const shipmentStatusEnum = pgEnum('shipment_status', ['Proses', 'Pengemasan', 'Terkirim']);
@@ -72,6 +72,7 @@ export const shipments = pgTable('shipments', {
   customerName: varchar('customer_name', { length: 255 }).notNull(),
   expedition: varchar('expedition', { length: 255 }).notNull(),
   packagingId: text('packaging_id'),
+  accountId: text('account_id'), // Can be null for 'Proses'/'Pengemasan'
   status: shipmentStatusEnum('status').notNull(),
   receipt: jsonb('receipt'), // { fileName: string, dataUrl: string }
   products: jsonb('products').notNull(), // ShipmentProduct[]
@@ -88,6 +89,7 @@ export const purchases = pgTable('purchases', {
     supplierId: text('supplier_id').notNull().references(() => suppliers.id),
     supplierName: varchar('supplier_name', { length: 255 }).notNull(),
     purchaseNumber: varchar('purchase_number', { length: 255 }).notNull(),
+    accountId: text('account_id').notNull().references(() => accounts.id),
     status: purchaseStatusEnum('status').notNull(),
     products: jsonb('products').notNull(), // PurchaseProduct[]
     totalAmount: real('total_amount').notNull(),
@@ -129,3 +131,10 @@ export const financialTransactions = pgTable('financial_transactions', {
   referenceId: text('reference_id'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
+
+export const financialTransactionsRelations = relations(financialTransactions, ({ one }) => ({
+	account: one(accounts, {
+		fields: [financialTransactions.accountId],
+		references: [accounts.id],
+	}),
+}));

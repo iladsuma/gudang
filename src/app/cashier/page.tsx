@@ -4,8 +4,8 @@
 import * as React from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import { getProducts, getCustomers, processDirectSale } from '@/lib/data';
-import type { Product, Customer, ShipmentProduct, Shipment } from '@/lib/types';
+import { getProducts, getCustomers, processDirectSale, getAccounts } from '@/lib/data';
+import type { Product, Customer, ShipmentProduct, Shipment, Account } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -43,11 +43,13 @@ export default function CashierPage() {
     // Data states
     const [products, setProducts] = React.useState<Product[]>([]);
     const [customers, setCustomers] = React.useState<Customer[]>([]);
+    const [accounts, setAccounts] = React.useState<Account[]>([]);
     const [dataLoading, setDataLoading] = React.useState(true);
 
     // Transaction states
     const [cart, setCart] = React.useState<ShipmentProduct[]>([]);
     const [selectedCustomer, setSelectedCustomer] = React.useState<string>('');
+    const [selectedAccount, setSelectedAccount] = React.useState<string>('');
     const [openProductSelector, setOpenProductSelector] = React.useState(false);
     const [isSubmitting, setIsSubmitting] = React.useState(false);
     const [lastTransaction, setLastTransaction] = React.useState<Shipment | null>(null);
@@ -62,9 +64,10 @@ export default function CashierPage() {
         if (user?.role === 'admin') {
             const fetchData = async () => {
                 setDataLoading(true);
-                const [productsData, customersData] = await Promise.all([getProducts(), getCustomers()]);
+                const [productsData, customersData, accountsData] = await Promise.all([getProducts(), getCustomers(), getAccounts()]);
                 setProducts(productsData);
                 setCustomers(customersData);
+                setAccounts(accountsData);
                 // Set default customer to "Pelanggan Umum"
                 const generalCustomer = customersData.find(c => c.name.toLowerCase() === 'pelanggan umum');
                 if (generalCustomer) {
@@ -138,6 +141,7 @@ export default function CashierPage() {
         if (generalCustomer) {
             setSelectedCustomer(generalCustomer.id);
         }
+        setSelectedAccount('');
     };
     
     const handleSubmit = async () => {
@@ -153,10 +157,14 @@ export default function CashierPage() {
             toast({ variant: 'destructive', title: 'Pelanggan Belum Dipilih', description: 'Silakan pilih pelanggan.' });
             return;
         }
+        if (!selectedAccount) {
+            toast({ variant: 'destructive', title: 'Akun Pembayaran Belum Dipilih', description: 'Silakan pilih akun tujuan pembayaran.' });
+            return;
+        }
         
         setIsSubmitting(true);
         try {
-            const result = await processDirectSale(user, selectedCustomer, cart);
+            const result = await processDirectSale(user, selectedCustomer, cart, selectedAccount);
             // Success
             setLastTransaction(result);
             setIsSuccessDialogOpen(true);
@@ -277,13 +285,26 @@ export default function CashierPage() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div>
-                                <label htmlFor="customer-select" className="text-sm font-medium">Pelanggan</label>
+                                <label htmlFor="customer-select" className="text-sm font-medium mb-2 block">Pelanggan</label>
                                 <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
                                     <SelectTrigger id="customer-select">
                                         <SelectValue placeholder="Pilih pelanggan" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {customers.map(c => (
+                                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                             <div>
+                                <label htmlFor="account-select" className="text-sm font-medium mb-2 block">Pembayaran Masuk ke Akun</label>
+                                <Select value={selectedAccount} onValueChange={setSelectedAccount}>
+                                    <SelectTrigger id="account-select">
+                                        <SelectValue placeholder="Pilih akun" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {accounts.map(c => (
                                             <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                                         ))}
                                     </SelectContent>

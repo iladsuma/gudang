@@ -3,9 +3,9 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import type { Purchase, Product, Supplier, PurchaseProduct } from '@/lib/types';
+import type { Purchase, Product, Supplier, PurchaseProduct, Account } from '@/lib/types';
 import { useAuth } from '@/context/auth-context';
-import { getPurchases, getProducts, getSuppliers, addPurchase } from '@/lib/data';
+import { getPurchases, getProducts, getSuppliers, addPurchase, getAccounts } from '@/lib/data';
 import { useRouter } from 'next/navigation';
 import {
   Card,
@@ -67,6 +67,7 @@ const purchaseFormSchema = z.object({
   purchaseNumber: z.string().min(1, 'Nomor Pembelian harus diisi.'),
   supplierId: z.string().min(1, 'Supplier harus dipilih.'),
   supplierName: z.string(),
+  accountId: z.string().min(1, 'Akun pembayaran harus dipilih.'),
   products: z.array(purchaseProductSchema).min(1, 'Minimal harus ada satu produk.'),
 });
 
@@ -111,7 +112,7 @@ const Summary = ({ control }: { control: any }) => {
 // =======================
 // Main Purchase Form Component
 // =======================
-function PurchaseForm({ allProducts, allSuppliers, onFormSuccess }: { allProducts: Product[], allSuppliers: Supplier[], onFormSuccess: () => void }) {
+function PurchaseForm({ allProducts, allSuppliers, allAccounts, onFormSuccess }: { allProducts: Product[], allSuppliers: Supplier[], allAccounts: Account[], onFormSuccess: () => void }) {
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [openProductSelector, setOpenProductSelector] = useState(false);
@@ -123,6 +124,7 @@ function PurchaseForm({ allProducts, allSuppliers, onFormSuccess }: { allProduct
             purchaseNumber: '',
             supplierId: '',
             supplierName: '',
+            accountId: '',
             products: [],
         },
     });
@@ -198,6 +200,16 @@ function PurchaseForm({ allProducts, allSuppliers, onFormSuccess }: { allProduct
                                         <FormControl><SelectTrigger><SelectValue placeholder="Pilih supplier" /></SelectTrigger></FormControl>
                                         <SelectContent>
                                             {allSuppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                <FormMessage /></FormItem>
+                            )} />
+                             <FormField control={form.control} name="accountId" render={({ field }) => (
+                                <FormItem className="md:col-span-2"><FormLabel>Bayar Dari Akun</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl><SelectTrigger><SelectValue placeholder="Pilih akun untuk membayar" /></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                            {allAccounts.map(s => <SelectItem key={s.id} value={s.id}>{s.name} ({formatRupiah(s.balance)})</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 <FormMessage /></FormItem>
@@ -304,6 +316,7 @@ export default function PurchasesPage() {
     const [purchases, setPurchases] = useState<Purchase[]>([]);
     const [allProducts, setAllProducts] = useState<Product[]>([]);
     const [allSuppliers, setAllSuppliers] = useState<Supplier[]>([]);
+    const [allAccounts, setAllAccounts] = useState<Account[]>([]);
 
     // Filters
     const [searchTerm, setSearchTerm] = useState('');
@@ -311,10 +324,16 @@ export default function PurchasesPage() {
 
     const fetchData = useCallback(async () => {
         setDataLoading(true);
-        const [purchasesData, productsData, suppliersData] = await Promise.all([getPurchases(), getProducts(), getSuppliers()]);
+        const [purchasesData, productsData, suppliersData, accountsData] = await Promise.all([
+            getPurchases(), 
+            getProducts(), 
+            getSuppliers(),
+            getAccounts()
+        ]);
         setPurchases(purchasesData);
         setAllProducts(productsData);
         setAllSuppliers(suppliersData);
+        setAllAccounts(accountsData);
         setDataLoading(false);
     }, []);
 
@@ -372,7 +391,7 @@ export default function PurchasesPage() {
                             <CardTitle>Riwayat Transaksi Pembelian</CardTitle>
                             <CardDescription>Daftar semua pembelian barang dari supplier untuk restok.</CardDescription>
                         </div>
-                        <PurchaseForm allProducts={allProducts} allSuppliers={allSuppliers} onFormSuccess={fetchData} />
+                        <PurchaseForm allProducts={allProducts} allSuppliers={allSuppliers} allAccounts={allAccounts} onFormSuccess={fetchData} />
                     </div>
                 </CardHeader>
                 <CardContent>

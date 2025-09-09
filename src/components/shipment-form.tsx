@@ -6,7 +6,7 @@ import * as React from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { Shipment, Expedition, Packaging, CartItem, Customer, ShipmentProduct } from '@/lib/types';
+import type { Shipment, Expedition, Packaging, CartItem, Customer, ShipmentProduct, Account } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ import { DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/co
 import { Loader2, PlusCircle, Trash2, Upload } from 'lucide-react';
 import { Card, CardContent, CardFooter } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import { addShipment, getExpeditions, getPackagingOptions, updateShipment, getCustomers, getProducts } from '@/lib/data';
+import { addShipment, getExpeditions, getPackagingOptions, updateShipment, getCustomers, getProducts, getAccounts } from '@/lib/data';
 import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Label } from './ui/label';
@@ -37,6 +37,7 @@ const shipmentFormSchema = z.object({
   user: z.string().min(1, 'User harus diisi'),
   transactionId: z.string().min(1, 'No. Transaksi harus diisi.'),
   customerId: z.string().min(1, 'Pelanggan harus dipilih'),
+  accountId: z.string().min(1, 'Akun pembayaran harus dipilih'),
   expedition: z.string().min(1, 'Nama ekspedisi harus dipilih'),
   packagingId: z.string().min(1, "Pilih kemasan"),
   packagingCost: z.coerce.number().min(0),
@@ -123,6 +124,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
   const [expeditions, setExpeditions] = React.useState<Expedition[]>([]);
   const [packagingOptions, setPackagingOptions] = React.useState<Packaging[]>([]);
   const [customers, setCustomers] = React.useState<Customer[]>([]);
+  const [accounts, setAccounts] = React.useState<Account[]>([]);
 
   const isEditMode = !!shipmentToEdit;
 
@@ -141,6 +143,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
         user: shipmentToEdit.userId, 
         transactionId: shipmentToEdit.transactionId,
         customerId: shipmentToEdit.customerId,
+        accountId: shipmentToEdit.accountId,
         expedition: shipmentToEdit.expedition,
         packagingId: shipmentToEdit.packagingId || '',
         packagingCost: shipmentToEdit.totalPackingCost || 0,
@@ -150,6 +153,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
       user: user?.username || '',
       transactionId: '',
       customerId: '',
+      accountId: '',
       expedition: '',
       packagingId: '',
       packagingCost: 0,
@@ -193,6 +197,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
     getExpeditions().then(setExpeditions);
     getPackagingOptions().then(setPackagingOptions);
     getCustomers().then(setCustomers);
+    getAccounts().then(setAccounts);
   }, [user, form, generateTransactionId, isEditMode]);
 
 
@@ -389,9 +394,29 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
                 />
                 <FormField
                     control={form.control}
+                    name="accountId"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Pembayaran Masuk ke Akun</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Pilih akun tujuan" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {accounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
                     name="receipt"
                     render={() => (
-                        <FormItem>
+                        <FormItem className="md:col-span-2">
                             <FormLabel>Resi (PDF) (Opsional)</FormLabel>
                             <FormControl>
                                 <div>
