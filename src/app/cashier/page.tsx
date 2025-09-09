@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { getProducts, getCustomers, processDirectSale, getAccounts } from '@/lib/data';
-import type { Product, Customer, ShipmentProduct, Shipment, Account } from '@/lib/types';
+import type { Product, Customer, ShipmentProduct, Shipment, Account, PaymentStatus } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 const formatRupiah = (number: number) => {
     if (isNaN(number)) return 'Rp 0';
@@ -50,6 +52,7 @@ export default function CashierPage() {
     const [cart, setCart] = React.useState<ShipmentProduct[]>([]);
     const [selectedCustomer, setSelectedCustomer] = React.useState<string>('');
     const [selectedAccount, setSelectedAccount] = React.useState<string>('');
+    const [paymentStatus, setPaymentStatus] = React.useState<PaymentStatus>('Lunas');
     const [openProductSelector, setOpenProductSelector] = React.useState(false);
     const [isSubmitting, setIsSubmitting] = React.useState(false);
     const [lastTransaction, setLastTransaction] = React.useState<Shipment | null>(null);
@@ -142,6 +145,7 @@ export default function CashierPage() {
             setSelectedCustomer(generalCustomer.id);
         }
         setSelectedAccount('');
+        setPaymentStatus('Lunas');
     };
     
     const handleSubmit = async () => {
@@ -157,14 +161,14 @@ export default function CashierPage() {
             toast({ variant: 'destructive', title: 'Pelanggan Belum Dipilih', description: 'Silakan pilih pelanggan.' });
             return;
         }
-        if (!selectedAccount) {
-            toast({ variant: 'destructive', title: 'Akun Pembayaran Belum Dipilih', description: 'Silakan pilih akun tujuan pembayaran.' });
+        if (paymentStatus === 'Lunas' && !selectedAccount) {
+            toast({ variant: 'destructive', title: 'Akun Pembayaran Belum Dipilih', description: 'Silakan pilih akun tujuan pembayaran untuk transaksi lunas.' });
             return;
         }
         
         setIsSubmitting(true);
         try {
-            const result = await processDirectSale(user, selectedCustomer, cart, selectedAccount);
+            const result = await processDirectSale(user, selectedCustomer, cart, selectedAccount, paymentStatus);
             // Success
             setLastTransaction(result);
             setIsSuccessDialogOpen(true);
@@ -285,7 +289,7 @@ export default function CashierPage() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div>
-                                <label htmlFor="customer-select" className="text-sm font-medium mb-2 block">Pelanggan</label>
+                                <Label htmlFor="customer-select" className="text-sm font-medium mb-2 block">Pelanggan</Label>
                                 <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
                                     <SelectTrigger id="customer-select">
                                         <SelectValue placeholder="Pilih pelanggan" />
@@ -297,8 +301,17 @@ export default function CashierPage() {
                                     </SelectContent>
                                 </Select>
                             </div>
-                             <div>
-                                <label htmlFor="account-select" className="text-sm font-medium mb-2 block">Pembayaran Masuk ke Akun</label>
+                             <div className="flex items-center space-x-2">
+                                <Checkbox 
+                                    id="payment-status" 
+                                    checked={paymentStatus === 'Lunas'}
+                                    onCheckedChange={(checked) => setPaymentStatus(checked ? 'Lunas' : 'Belum Lunas')}
+                                />
+                                <Label htmlFor="payment-status">Tandai sebagai Lunas</Label>
+                            </div>
+                            {paymentStatus === 'Lunas' && (
+                                <div>
+                                <Label htmlFor="account-select" className="text-sm font-medium mb-2 block">Pembayaran Masuk ke Akun</Label>
                                 <Select value={selectedAccount} onValueChange={setSelectedAccount}>
                                     <SelectTrigger id="account-select">
                                         <SelectValue placeholder="Pilih akun" />
@@ -310,6 +323,8 @@ export default function CashierPage() {
                                     </SelectContent>
                                 </Select>
                             </div>
+                            )}
+                            
                             <div className="border-t pt-4 space-y-2">
                                 <div className="flex justify-between text-lg font-medium">
                                     <span>Total</span>

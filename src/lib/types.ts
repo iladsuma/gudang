@@ -34,6 +34,7 @@ export interface PurchaseProduct {
     imageUrl: string | null;
 }
 
+export type PaymentStatus = 'Lunas' | 'Belum Lunas';
 
 export interface Purchase {
     id: string;
@@ -42,6 +43,7 @@ export interface Purchase {
     purchaseNumber: string; // Nomor faktur pembelian
     accountId: string; // Akun yang digunakan untuk membayar
     status: 'Selesai' | 'Draf';
+    paymentStatus: PaymentStatus;
     products: PurchaseProduct[];
     totalAmount: number;
     createdAt: string; // ISO String for when it was added
@@ -68,6 +70,7 @@ export interface Shipment {
     packagingId: string; // The selected packaging for the whole shipment
     accountId: string; // Akun yang menerima pembayaran
     status: 'Proses' | 'Pengemasan' | 'Terkirim';
+    paymentStatus: PaymentStatus;
     receipt?: { // Receipt is now optional
         fileName: string;
         dataUrl: string; // Base64 encoded PDF

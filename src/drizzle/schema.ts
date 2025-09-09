@@ -8,6 +8,7 @@ export const purchaseStatusEnum = pgEnum('purchase_status', ['Selesai', 'Draf'])
 export const stockMovementTypeEnum = pgEnum('stock_movement_type', ['Stok Awal', 'Penjualan', 'Stok Opname', 'Pembelian', 'Retur']);
 export const transactionTypeEnum = pgEnum('transaction_type', ['in', 'out']);
 export const accountTypeEnum = pgEnum('account_type', ['Cash', 'Bank', 'E-Wallet', 'Other']);
+export const paymentStatusEnum = pgEnum('payment_status', ['Lunas', 'Belum Lunas']);
 
 
 export const users = pgTable('users', {
@@ -74,6 +75,7 @@ export const shipments = pgTable('shipments', {
   packagingId: text('packaging_id'),
   accountId: text('account_id'), // Can be null for 'Proses'/'Pengemasan'
   status: shipmentStatusEnum('status').notNull(),
+  paymentStatus: paymentStatusEnum('payment_status').notNull().default('Lunas'),
   receipt: jsonb('receipt'), // { fileName: string, dataUrl: string }
   products: jsonb('products').notNull(), // ShipmentProduct[]
   totalItems: integer('total_items').notNull(),
@@ -91,6 +93,7 @@ export const purchases = pgTable('purchases', {
     purchaseNumber: varchar('purchase_number', { length: 255 }).notNull(),
     accountId: text('account_id').notNull().references(() => accounts.id),
     status: purchaseStatusEnum('status').notNull(),
+    paymentStatus: paymentStatusEnum('payment_status').notNull().default('Lunas'),
     products: jsonb('products').notNull(), // PurchaseProduct[]
     totalAmount: real('total_amount').notNull(),
     createdAt: timestamp('created_at').notNull().defaultNow(),

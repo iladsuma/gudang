@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import type { Purchase, Product, Supplier, PurchaseProduct, Account } from '@/lib/types';
+import type { Purchase, Product, Supplier, PurchaseProduct, Account, PaymentStatus } from '@/lib/types';
 import { useAuth } from '@/context/auth-context';
 import { getPurchases, getProducts, getSuppliers, addPurchase, getAccounts } from '@/lib/data';
 import { useRouter } from 'next/navigation';
@@ -47,8 +47,8 @@ import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 
 // =======================
@@ -67,9 +67,19 @@ const purchaseFormSchema = z.object({
   purchaseNumber: z.string().min(1, 'Nomor Pembelian harus diisi.'),
   supplierId: z.string().min(1, 'Supplier harus dipilih.'),
   supplierName: z.string(),
-  accountId: z.string().min(1, 'Akun pembayaran harus dipilih.'),
+  accountId: z.string().optional(),
+  paymentStatus: z.enum(['Lunas', 'Belum Lunas']),
   products: z.array(purchaseProductSchema).min(1, 'Minimal harus ada satu produk.'),
+}).refine(data => {
+    if (data.paymentStatus === 'Lunas' && !data.accountId) {
+        return false;
+    }
+    return true;
+}, {
+    message: 'Akun pembayaran harus dipilih jika status Lunas.',
+    path: ['accountId'],
 });
+
 
 type PurchaseFormValues = z.infer<typeof purchaseFormSchema>;
 
@@ -121,15 +131,16 @@ function PurchaseForm({ allProducts, allSuppliers, allAccounts, onFormSuccess }:
     const form = useForm<PurchaseFormValues>({
         resolver: zodResolver(purchaseFormSchema),
         defaultValues: {
-            purchaseNumber: '',
+            purchaseNumber: `INV/${Date.now()}`,
             supplierId: '',
             supplierName: '',
             accountId: '',
+            paymentStatus: 'Lunas',
             products: [],
         },
     });
 
-    const { fields, append, remove, update } = useFieldArray({
+    const { fields, append, remove } = useFieldArray({
         control: form.control,
         name: 'products',
     });
@@ -167,6 +178,8 @@ function PurchaseForm({ allProducts, allSuppliers, allAccounts, onFormSuccess }:
             setIsSubmitting(false);
         }
     };
+    
+    const paymentStatus = form.watch('paymentStatus');
 
     return (
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
@@ -204,8 +217,19 @@ function PurchaseForm({ allProducts, allSuppliers, allAccounts, onFormSuccess }:
                                     </Select>
                                 <FormMessage /></FormItem>
                             )} />
-                             <FormField control={form.control} name="accountId" render={({ field }) => (
-                                <FormItem className="md:col-span-2"><FormLabel>Bayar Dari Akun</FormLabel>
+                             <FormField control={form.control} name="paymentStatus" render={({ field }) => (
+                                <FormItem><FormLabel>Status Pembayaran</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl><SelectTrigger><SelectValue placeholder="Pilih status" /></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="Lunas">Lunas</SelectItem>
+                                            <SelectItem value="Belum Lunas">Belum Lunas</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                <FormMessage /></FormItem>
+                            )} />
+                             {paymentStatus === 'Lunas' && <FormField control={form.control} name="accountId" render={({ field }) => (
+                                <FormItem><FormLabel>Bayar Dari Akun</FormLabel>
                                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                                         <FormControl><SelectTrigger><SelectValue placeholder="Pilih akun untuk membayar" /></SelectTrigger></FormControl>
                                         <SelectContent>
@@ -213,7 +237,7 @@ function PurchaseForm({ allProducts, allSuppliers, allAccounts, onFormSuccess }:
                                         </SelectContent>
                                     </Select>
                                 <FormMessage /></FormItem>
-                            )} />
+                            )} />}
                         </div>
 
                         <Card>
@@ -427,19 +451,25 @@ export default function PurchasesPage() {
                                     <TableHead>No. Pembelian</TableHead>
                                     <TableHead>Supplier</TableHead>
                                     <TableHead>Tanggal</TableHead>
+                                    <TableHead>Status Pembayaran</TableHead>
                                     <TableHead>Detail Produk</TableHead>
                                     <TableHead className="text-right">Total Nilai</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {dataLoading ? (
-                                    <TableRow><TableCell colSpan={5} className="h-24 text-center"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={6} className="h-24 text-center"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
                                 ) : filteredPurchases.length > 0 ? (
                                     filteredPurchases.map(purchase => (
                                         <TableRow key={purchase.id}>
                                             <TableCell className="font-mono">{purchase.purchaseNumber}</TableCell>
                                             <TableCell className="font-medium">{purchase.supplierName}</TableCell>
                                             <TableCell>{format(new Date(purchase.createdAt), 'dd MMM yyyy, HH:mm', { locale: id })}</TableCell>
+                                             <TableCell>
+                                                <Badge variant={purchase.paymentStatus === 'Lunas' ? 'default' : 'destructive'}>
+                                                    {purchase.paymentStatus}
+                                                </Badge>
+                                             </TableCell>
                                             <TableCell>
                                                 <ul className="list-disc list-inside text-xs">
                                                     {purchase.products.map(p => (
@@ -451,7 +481,7 @@ export default function PurchasesPage() {
                                         </TableRow>
                                     ))
                                 ) : (
-                                    <TableRow><TableCell colSpan={5} className="h-24 text-center">Belum ada riwayat pembelian yang cocok dengan filter.</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={6} className="h-24 text-center">Belum ada riwayat pembelian yang cocok dengan filter.</TableCell></TableRow>
                                 )}
                             </TableBody>
                         </Table>

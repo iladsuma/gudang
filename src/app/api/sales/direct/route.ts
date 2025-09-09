@@ -17,7 +17,7 @@ import { format } from 'date-fns';
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const {user: userAuth, customerId, products, accountId} = body;
+        const {user: userAuth, customerId, products, accountId, paymentStatus} = body;
         
         let newShipment: Shipment;
 
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
             if (!customer) throw new Error('Customer not found');
             if (!user) throw new Error('User not found');
             if (!products || products.length === 0) throw new Error('Cannot process sale with no products');
-            if (!accountId) throw new Error('Payment account must be selected');
+            if (!accountId && paymentStatus === 'Lunas') throw new Error('Payment account must be selected for paid sales');
 
             const totalItems = products.reduce((sum: number, p: ShipmentProduct) => sum + p.quantity, 0);
             const totalAmount = products.reduce((sum: number, p: ShipmentProduct) => sum + p.price * p.quantity, 0);
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
                 return { ...p, costPrice: productData?.costPrice || 0 };
             }));
 
-            const newShipmentData: Omit<Shipment, 'id' | 'createdAt' | 'totalRevenue' | 'accountId'> = {
+            const newShipmentData: Omit<Shipment, 'id' | 'createdAt' | 'totalRevenue' | 'accountId' | 'paymentStatus'> = {
                 userId: user.id,
                 transactionId,
                 customerId: customer.id,
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
                 totalAmount: totalAmount,
             };
 
-            const [insertedShipment] = await tx.insert(shipmentsTable).values({...newShipmentData, totalRevenue: totalAmount, accountId: accountId } as any).returning();
+            const [insertedShipment] = await tx.insert(shipmentsTable).values({...newShipmentData, totalRevenue: totalAmount, accountId: accountId, paymentStatus: paymentStatus } as any).returning();
             newShipment = insertedShipment;
 
              for (const product of products) {
@@ -91,21 +91,23 @@ export async function POST(request: NextRequest) {
                 });
             }
             
-            // Automatically add to financial transactions
-             await tx.insert(ftTable).values({
-                accountId: newShipment.accountId,
-                type: 'in',
-                amount: newShipment.totalAmount,
-                category: 'Penjualan Tunai',
-                description: `Penjualan ${newShipment.transactionId} kepada ${newShipment.customerName}`,
-                transactionDate: format(new Date(), 'yyyy-MM-dd'),
-                referenceId: newShipment.id,
-            });
-            
-            // Update account balance
-            await tx.update(accountsTable)
-                .set({ balance: sql`${accountsTable.balance} + ${newShipment.totalAmount}`})
-                .where(eq(accountsTable.id, newShipment.accountId));
+            // Automatically add to financial transactions if it's paid
+            if (newShipment.paymentStatus === 'Lunas' && newShipment.accountId) {
+                 await tx.insert(ftTable).values({
+                    accountId: newShipment.accountId,
+                    type: 'in',
+                    amount: newShipment.totalAmount,
+                    category: 'Penjualan Tunai',
+                    description: `Penjualan ${newShipment.transactionId} kepada ${newShipment.customerName}`,
+                    transactionDate: format(new Date(), 'yyyy-MM-dd'),
+                    referenceId: newShipment.id,
+                });
+                
+                // Update account balance
+                await tx.update(accountsTable)
+                    .set({ balance: sql`${accountsTable.balance} + ${newShipment.totalAmount}`})
+                    .where(eq(accountsTable.id, newShipment.accountId));
+            }
 
         });
 

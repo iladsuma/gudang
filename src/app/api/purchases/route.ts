@@ -28,13 +28,13 @@ export async function POST(request: NextRequest) {
         let newPurchase: Purchase;
 
         await db.transaction(async (tx) => {
-            const {supplierId, supplierName, purchaseNumber, products, accountId} = body;
+            const {supplierId, supplierName, purchaseNumber, products, accountId, paymentStatus} = body;
 
             if (!products || products.length === 0) {
                 throw new Error("Purchase must have at least one product.");
             }
-            if(!accountId) {
-                throw new Error("Payment account must be selected.");
+            if(!accountId && paymentStatus === 'Lunas') {
+                throw new Error("Payment account must be selected for paid purchases.");
             }
 
             const totalAmount = products.reduce((sum: number, p: PurchaseProduct) => sum + p.costPrice * p.quantity, 0);
@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
                 supplierName,
                 purchaseNumber,
                 status: 'Selesai',
+                paymentStatus,
                 products,
                 totalAmount,
                 accountId,
@@ -75,21 +76,23 @@ export async function POST(request: NextRequest) {
                 });
             }
             
-            // Automatically add to financial transactions
-            await tx.insert(ftTable).values({
-                accountId: newPurchase.accountId,
-                type: 'out',
-                amount: newPurchase.totalAmount,
-                category: 'Pembelian Stok',
-                description: `Pembelian ${newPurchase.purchaseNumber} dari ${newPurchase.supplierName}`,
-                transactionDate: format(new Date(), 'yyyy-MM-dd'),
-                referenceId: newPurchase.id,
-            });
-            
-            // Update account balance
-            await tx.update(accountsTable)
-                .set({ balance: sql`${accountsTable.balance} - ${newPurchase.totalAmount}`})
-                .where(eq(accountsTable.id, newPurchase.accountId));
+            // Automatically add to financial transactions only if it's paid
+            if (newPurchase.paymentStatus === 'Lunas' && newPurchase.accountId) {
+                await tx.insert(ftTable).values({
+                    accountId: newPurchase.accountId,
+                    type: 'out',
+                    amount: newPurchase.totalAmount,
+                    category: 'Pembelian Stok',
+                    description: `Pembelian ${newPurchase.purchaseNumber} dari ${newPurchase.supplierName}`,
+                    transactionDate: format(new Date(), 'yyyy-MM-dd'),
+                    referenceId: newPurchase.id,
+                });
+                
+                // Update account balance
+                await tx.update(accountsTable)
+                    .set({ balance: sql`${accountsTable.balance} - ${newPurchase.totalAmount}`})
+                    .where(eq(accountsTable.id, newPurchase.accountId));
+            }
         });
 
         return NextResponse.json(newPurchase!, {status: 201});
