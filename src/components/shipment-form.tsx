@@ -491,7 +491,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
           </Card>
         </form>
     </Form>
-      <DialogFooter className="mt-auto">
+      <DialogFooter className="mt-auto pt-4">
         <Button type="button" variant="outline" onClick={onCancel}>
           Batal
         </Button>

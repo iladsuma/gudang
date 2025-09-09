@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
              await tx.insert(ftTable).values({
                 type: 'in',
                 amount: newShipment.totalAmount,
-                category: 'Penjualan Langsung',
+                category: 'Penjualan Tunai',
                 description: `Penjualan ${newShipment.transactionId} kepada ${newShipment.customerName}`,
                 transactionDate: format(new Date(), 'yyyy-MM-dd'),
                 referenceId: newShipment.id,

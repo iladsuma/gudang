@@ -96,6 +96,7 @@ export default function CashierPage() {
                         name: product.name,
                         quantity: 1,
                         price: product.price,
+                        costPrice: product.costPrice,
                         imageUrl: product.imageUrl,
                     }];
                  } else {

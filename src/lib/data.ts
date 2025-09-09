@@ -3,6 +3,7 @@
 'use client';
 
 import type { User, Shipment, Checkout, Expedition, Product, Packaging, Customer, StockMovement, Supplier, Purchase, Return, SortableProductField, SortOrder, FinancialTransaction, ShipmentProduct } from './types';
+import type { SalesProfitReportData } from '@/app/api/reports/sales-profit/route';
 // =================================================================
 // API Client Functions
 // =================================================================
@@ -378,7 +379,7 @@ export async function deleteFinancialTransaction(id: string): Promise<void> {
 }
 
 // --- Report Functions ---
-export async function getSalesProfitReport(startDate: Date, endDate: Date): Promise<any> {
+export async function getSalesProfitReport(startDate: Date, endDate: Date): Promise<SalesProfitReportData> {
     const response = await fetch(`${API_BASE_URL}/reports/sales-profit?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`);
-    return handleResponse<any>(response);
+    return handleResponse<SalesProfitReportData>(response);
 }
