@@ -25,6 +25,7 @@ import { id } from 'date-fns/locale';
 
 const stockOpnameSchema = z.object({
   physicalStock: z.coerce.number().int().min(0, 'Stok fisik harus bilangan positif.'),
+  notes: z.string().min(1, "Catatan harus diisi, cth: 'Stok opname bulanan'"),
 });
 
 type StockOpnameFormValues = z.infer<typeof stockOpnameSchema>;
@@ -50,6 +51,7 @@ export default function StockOpnamePage() {
         resolver: zodResolver(stockOpnameSchema),
         defaultValues: {
             physicalStock: 0,
+            notes: ''
         },
     });
 
@@ -69,6 +71,7 @@ export default function StockOpnamePage() {
     const handleSelectProduct = (product: Product) => {
         setSelectedProduct(product);
         form.setValue('physicalStock', product.stock); // Set initial value to current stock
+        form.setValue('notes', '');
         setOpenProductSelector(false);
         fetchStockHistory(product.id);
     };
@@ -90,7 +93,7 @@ export default function StockOpnamePage() {
         
         setIsSubmitting(true);
         try {
-            const updatedProduct = await updateProductStock(selectedProduct.id, data.physicalStock);
+            const updatedProduct = await updateProductStock(selectedProduct.id, data.physicalStock, data.notes);
             toast({ title: 'Sukses!', description: `Stok untuk ${updatedProduct.name} telah diperbarui.` });
             
             // Update local state to reflect change
@@ -159,28 +162,43 @@ export default function StockOpnamePage() {
                             </Popover>
 
                             {selectedProduct && (
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t pt-6">
-                                     <div className='space-y-2'>
-                                        <FormLabel>Stok Menurut Sistem (Buku)</FormLabel>
-                                        <Input value={stockInBook} readOnly disabled />
-                                     </div>
-                                      <FormField
+                                <div className="grid grid-cols-1 gap-6 border-t pt-6">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                         <div className='space-y-2'>
+                                            <FormLabel>Stok Menurut Sistem (Buku)</FormLabel>
+                                            <Input value={stockInBook} readOnly disabled />
+                                         </div>
+                                          <FormField
+                                            control={form.control}
+                                            name="physicalStock"
+                                            render={({ field }) => (
+                                              <FormItem>
+                                                <FormLabel>Stok Fisik Sebenarnya</FormLabel>
+                                                <FormControl>
+                                                  <Input type="number" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
+                                          />
+                                          <div className='space-y-2'>
+                                            <FormLabel>Selisih</FormLabel>
+                                            <Input value={difference} readOnly disabled className={difference !== 0 ? (difference > 0 ? 'text-green-600 font-bold' : 'text-red-600 font-bold') : ''} />
+                                         </div>
+                                    </div>
+                                     <FormField
                                         control={form.control}
-                                        name="physicalStock"
+                                        name="notes"
                                         render={({ field }) => (
                                           <FormItem>
-                                            <FormLabel>Stok Fisik Sebenarnya</FormLabel>
+                                            <FormLabel>Catatan/Keterangan Opname</FormLabel>
                                             <FormControl>
-                                              <Input type="number" {...field} />
+                                              <Textarea placeholder="Cth: Penyesuaian bulanan, ditemukan selisih, dll." {...field} />
                                             </FormControl>
                                             <FormMessage />
                                           </FormItem>
                                         )}
                                       />
-                                      <div className='space-y-2'>
-                                        <FormLabel>Selisih</FormLabel>
-                                        <Input value={difference} readOnly disabled className={difference !== 0 ? (difference > 0 ? 'text-green-600 font-bold' : 'text-red-600 font-bold') : ''} />
-                                     </div>
                                 </div>
                             )}
 
@@ -207,13 +225,14 @@ export default function StockOpnamePage() {
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>Tanggal</TableHead>
-                                            <TableHead>Qty</TableHead>
+                                            <TableHead>Perubahan</TableHead>
                                             <TableHead>Stok Akhir</TableHead>
+                                            <TableHead>Catatan</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                     {historyLoading ? (
-                                        <TableRow><TableCell colSpan={3} className="h-24 text-center"><Loader2 className="mx-auto animate-spin" /></TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="mx-auto animate-spin" /></TableCell></TableRow>
                                     ) : movements.length > 0 ? (
                                         movements.map(m => (
                                             <TableRow key={m.id}>
@@ -222,10 +241,11 @@ export default function StockOpnamePage() {
                                                     {m.quantityChange > 0 ? `+${m.quantityChange}` : m.quantityChange}
                                                 </TableCell>
                                                 <TableCell className="font-bold">{m.stockAfter}</TableCell>
+                                                <TableCell className="text-xs text-muted-foreground">{m.notes}</TableCell>
                                             </TableRow>
                                         ))
                                     ) : (
-                                        <TableRow><TableCell colSpan={3} className="h-24 text-center text-muted-foreground">Pilih produk untuk melihat riwayat.</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={4} className="h-24 text-center text-muted-foreground">Pilih produk untuk melihat riwayat.</TableCell></TableRow>
                                     )}
                                     </TableBody>
                                 </Table>

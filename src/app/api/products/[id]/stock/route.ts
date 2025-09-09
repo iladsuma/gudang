@@ -42,7 +42,7 @@ export async function PUT(request: NextRequest, {params}: { params: { id: string
                 quantityChange: quantityChange,
                 stockBefore: stockBefore,
                 stockAfter: newStock,
-                notes: notes || 'Penyesuaian stok manual',
+                notes: notes,
             });
         });
 

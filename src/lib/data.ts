@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import type { User, Shipment, Checkout, Expedition, Product, Packaging, Customer, StockMovement, Supplier, Purchase, Return, SortableProductField, SortOrder, FinancialTransaction, ShipmentProduct } from './types';
@@ -237,7 +236,7 @@ export async function deleteMultipleProducts(ids: string[]): Promise<void> {
 }
 
 
-export async function updateProductStock(id: string, newStock: number, notes: string = 'Penyesuaian stok manual'): Promise<Product> {
+export async function updateProductStock(id: string, newStock: number, notes: string): Promise<Product> {
     const response = await fetch(`${API_BASE_URL}/products/${id}/stock`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
