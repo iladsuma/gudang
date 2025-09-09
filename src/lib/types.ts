@@ -75,7 +75,6 @@ export interface Shipment {
     totalProductCost: number; // Total price of products
     totalPackingCost: number; // Total of all packing fees
     totalAmount: number; // Grand total (totalProductCost + totalPackingCost)
-    totalRevenue: number;
     createdAt: string; // ISO String for when it was added
 }
 

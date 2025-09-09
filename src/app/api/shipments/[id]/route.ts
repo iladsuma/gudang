@@ -30,6 +30,7 @@ export async function PUT(request: NextRequest, {params}: { params: { id: string
             totalProductCost,
             totalPackingCost: packagingCost,
             totalAmount,
+            totalRevenue: totalAmount,
         };
 
         const [updatedShipment] = await db.update(shipmentsTable).set(updatedShipmentData).where(eq(shipmentsTable.id, id)).returning();

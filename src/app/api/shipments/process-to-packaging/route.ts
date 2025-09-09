@@ -4,10 +4,12 @@ import {db} from '@/drizzle/db';
 import {
     shipments as shipmentsTable,
     products as productsTable,
-    stockMovements as stockMovementsTable
+    stockMovements as stockMovementsTable,
+    financialTransactions as ftTable,
 } from '@/drizzle/schema';
 import {inArray, eq, sql} from 'drizzle-orm';
 import type {ShipmentProduct} from '@/lib/types';
+import { format } from 'date-fns';
 
 export async function POST(request: NextRequest) {
     const {shipmentIds} = await request.json();
@@ -64,6 +66,17 @@ export async function POST(request: NextRequest) {
                         notes: `Penjualan dari No. Transaksi: ${shipment.transactionId}`
                     });
                 }
+                 // Add to financial transactions upon being marked as delivered
+                 if (shipment.status === 'Terkirim') {
+                     await tx.insert(ftTable).values({
+                        type: 'in',
+                        amount: shipment.totalAmount,
+                        category: 'Penjualan Tunai',
+                        description: `Penjualan ${shipment.transactionId} kepada ${shipment.customerName}`,
+                        transactionDate: format(new Date(), 'yyyy-MM-dd'),
+                        referenceId: shipment.id,
+                    });
+                 }
             }
 
             // 3. Update the status of the shipments

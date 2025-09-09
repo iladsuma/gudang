@@ -69,7 +69,6 @@ export const shipments = pgTable('shipments', {
   totalProductCost: real('total_product_cost').notNull(),
   totalPackingCost: real('total_packing_cost').notNull(),
   totalAmount: real('total_amount').notNull(),
-  totalRevenue: real('total_revenue').notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 

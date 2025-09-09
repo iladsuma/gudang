@@ -118,7 +118,7 @@ export async function getShipments(): Promise<Shipment[]> {
     return handleResponse<Shipment[]>(response);
 }
 
-export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'status' | 'totalItems' | 'totalAmount' | 'totalProductCost' | 'totalPackingCost' | 'customerName' | 'totalRevenue'> & { packagingCost: number }): Promise<Shipment> {
+export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'status' | 'totalItems' | 'totalAmount' | 'totalProductCost' | 'totalPackingCost' | 'customerName'> & { packagingCost: number }): Promise<Shipment> {
     const response = await fetch(`${API_BASE_URL}/shipments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -127,7 +127,7 @@ export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'sta
     return handleResponse<Shipment>(response);
 }
 
-export async function updateShipment(shipmentId: string, data: Omit<Shipment, 'id' | 'createdAt' | 'status' | 'totalItems' | 'totalAmount' | 'totalProductCost' | 'totalPackingCost' | 'customerName' | 'totalRevenue'> & { packagingCost: number }): Promise<Shipment> {
+export async function updateShipment(shipmentId: string, data: Omit<Shipment, 'id' | 'createdAt' | 'status' | 'totalItems' | 'totalAmount' | 'totalProductCost' | 'totalPackingCost' | 'customerName'> & { packagingCost: number }): Promise<Shipment> {
     const response = await fetch(`${API_BASE_URL}/shipments/${shipmentId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
