@@ -6,6 +6,7 @@ import {
     products as productsTable,
     stockMovements as stockMovementsTable,
     financialTransactions as ftTable,
+    accounts as accountsTable
 } from '@/drizzle/schema';
 import {desc, eq, sql} from 'drizzle-orm';
 import type {Purchase, PurchaseProduct} from '@/lib/types';
@@ -27,10 +28,13 @@ export async function POST(request: NextRequest) {
         let newPurchase: Purchase;
 
         await db.transaction(async (tx) => {
-            const {supplierId, supplierName, purchaseNumber, products} = body;
+            const {supplierId, supplierName, purchaseNumber, products, accountId} = body;
 
             if (!products || products.length === 0) {
                 throw new Error("Purchase must have at least one product.");
+            }
+            if(!accountId) {
+                throw new Error("Payment account must be selected.");
             }
 
             const totalAmount = products.reduce((sum: number, p: PurchaseProduct) => sum + p.costPrice * p.quantity, 0);
@@ -42,6 +46,7 @@ export async function POST(request: NextRequest) {
                 status: 'Selesai',
                 products,
                 totalAmount,
+                accountId,
             };
 
             const [insertedPurchase] = await tx.insert(purchasesTable).values(purchaseData as any).returning();
@@ -72,6 +77,7 @@ export async function POST(request: NextRequest) {
             
             // Automatically add to financial transactions
             await tx.insert(ftTable).values({
+                accountId: newPurchase.accountId,
                 type: 'out',
                 amount: newPurchase.totalAmount,
                 category: 'Pembelian Stok',
@@ -79,6 +85,11 @@ export async function POST(request: NextRequest) {
                 transactionDate: format(new Date(), 'yyyy-MM-dd'),
                 referenceId: newPurchase.id,
             });
+            
+            // Update account balance
+            await tx.update(accountsTable)
+                .set({ balance: sql`${accountsTable.balance} - ${newPurchase.totalAmount}`})
+                .where(eq(accountsTable.id, newPurchase.accountId));
         });
 
         return NextResponse.json(newPurchase!, {status: 201});

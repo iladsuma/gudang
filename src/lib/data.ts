@@ -157,11 +157,15 @@ export async function processShipmentsToPackaging(shipmentIds: string[]): Promis
 
 
 export async function processShipmentsToDelivered(shipmentIds: string[]): Promise<void> {
-     await fetch(`${API_BASE_URL}/shipments/process-to-delivered`, {
+     const response = await fetch(`${API_BASE_URL}/shipments/process-to-delivered`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ shipmentIds }),
     });
+     if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to mark as delivered');
+    }
 }
 
 
@@ -307,12 +311,13 @@ export async function addPurchase(data: Omit<Purchase, 'id' | 'createdAt' | 'sta
 export async function processDirectSale(
     user: User, 
     customerId: string,
-    products: ShipmentProduct[]
+    products: ShipmentProduct[],
+    accountId: string
 ): Promise<Shipment> {
      const response = await fetch(`${API_BASE_URL}/sales/direct`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user, customerId, products }),
+        body: JSON.stringify({ user, customerId, products, accountId }),
     });
     return handleResponse<Shipment>(response);
 }
@@ -384,7 +389,7 @@ export async function getFinancialTransactions(type?: 'in' | 'out', startDate?: 
 }
 
 
-export async function addFinancialTransaction(data: Omit<FinancialTransaction, 'id' | 'createdAt'>): Promise<FinancialTransaction> {
+export async function addFinancialTransaction(data: Omit<FinancialTransaction, 'id' | 'createdAt' | 'account'>): Promise<FinancialTransaction> {
     const response = await fetch(`${API_BASE_URL}/financial-transactions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -393,7 +398,7 @@ export async function addFinancialTransaction(data: Omit<FinancialTransaction, '
     return handleResponse<FinancialTransaction>(response);
 }
 
-export async function updateFinancialTransaction(id: string, data: Partial<Omit<FinancialTransaction, 'id' | 'createdAt'>>): Promise<FinancialTransaction> {
+export async function updateFinancialTransaction(id: string, data: Partial<Omit<FinancialTransaction, 'id' | 'createdAt' | 'account'>>): Promise<FinancialTransaction> {
     const response = await fetch(`${API_BASE_URL}/financial-transactions/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },

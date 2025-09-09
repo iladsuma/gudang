@@ -1,8 +1,8 @@
 
 import {NextRequest, NextResponse} from 'next/server';
 import {db} from '@/drizzle/db';
-import {shipments as shipmentsTable, financialTransactions as ftTable} from '@/drizzle/schema';
-import {inArray, eq} from 'drizzle-orm';
+import {shipments as shipmentsTable, financialTransactions as ftTable, accounts as accountsTable} from '@/drizzle/schema';
+import {inArray, eq, sql} from 'drizzle-orm';
 import { format } from 'date-fns';
 
 export async function POST(request: NextRequest) {
@@ -19,14 +19,24 @@ export async function POST(request: NextRequest) {
             });
             
             for (const shipment of shipmentsToUpdate) {
+                if(!shipment.accountId) {
+                    // This is a safeguard, though UI should prevent this.
+                    throw new Error(`Shipment ${shipment.transactionId} does not have a payment account set.`);
+                }
+                
                 await tx.insert(ftTable).values({
+                    accountId: shipment.accountId,
                     type: 'in',
                     amount: shipment.totalAmount,
-                    category: 'Penjualan Tunai',
+                    category: 'Penjualan Online',
                     description: `Penjualan ${shipment.transactionId} kepada ${shipment.customerName}`,
                     transactionDate: format(new Date(), 'yyyy-MM-dd'),
                     referenceId: shipment.id,
                 });
+                
+                 await tx.update(accountsTable)
+                    .set({ balance: sql`${accountsTable.balance} + ${shipment.totalAmount}`})
+                    .where(eq(accountsTable.id, shipment.accountId));
             }
 
             await tx.update(shipmentsTable)

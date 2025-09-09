@@ -4,9 +4,9 @@
 import * as React from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import { getFinancialTransactions, addFinancialTransaction, updateFinancialTransaction, deleteFinancialTransaction } from '@/lib/data';
-import type { FinancialTransaction } from '@/lib/types';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { getFinancialTransactions, addFinancialTransaction, updateFinancialTransaction, deleteFinancialTransaction, getAccounts } from '@/lib/data';
+import type { FinancialTransaction, Account } from '@/lib/types';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -18,7 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, Loader2, PlusCircle, ArrowUpCircle, ArrowDownCircle, Pencil, Trash2, Wallet, FileText, Download } from 'lucide-react';
+import { CalendarIcon, Loader2, PlusCircle, ArrowUpCircle, ArrowDownCircle, Pencil, Trash2, Wallet, FileText, Download, Landmark, Smartphone } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -32,6 +32,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import Papa from 'papaparse';
 import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 
 
 interface jsPDFWithAutoTable extends jsPDF {
@@ -44,6 +45,7 @@ const transactionFormSchema = z.object({
   category: z.string().min(1, 'Kategori harus diisi.'),
   description: z.string().min(1, 'Deskripsi harus diisi.'),
   type: z.enum(['in', 'out'], { required_error: 'Tipe transaksi harus dipilih.' }),
+  accountId: z.string().min(1, "Akun harus dipilih."),
 });
 
 type TransactionFormValues = z.infer<typeof transactionFormSchema>;
@@ -59,10 +61,12 @@ const formatRupiah = (number: number) => {
 
 function TransactionForm({ 
     initialData, 
-    onFormSuccess 
+    onFormSuccess,
+    accounts,
 }: { 
     initialData?: FinancialTransaction, 
-    onFormSuccess: () => void 
+    onFormSuccess: () => void,
+    accounts: Account[],
 }) {
     const { toast } = useToast();
     const [isFormOpen, setIsFormOpen] = React.useState(false);
@@ -83,6 +87,7 @@ function TransactionForm({
                 category: initialData?.category || '',
                 description: initialData?.description || '',
                 type: initialData?.type || 'out',
+                accountId: initialData?.accountId || '',
             });
         }
     }, [isFormOpen, initialData, form]);
@@ -134,13 +139,23 @@ function TransactionForm({
                 </DialogHeader>
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                         <FormField
+                         <FormField control={form.control} name="accountId" render={({ field }) => (
+                            <FormItem><FormLabel>Akun</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Pilih akun" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        {accounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            <FormMessage /></FormItem>
+                        )} />
+                        <FormField
                             control={form.control}
                             name="type"
                             render={({ field }) => (
                                 <FormItem>
                                 <FormLabel>Tipe Transaksi</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!!initialData?.id}>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl><SelectTrigger><SelectValue placeholder="Pilih tipe" /></SelectTrigger></FormControl>
                                     <SelectContent>
                                         <SelectItem value="out">Kas Keluar</SelectItem>
@@ -220,12 +235,14 @@ function TransactionForm({
 
 function TransactionTable({
     transactions,
+    accounts,
     onSuccess,
     isDeleting,
     dataLoading,
     onDelete,
 }: {
     transactions: FinancialTransaction[],
+    accounts: Account[],
     onSuccess: () => void,
     onDelete: (tx: FinancialTransaction) => void,
     isDeleting: boolean,
@@ -249,6 +266,7 @@ function TransactionTable({
                 <TableRow>
                     <TableHead>Tanggal</TableHead>
                     <TableHead>Deskripsi</TableHead>
+                    <TableHead>Akun</TableHead>
                     <TableHead>Kategori</TableHead>
                     <TableHead className="text-right">Jumlah</TableHead>
                     <TableHead className="w-[100px] text-center">Aksi</TableHead>
@@ -259,12 +277,13 @@ function TransactionTable({
                     <TableRow key={tx.id}>
                         <TableCell>{format(new Date(tx.transactionDate), 'dd MMM yyyy', {locale: id})}</TableCell>
                         <TableCell>{tx.description}</TableCell>
-                        <TableCell><Badge variant="outline">{tx.category}</Badge></TableCell>
+                        <TableCell><Badge variant="outline">{tx.account.name}</Badge></TableCell>
+                        <TableCell><Badge variant="secondary">{tx.category}</Badge></TableCell>
                         <TableCell className={cn("text-right font-medium", tx.type === 'in' ? 'text-green-600' : 'text-red-600')}>
                             {tx.type === 'in' ? '+' : '-'} {formatRupiah(tx.amount)}
                         </TableCell>
                         <TableCell className="text-center">
-                            <TransactionForm initialData={tx} onFormSuccess={onSuccess} />
+                            <TransactionForm initialData={tx} onFormSuccess={onSuccess} accounts={accounts} />
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                      <Button variant="ghost" size="icon" disabled={!!tx.referenceId}>
@@ -296,6 +315,7 @@ export default function AccountingPage() {
     const { toast } = useToast();
     
     const [transactions, setTransactions] = React.useState<FinancialTransaction[]>([]);
+    const [accounts, setAccounts] = React.useState<Account[]>([]);
     const [dataLoading, setDataLoading] = React.useState(true);
     const [isDeleting, setIsDeleting] = React.useState(false);
     const [dateRange, setDateRange] = React.useState<DateRange | undefined>({
@@ -309,11 +329,15 @@ export default function AccountingPage() {
         try {
             const startDate = dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined;
             const endDate = dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : undefined;
-            const data = await getFinancialTransactions(undefined, startDate, endDate);
-            setTransactions(data);
+            const [transactionsData, accountsData] = await Promise.all([
+                getFinancialTransactions(undefined, startDate, endDate),
+                getAccounts()
+            ]);
+            setTransactions(transactionsData);
+            setAccounts(accountsData);
         } catch (error) {
           console.error(error);
-          toast({ variant: 'destructive', title: 'Gagal Memuat Data', description: 'Tidak dapat mengambil data transaksi.' });
+          toast({ variant: 'destructive', title: 'Gagal Memuat Data', description: 'Tidak dapat mengambil data buku kas.' });
         } finally {
           setDataLoading(false);
         }
@@ -328,13 +352,6 @@ export default function AccountingPage() {
         }
     }, [user, authLoading, router, fetchData]);
     
-    const summary = React.useMemo(() => {
-        const totalIn = transactions.filter(t => t.type === 'in').reduce((sum, tx) => sum + tx.amount, 0);
-        const totalOut = transactions.filter(t => t.type === 'out').reduce((sum, tx) => sum + tx.amount, 0);
-        const balance = totalIn - totalOut;
-        return { totalIn, totalOut, balance };
-    }, [transactions]);
-
 
     const handleDeleteTransaction = async (tx: FinancialTransaction) => {
         setIsDeleting(true);
@@ -353,6 +370,7 @@ export default function AccountingPage() {
     const handleExportCSV = () => {
         const dataToExport = transactions.map(t => ({
             Tanggal: format(new Date(t.transactionDate), 'yyyy-MM-dd'),
+            Akun: t.account.name,
             Tipe: t.type === 'in' ? 'Masuk' : 'Keluar',
             Kategori: t.category,
             Deskripsi: t.description,
@@ -382,9 +400,10 @@ export default function AccountingPage() {
             doc.setFontSize(10);
             doc.text(`Periode: ${dateDisplay}`, 14, 28);
             
-            const head = [['Tanggal', 'Deskripsi', 'Kategori', 'Masuk (Rp)', 'Keluar (Rp)']];
+            const head = [['Tanggal', 'Akun', 'Deskripsi', 'Kategori', 'Masuk (Rp)', 'Keluar (Rp)']];
             const body = transactions.map(tx => [
                 format(new Date(tx.transactionDate), 'dd/MM/yy'),
+                tx.account.name,
                 tx.description,
                 tx.category,
                 tx.type === 'in' ? tx.amount.toLocaleString('id-ID') : '-',
@@ -397,27 +416,24 @@ export default function AccountingPage() {
                 startY: 35,
                 theme: 'grid',
                 columnStyles: { 
-                    3: { halign: 'right' },
-                    4: { halign: 'right' }
+                    4: { halign: 'right' },
+                    5: { halign: 'right' }
                 }
-            });
-
-            const finalY = doc.autoTable.previous.finalY;
-
-            doc.autoTable({
-                startY: finalY + 5,
-                theme: 'grid',
-                body: [
-                    [{content: 'Total Kas Masuk', colSpan: 3, styles: { fontStyle: 'bold'}}, {content: formatRupiah(summary.totalIn), styles: { halign: 'right', fontStyle: 'bold'}}],
-                    [{content: 'Total Kas Keluar', colSpan: 3, styles: { fontStyle: 'bold'}}, {content: formatRupiah(summary.totalOut), styles: { halign: 'right', fontStyle: 'bold'}}],
-                    [{content: 'Arus Kas Bersih', colSpan: 3, styles: { fontStyle: 'bold', fillColor: '#dff9fb'}}, {content: formatRupiah(summary.balance), styles: { halign: 'right', fontStyle: 'bold', fillColor: '#dff9fb'}}],
-                ],
             });
 
             const timestamp = format(new Date(), 'yyyyMMdd_HHmmss');
             doc.save(`buku_kas_${timestamp}.pdf`);
         } catch (error) {
             toast({ variant: 'destructive', title: 'Gagal Membuat PDF', description: 'Terjadi kesalahan.' });
+        }
+    };
+    
+    const getAccountIcon = (type: Account['type']) => {
+        switch (type) {
+            case 'Bank': return <Landmark className="h-4 w-4 text-muted-foreground" />;
+            case 'Cash': return <Wallet className="h-4 w-4 text-muted-foreground" />;
+            case 'E-Wallet': return <Smartphone className="h-4 w-4 text-muted-foreground" />;
+            default: return null;
         }
     };
 
@@ -434,39 +450,59 @@ export default function AccountingPage() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Buku Kas</h1>
-                    <p className="text-muted-foreground">Lacak semua pergerakan kas masuk dan kas keluar Anda.</p>
+                    <p className="text-muted-foreground">Lacak semua pergerakan kas masuk dan kas keluar di semua akun Anda.</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <Button onClick={handleExportCSV} variant="outline" disabled={transactions.length === 0}><Download className="mr-2 h-4 w-4" /> Ekspor CSV</Button>
                     <Button onClick={handlePrintPDF} disabled={transactions.length === 0}><FileText className="mr-2 h-4 w-4" /> Cetak PDF</Button>
-                    <TransactionForm onFormSuccess={fetchData} />
+                    <TransactionForm onFormSuccess={fetchData} accounts={accounts} />
                 </div>
             </div>
-             <div className="mb-6">
-                <DateRangePicker date={dateRange} onDateChange={setDateRange} />
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Kas Masuk</CardTitle><ArrowUpCircle className="h-4 w-4 text-muted-foreground" /></CardHeader>
-                    <CardContent><div className="text-2xl font-bold text-green-600">{formatRupiah(summary.totalIn)}</div></CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Kas Keluar</CardTitle><ArrowDownCircle className="h-4 w-4 text-muted-foreground" /></CardHeader>
-                    <CardContent><div className="text-2xl font-bold text-red-600">{formatRupiah(summary.totalOut)}</div></CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Arus Kas Bersih</CardTitle><Wallet className="h-4 w-4 text-muted-foreground" /></CardHeader>
-                    <CardContent><div className={cn("text-2xl font-bold", summary.balance >= 0 ? "text-primary" : "text-destructive")}>{formatRupiah(summary.balance)}</div></CardContent>
-                </Card>
+             <div className="mb-6">
+                <h2 className="text-xl font-semibold mb-3">Ringkasan Saldo Akun</h2>
+                 {accounts.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {accounts.map(acc => (
+                            <Card key={acc.id}>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">{acc.name}</CardTitle>
+                                    {getAccountIcon(acc.type)}
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{formatRupiah(acc.balance)}</div>
+                                    <p className="text-xs text-muted-foreground">{acc.notes}</p>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                ) : (
+                    <Card>
+                        <CardContent className="p-6 text-center text-muted-foreground">
+                            <p>Anda belum memiliki akun kas atau bank.</p>
+                            <Button asChild variant="link" className="mt-2">
+                                <Link href="/settings/accounts">Tambah Akun Sekarang</Link>
+                            </Button>
+                        </CardContent>
+                    </Card>
+                )}
             </div>
 
             <Card>
-                <CardHeader><CardTitle>Riwayat Transaksi</CardTitle><CardDescription>Daftar semua transaksi dalam periode yang dipilih.</CardDescription></CardHeader>
+                <CardHeader>
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <CardTitle>Riwayat Transaksi</CardTitle>
+                            <CardDescription>Daftar semua transaksi dalam periode yang dipilih.</CardDescription>
+                        </div>
+                        <DateRangePicker date={dateRange} onDateChange={setDateRange} />
+                    </div>
+                </CardHeader>
                 <CardContent>
                     <div className="rounded-md border">
                         <TransactionTable 
                             transactions={transactions} 
+                            accounts={accounts}
                             onSuccess={fetchData}
                             onDelete={handleDeleteTransaction}
                             isDeleting={isDeleting}
@@ -478,5 +514,3 @@ export default function AccountingPage() {
         </div>
     );
 }
-
-    

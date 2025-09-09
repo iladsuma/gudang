@@ -40,6 +40,7 @@ export interface Purchase {
     supplierId: string;
     supplierName: string;
     purchaseNumber: string; // Nomor faktur pembelian
+    accountId: string; // Akun yang digunakan untuk membayar
     status: 'Selesai' | 'Draf';
     products: PurchaseProduct[];
     totalAmount: number;
@@ -65,6 +66,7 @@ export interface Shipment {
     customerName: string;
     expedition: string;
     packagingId: string; // The selected packaging for the whole shipment
+    accountId: string; // Akun yang menerima pembayaran
     status: 'Proses' | 'Pengemasan' | 'Terkirim';
     receipt?: { // Receipt is now optional
         fileName: string;
@@ -181,6 +183,9 @@ export interface Account {
 export interface FinancialTransaction {
   id: string;
   accountId: string;
+  account: { // For relation query
+      name: string;
+  };
   type: 'in' | 'out';
   amount: number;
   category: string;
