@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, Settings, Truck, ShoppingBag, ShoppingBasket, Undo2, ArrowRightLeft, PackageCheck, BookUser, FileBarChart, History, Scale, Database, Landmark } from 'lucide-react';
+import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, Settings, Truck, ShoppingBag, ShoppingBasket, Undo2, ArrowRightLeft, PackageCheck, BookUser, FileBarChart, History, Scale, Database, Landmark, HandCoins, Receipt } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { Button } from './ui/button';
 import { useRouter, usePathname } from 'next/navigation';
@@ -32,7 +32,7 @@ export function Header() {
 
   const isSettingsPage = pathname.startsWith('/settings');
   const isTransactionPage = ['/cashier', '/purchases', '/returns', '/stock-opname'].includes(pathname);
-  const isAccountingPage = pathname.startsWith('/accounting');
+  const isAccountingPage = ['/accounting', '/receivables', '/payables'].includes(pathname);
   const isReportPage = pathname.startsWith('/reports');
 
 
@@ -86,12 +86,19 @@ export function Header() {
                       </DropdownMenuContent>
                     </DropdownMenu>
 
-                     <Link
-                      href="/accounting"
-                      className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", isAccountingPage ? 'text-foreground' : 'text-foreground/60')}
-                    >
-                      <BookUser className="h-4 w-4" /> Buku Kas
-                    </Link>
+                     <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                         <Button variant="ghost" className={cn("gap-1 px-2 h-auto text-sm transition-colors hover:text-foreground/80", isAccountingPage ? 'text-foreground' : 'text-foreground/60')}>
+                            <BookUser className="h-4 w-4" /> Akuntansi
+                            <ChevronDown className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onSelect={() => router.push('/accounting')}><Landmark className="mr-2"/> Buku Kas</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => router.push('/receivables')}><Receipt className="mr-2"/> Piutang Usaha</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => router.push('/payables')}><HandCoins className="mr-2"/> Utang Usaha</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                     
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>

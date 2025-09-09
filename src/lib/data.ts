@@ -431,3 +431,28 @@ export async function getSalesProfitReport(startDate: Date, endDate: Date): Prom
     const response = await fetch(`${API_BASE_URL}/reports/sales-profit?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`);
     return handleResponse<SalesProfitReportData>(response);
 }
+
+// --- Payment Functions ---
+export async function payReceivable(shipmentId: string, accountId: string, paidAt: Date): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/receivables/${shipmentId}/pay`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accountId, paidAt: paidAt.toISOString() }),
+    });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to process receivable payment');
+    }
+}
+
+export async function payPayable(purchaseId: string, accountId: string, paidAt: Date): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/payables/${purchaseId}/pay`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accountId, paidAt: paidAt.toISOString() }),
+    });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to process payable payment');
+    }
+}

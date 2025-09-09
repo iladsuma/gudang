@@ -46,6 +46,7 @@ export interface Purchase {
     products: PurchaseProduct[];
     totalAmount: number;
     createdAt: string; // ISO String for when it was added
+    paidAt?: string;
 }
 
 
@@ -81,6 +82,7 @@ export interface Shipment {
     totalAmount: number; // Grand total (totalProductCost + totalPackingCost)
     totalRevenue: number; // Explicitly store revenue
     createdAt: string; // ISO String for when it was added
+    paidAt?: string;
 }
 
 export interface ReturnedProduct {

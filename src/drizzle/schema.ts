@@ -84,6 +84,7 @@ export const shipments = pgTable('shipments', {
   totalAmount: real('total_amount').notNull(),
   totalRevenue: real('total_revenue').notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
+  paidAt: timestamp('paid_at'),
 });
 
 export const purchases = pgTable('purchases', {
@@ -97,6 +98,7 @@ export const purchases = pgTable('purchases', {
     products: jsonb('products').notNull(), // PurchaseProduct[]
     totalAmount: real('total_amount').notNull(),
     createdAt: timestamp('created_at').notNull().defaultNow(),
+    paidAt: timestamp('paid_at'),
 });
 
 export const returns = pgTable('returns', {
