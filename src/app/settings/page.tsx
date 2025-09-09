@@ -136,7 +136,7 @@ export default function SettingsPage() {
                         <CardTitle>Manajemen Ekspedisi</CardTitle>
                         <CardDescription>
                             Kelola daftar ekspedisi yang tersedia untuk dipilih saat menambah data pengiriman.
-                        </CardDescription>
+                        </Description>
                     </CardHeader>
                     <CardContent className="flex-grow">
                        <p className="text-sm text-muted-foreground">Tambah, hapus, atau edit daftar ekspedisi.</p>
@@ -172,7 +172,7 @@ export default function SettingsPage() {
                         <CardTitle>Manajemen Pengguna</CardTitle>
                         <CardDescription>
                             Kelola akun yang dapat mengakses aplikasi. Tambah, edit, dan hapus pengguna.
-                        </CardDescription>
+                        </Description>
                     </CardHeader>
                     <CardContent className="flex-grow">
                        <p className="text-sm text-muted-foreground">Atur username, password, dan peran (admin/user) untuk setiap akun.</p>
