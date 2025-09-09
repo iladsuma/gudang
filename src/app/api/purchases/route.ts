@@ -5,9 +5,12 @@ import {
     purchases as purchasesTable,
     products as productsTable,
     stockMovements as stockMovementsTable,
+    financialTransactions as ftTable,
 } from '@/drizzle/schema';
 import {desc, eq, sql} from 'drizzle-orm';
 import type {Purchase, PurchaseProduct} from '@/lib/types';
+import { format } from 'date-fns';
+
 
 export async function GET() {
     try {
@@ -66,6 +69,16 @@ export async function POST(request: NextRequest) {
                     notes: `Pembelian dari ${supplierName} - No: ${purchaseNumber}`,
                 });
             }
+            
+            // Automatically add to financial transactions
+            await tx.insert(ftTable).values({
+                type: 'out',
+                amount: newPurchase.totalAmount,
+                category: 'Pembelian Stok',
+                description: `Pembelian ${newPurchase.purchaseNumber} dari ${newPurchase.supplierName}`,
+                transactionDate: format(new Date(), 'yyyy-MM-dd'),
+                referenceId: newPurchase.id,
+            });
         });
 
         return NextResponse.json(newPurchase!, {status: 201});

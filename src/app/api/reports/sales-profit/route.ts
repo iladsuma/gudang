@@ -2,8 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/drizzle/db';
 import { shipments as shipmentsTable } from '@/drizzle/schema';
-import { eq, and, gte, lte, sql } from 'drizzle-orm';
-import type { Shipment } from '@/lib/types';
+import { eq, and, gte, lte } from 'drizzle-orm';
+import type { Shipment, ShipmentProduct } from '@/lib/types';
 
 export interface SalesProfitReportData extends Shipment {
     totalCOGS: number;
@@ -30,18 +30,13 @@ export async function GET(request: NextRequest) {
                 )
             );
         
-        const reportData = deliveredShipments.map(shipment => {
-            const totalCOGS = shipment.products.reduce((sum, p) => {
-                // This is a simplification. In a real scenario, you'd fetch the cost price
-                // at the time of sale. Here we assume the current cost price is used.
-                // For a more accurate system, costPrice should be stored with the shipment product.
-                // For now, let's estimate it. A proper implementation would need to join with products table.
-                // Let's assume a 20% margin for calculation if costPrice is not available on product.
-                const estimatedCostPrice = p.price * 0.8; 
-                return sum + (estimatedCostPrice * p.quantity);
+        const reportData: SalesProfitReportData[] = deliveredShipments.map(shipment => {
+            const totalCOGS = (shipment.products as ShipmentProduct[]).reduce((sum, p) => {
+                // Now using costPrice stored at the time of sale
+                return sum + (p.costPrice * p.quantity);
             }, 0);
 
-            const profit = shipment.totalProductCost - totalCOGS;
+            const profit = shipment.totalRevenue - totalCOGS;
 
             return {
                 ...shipment,

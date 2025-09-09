@@ -6,7 +6,7 @@ import * as React from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { Shipment, Expedition, Packaging, CartItem, Customer } from '@/lib/types';
+import type { Shipment, Expedition, Packaging, CartItem, Customer, ShipmentProduct } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ import { DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/co
 import { Loader2, PlusCircle, Trash2, Upload } from 'lucide-react';
 import { Card, CardContent, CardFooter } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import { addShipment, getExpeditions, getPackagingOptions, updateShipment, getCustomers } from '@/lib/data';
+import { addShipment, getExpeditions, getPackagingOptions, updateShipment, getCustomers, getProducts } from '@/lib/data';
 import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Label } from './ui/label';
@@ -29,6 +29,7 @@ const shipmentProductSchema = z.object({
   name: z.string(), // Will be populated
   quantity: z.coerce.number().int().min(1, 'Jumlah minimal 1'),
   price: z.coerce.number().min(0, 'Harga harus diisi'),
+  costPrice: z.coerce.number().min(0, 'Harga pokok harus diisi'),
   imageUrl: z.string().nullable().default(null),
 });
 
@@ -137,7 +138,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
   const form = useForm<ShipmentFormValues>({
     resolver: zodResolver(shipmentFormSchema),
     defaultValues: isEditMode ? {
-        user: shipmentToEdit.userId, // We pass userId here now which is wrong, but the schema expects user string. This will get fixed.
+        user: shipmentToEdit.userId, 
         transactionId: shipmentToEdit.transactionId,
         customerId: shipmentToEdit.customerId,
         expedition: shipmentToEdit.expedition,
@@ -156,8 +157,9 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
             productId: item.id,
             code: item.code,
             name: item.name,
-            quantity: 1, // Default quantity to 1
+            quantity: 1,
             price: item.price,
+            costPrice: item.costPrice,
             imageUrl: item.imageUrl || null,
       })),
     },
@@ -176,6 +178,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
             name: item.name,
             quantity: 1, // Always start with 1 in the form
             price: item.price,
+            costPrice: item.costPrice,
             imageUrl: item.imageUrl || null,
         }));
         replace(cartProducts);
@@ -257,6 +260,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
         form.setValue(`products.${index}.code`, product.code);
         form.setValue(`products.${index}.name`, product.name);
         form.setValue(`products.${index}.price`, product.price);
+        form.setValue(`products.${index}.costPrice`, product.costPrice);
         form.setValue(`products.${index}.imageUrl`, product.imageUrl);
         form.setValue(`products.${index}.quantity`, 1);
       }

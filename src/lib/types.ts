@@ -53,6 +53,7 @@ export interface ShipmentProduct {
     name: string;
     quantity: number;
     price: number; // Can be overridden from master product's price
+    costPrice: number; // Cost price at the time of sale
     imageUrl: string | null;
 }
 
@@ -74,6 +75,7 @@ export interface Shipment {
     totalProductCost: number; // Total price of products
     totalPackingCost: number; // Total of all packing fees
     totalAmount: number; // Grand total (totalProductCost + totalPackingCost)
+    totalRevenue: number; // Same as totalAmount for sales report consistency
     createdAt: string; // ISO String for when it was added
 }
 
@@ -174,5 +176,6 @@ export interface FinancialTransaction {
   category: string;
   description: string;
   transactionDate: string; // Should be a string in 'YYYY-MM-DD' format
+  referenceId?: string; // Optional reference to a sale, purchase, etc.
   createdAt: string;
 }

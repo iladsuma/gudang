@@ -267,7 +267,9 @@ function TransactionTable({
                             <TransactionForm initialData={tx} onFormSuccess={onSuccess} />
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4" /></Button>
+                                     <Button variant="ghost" size="icon" disabled={!!tx.referenceId}>
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                     <AlertDialogHeader>

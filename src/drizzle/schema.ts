@@ -69,6 +69,7 @@ export const shipments = pgTable('shipments', {
   totalProductCost: real('total_product_cost').notNull(),
   totalPackingCost: real('total_packing_cost').notNull(),
   totalAmount: real('total_amount').notNull(),
+  totalRevenue: real('total_revenue').notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
@@ -114,56 +115,6 @@ export const financialTransactions = pgTable('financial_transactions', {
   category: varchar('category', { length: 255 }).notNull(),
   description: text('description').notNull(),
   transactionDate: date('transaction_date').notNull(),
+  referenceId: text('reference_id'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
-
-
-// Relations
-/*
-export const usersRelations = relations(users, ({ many }) => ({
-  shipments: many(shipments),
-}));
-
-export const customersRelations = relations(customers, ({ many }) => ({
-    shipments: many(shipments),
-}));
-
-export const suppliersRelations = relations(suppliers, ({ many }) => ({
-    purchases: many(purchases),
-}));
-
-export const shipmentsRelations = relations(shipments, ({ one }) => ({
-    user: one(users, {
-        fields: [shipments.userId],
-        references: [users.id],
-    }),
-    customer: one(customers, {
-        fields: [shipments.customerId],
-        references: [customers.id],
-    }),
-}));
-
-export const purchasesRelations = relations(purchases, ({ one }) => ({
-    supplier: one(suppliers, {
-        fields: [purchases.supplierId],
-        references: [suppliers.id],
-    }),
-}));
-
-export const productsRelations = relations(products, ({ many }) => ({
-    stockMovements: many(stockMovements),
-}));
-
-export const stockMovementsRelations = relations(stockMovements, ({ one }) => ({
-    product: one(products, {
-        fields: [stockMovements.productId],
-        references: [products.id],
-    }),
-}));
-
-export const financialTransactionsRelations = relations(financialTransactions, () => ({
-  // No direct relations, but defining it is good practice
-}));
-*/
-
-    

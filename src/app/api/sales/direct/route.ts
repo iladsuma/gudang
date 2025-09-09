@@ -6,10 +6,12 @@ import {
     products as productsTable,
     stockMovements as stockMovementsTable,
     customers as customersTable,
-    users as usersTable
+    users as usersTable,
+    financialTransactions as ftTable,
 } from '@/drizzle/schema';
 import {eq, sql} from 'drizzle-orm';
 import type {Shipment, ShipmentProduct} from '@/lib/types';
+import { format } from 'date-fns';
 
 export async function POST(request: NextRequest) {
     try {
@@ -30,8 +32,16 @@ export async function POST(request: NextRequest) {
             const totalAmount = products.reduce((sum: number, p: ShipmentProduct) => sum + p.price * p.quantity, 0);
 
             const transactionId = `POS-${user.username.toUpperCase()}-${Date.now()}`;
+            
+            const productsWithCostPrice = await Promise.all(products.map(async (p: ShipmentProduct) => {
+                const productData = await tx.query.products.findFirst({
+                    where: eq(productsTable.id, p.productId),
+                    columns: { costPrice: true }
+                });
+                return { ...p, costPrice: productData?.costPrice || 0 };
+            }));
 
-            const newShipmentData: Omit<Shipment, 'id' | 'createdAt'> = {
+            const newShipmentData: Omit<Shipment, 'id' | 'createdAt' | 'totalRevenue'> = {
                 userId: user.id,
                 transactionId,
                 customerId: customer.id,
@@ -39,15 +49,14 @@ export async function POST(request: NextRequest) {
                 expedition: 'Penjualan Langsung',
                 packagingId: '', // No packaging for direct sale
                 status: 'Terkirim',
-                products: products,
+                products: productsWithCostPrice,
                 totalItems,
                 totalProductCost: totalAmount,
                 totalPackingCost: 0,
                 totalAmount: totalAmount,
-                user: user.username, // keep user field for compatibility if needed elsewhere
             };
 
-            const [insertedShipment] = await tx.insert(shipmentsTable).values(newShipmentData as any).returning();
+            const [insertedShipment] = await tx.insert(shipmentsTable).values({...newShipmentData, totalRevenue: totalAmount } as any).returning();
             newShipment = insertedShipment;
 
              for (const product of products) {
@@ -79,6 +88,17 @@ export async function POST(request: NextRequest) {
                     notes: `Penjualan langsung: ${newShipment.transactionId}`,
                 });
             }
+            
+            // Automatically add to financial transactions
+             await tx.insert(ftTable).values({
+                type: 'in',
+                amount: newShipment.totalAmount,
+                category: 'Penjualan Langsung',
+                description: `Penjualan ${newShipment.transactionId} kepada ${newShipment.customerName}`,
+                transactionDate: format(new Date(), 'yyyy-MM-dd'),
+                referenceId: newShipment.id,
+            });
+
         });
 
         return NextResponse.json(newShipment!, {status: 201});
