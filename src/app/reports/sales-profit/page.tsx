@@ -86,10 +86,10 @@ export default function SalesProfitReportPage() {
         if (!authLoading && user?.role !== 'admin') {
             router.push('/shipments');
         }
-        if (user?.role === 'admin') {
+        if (user?.role === 'admin' && dateRange?.from && dateRange?.to) {
             fetchData();
         }
-    }, [user, authLoading, router, fetchData]);
+    }, [user, authLoading, router, fetchData, dateRange]);
     
     
     const handleExportCSV = () => {
@@ -147,7 +147,7 @@ export default function SalesProfitReportPage() {
 
             const summaryBody = [
                 ['Total Pendapatan', formatRupiah(reportData.totalRevenue)],
-                ['Total HPP (Harga Pokok Penjualan)', formatRupiah(reportData.totalCOGS)],
+                ['Total HPP (Harga Pokok Penjualan)', `(${formatRupiah(reportData.totalCOGS)})`],
                 ['Laba Kotor', formatRupiah(reportData.grossProfit)],
                 ['Total Biaya Operasional', `(${formatRupiah(reportData.operationalExpenses)})`],
                 ['Laba Bersih', formatRupiah(reportData.netProfit)],
@@ -161,6 +161,9 @@ export default function SalesProfitReportPage() {
                  didDrawCell: (data) => {
                     if (data.section === 'body' && (data.row.index === 2 || data.row.index === 4)) {
                         doc.setFont('helvetica', 'bold');
+                    }
+                    if (data.section === 'body' && data.row.index === 2) {
+                        data.cell.styles.fillColor = '#f1f5f9';
                     }
                     if (data.section === 'body' && data.row.index === 4) {
                          doc.setFillColor(232, 245, 233); // light green
@@ -325,5 +328,3 @@ export default function SalesProfitReportPage() {
         </div>
     );
 }
-
-    

@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
         let totalCOGS = 0;
         const transactionDetails = deliveredShipments.map(shipment => {
             const cogs = (shipment.products as ShipmentProduct[]).reduce((sum, p) => {
-                return sum + (p.costPrice * p.quantity);
+                return sum + ((p.costPrice || 0) * p.quantity);
             }, 0);
             const profit = shipment.totalRevenue - cogs;
             
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
         
         // 3. Get all operational expenses from financial transactions within the date range
         // Exclude 'Pembelian Stok' because it's already accounted for in COGS.
-        const expenses = await db.select({
+        const expensesResult = await db.select({
                 amount: ftTable.amount
             })
             .from(ftTable)
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
                 lte(ftTable.transactionDate, endDate.split('T')[0])
             ));
 
-        const operationalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+        const operationalExpenses = expensesResult.reduce((sum, e) => sum + e.amount, 0);
 
         // 4. Calculate Net Profit
         const netProfit = grossProfit - operationalExpenses;
@@ -101,5 +101,3 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }
-
-    
