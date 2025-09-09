@@ -12,6 +12,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -27,11 +28,13 @@ import { DateRangePicker } from '@/components/ui/date-range-picker';
 import type { DateRange } from 'react-day-picker';
 import { format, subDays } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { Loader2, FileText, Download } from 'lucide-react';
+import { Loader2, FileText, Download, TrendingUp, TrendingDown, DollarSign, Scale } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import Papa from 'papaparse';
+import { cn } from '@/lib/utils';
+
 
 interface jsPDFWithAutoTable extends jsPDF {
   autoTable: (options: any) => jsPDF;
@@ -51,7 +54,7 @@ export default function SalesProfitReportPage() {
     const router = useRouter();
     const { toast } = useToast();
 
-    const [reportData, setReportData] = React.useState<SalesProfitReportData[]>([]);
+    const [reportData, setReportData] = React.useState<SalesProfitReportData | null>(null);
     const [dataLoading, setDataLoading] = React.useState(true);
     const [isPrinting, setIsPrinting] = React.useState(false);
     const [dateRange, setDateRange] = React.useState<DateRange | undefined>({
@@ -88,17 +91,11 @@ export default function SalesProfitReportPage() {
         }
     }, [user, authLoading, router, fetchData]);
     
-    const summary = React.useMemo(() => {
-        return reportData.reduce((acc, item) => {
-            acc.totalRevenue += item.totalRevenue;
-            acc.totalCOGS += item.totalCOGS;
-            acc.totalProfit += item.profit;
-            return acc;
-        }, { totalRevenue: 0, totalCOGS: 0, totalProfit: 0 });
-    }, [reportData]);
     
     const handleExportCSV = () => {
-        const dataToExport = reportData.map(item => ({
+        if (!reportData?.transactionDetails) return;
+
+        const dataToExport = reportData.transactionDetails.map(item => ({
             "No Transaksi": item.transactionId,
             "Tanggal": format(new Date(item.createdAt), 'dd MMM yyyy, HH:mm', { locale: id }),
             "Pelanggan": item.customerName,
@@ -106,8 +103,20 @@ export default function SalesProfitReportPage() {
             "Total HPP (Rp)": item.totalCOGS,
             "Laba Kotor (Rp)": item.profit,
         }));
+        
+        const summary = [
+            {},
+            { "No Transaksi": "RINGKASAN" },
+            { "No Transaksi": "Total Pendapatan", "Tanggal": formatRupiah(reportData.totalRevenue) },
+            { "No Transaksi": "Total HPP", "Tanggal": formatRupiah(reportData.totalCOGS) },
+            { "No Transaksi": "Laba Kotor", "Tanggal": formatRupiah(reportData.grossProfit) },
+            { "No Transaksi": "Biaya Operasional", "Tanggal": formatRupiah(reportData.operationalExpenses) },
+            { "No Transaksi": "LABA BERSIH", "Tanggal": formatRupiah(reportData.netProfit) },
+        ];
+        
+        // @ts-ignore
+        const csv = Papa.unparse([...dataToExport, ...summary]);
 
-        const csv = Papa.unparse(dataToExport);
         const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
@@ -122,12 +131,13 @@ export default function SalesProfitReportPage() {
     };
 
     const handlePrintPDF = () => {
+        if (!reportData) return;
         setIsPrinting(true);
         try {
             const doc = new jsPDF() as jsPDFWithAutoTable;
 
             doc.setFontSize(16);
-            doc.text('Laporan Laba Kotor Penjualan', 14, 22);
+            doc.text('Laporan Laba Rugi', 14, 22);
             doc.setFontSize(10);
             const dateDisplay = dateRange?.from ? (
                 dateRange.to ? `${format(dateRange.from, "d LLL, y")} - ${format(dateRange.to, "d LLL, y")}`
@@ -135,10 +145,39 @@ export default function SalesProfitReportPage() {
             ) : "Semua waktu";
             doc.text(`Periode: ${dateDisplay}`, 14, 28);
 
+            const summaryBody = [
+                ['Total Pendapatan', formatRupiah(reportData.totalRevenue)],
+                ['Total HPP (Harga Pokok Penjualan)', formatRupiah(reportData.totalCOGS)],
+                ['Laba Kotor', formatRupiah(reportData.grossProfit)],
+                ['Total Biaya Operasional', `(${formatRupiah(reportData.operationalExpenses)})`],
+                ['Laba Bersih', formatRupiah(reportData.netProfit)],
+            ];
+
+            doc.autoTable({
+                startY: 35,
+                head: [['Deskripsi', 'Jumlah']],
+                body: summaryBody,
+                theme: 'grid',
+                 didDrawCell: (data) => {
+                    if (data.section === 'body' && (data.row.index === 2 || data.row.index === 4)) {
+                        doc.setFont('helvetica', 'bold');
+                    }
+                    if (data.section === 'body' && data.row.index === 4) {
+                         doc.setFillColor(232, 245, 233); // light green
+                    }
+                },
+                columnStyles: { 1: { halign: 'right' } }
+            });
+
+            const finalY = doc.autoTable.previous.finalY;
+
+            doc.setFontSize(12);
+            doc.text('Rincian Transaksi Penjualan', 14, finalY + 20);
+
             const tableColumn = ["Tanggal", "No. Transaksi", "Pendapatan (Rp)", "HPP (Rp)", "Laba (Rp)"];
             const tableRows: any[] = [];
 
-            reportData.forEach(item => {
+            reportData.transactionDetails.forEach(item => {
                 const row = [
                     format(new Date(item.createdAt), 'dd/MM/yy'),
                     item.transactionId,
@@ -152,8 +191,8 @@ export default function SalesProfitReportPage() {
              doc.autoTable({
                 head: [tableColumn],
                 body: tableRows,
-                startY: 35,
-                theme: 'grid',
+                startY: finalY + 25,
+                theme: 'striped',
                 headStyles: { fillColor: [41, 128, 185], textColor: 255 },
                 columnStyles: {
                     2: { halign: 'right' },
@@ -162,19 +201,6 @@ export default function SalesProfitReportPage() {
                 }
             });
             
-            const finalY = doc.autoTable.previous.finalY;
-            doc.autoTable({
-                startY: finalY + 5,
-                body: [
-                    [{ content: 'Total Pendapatan', colSpan: 2, styles: { fontStyle: 'bold' } }, { content: formatRupiah(summary.totalRevenue), styles: { halign: 'right', fontStyle: 'bold' } }],
-                    [{ content: 'Total HPP', colSpan: 2, styles: { fontStyle: 'bold' } }, { content: formatRupiah(summary.totalCOGS), styles: { halign: 'right', fontStyle: 'bold' } }],
-                    [{ content: 'Total Laba Kotor', colSpan: 2, styles: { fontStyle: 'bold', fillColor: '#dff9fb' } }, { content: formatRupiah(summary.totalProfit), styles: { halign: 'right', fontStyle: 'bold', fillColor: '#dff9fb' } }],
-                ],
-                theme: 'grid',
-                columnStyles: { 0: { cellWidth: 105 } }
-            });
-
-
             const timestamp = format(new Date(), 'yyyyMMdd_HHmmss');
             doc.save(`laporan_laba_rugi_${timestamp}.pdf`);
 
@@ -217,64 +243,87 @@ export default function SalesProfitReportPage() {
                 <CardHeader>
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <div>
-                            <CardTitle>Laporan Laba Kotor Penjualan</CardTitle>
-                            <CardDescription>Analisis keuntungan dari setiap penjualan yang telah selesai.</CardDescription>
+                            <CardTitle>Laporan Laba Rugi</CardTitle>
+                            <CardDescription>Analisis laba bersih berdasarkan pendapatan, HPP, dan biaya operasional.</CardDescription>
                         </div>
                         <div className="flex items-center gap-2">
-                             <Button onClick={handleExportCSV} variant="outline" disabled={reportData.length === 0}>
+                             <Button onClick={handleExportCSV} variant="outline" disabled={!reportData || reportData.transactionDetails.length === 0}>
                                 <Download className="mr-2 h-4 w-4" /> Ekspor CSV
                             </Button>
-                            <Button onClick={handlePrintPDF} disabled={reportData.length === 0 || isPrinting}>
+                            <Button onClick={handlePrintPDF} disabled={!reportData || reportData.transactionDetails.length === 0 || isPrinting}>
                                 {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
                                 Cetak PDF
                             </Button>
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-6">
                      <div className="mb-4">
                         <DateRangePicker date={dateRange} onDateChange={setDateRange} />
                     </div>
-                    <div className="rounded-md border">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>No. Transaksi</TableHead>
-                                    <TableHead>Pelanggan</TableHead>
-                                    <TableHead>Tanggal</TableHead>
-                                    <TableHead className="text-right">Pendapatan</TableHead>
-                                    <TableHead className="text-right">HPP</TableHead>
-                                    <TableHead className="text-right">Laba Kotor</TableHead>
+                     {dataLoading ? <Skeleton className="h-64 w-full"/> : reportData && (
+                     <>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Pendapatan</CardTitle><TrendingUp className="h-4 w-4 text-muted-foreground" /></CardHeader>
+                                <CardContent><div className="text-2xl font-bold text-green-600">{formatRupiah(reportData.totalRevenue)}</div></CardContent>
+                            </Card>
+                             <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total HPP</CardTitle><TrendingDown className="h-4 w-4 text-muted-foreground" /></CardHeader>
+                                <CardContent><div className="text-2xl font-bold text-red-600">{formatRupiah(reportData.totalCOGS)}</div></CardContent>
+                            </Card>
+                             <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Biaya Operasional</CardTitle><DollarSign className="h-4 w-4 text-muted-foreground" /></CardHeader>
+                                <CardContent><div className="text-2xl font-bold">{formatRupiah(reportData.operationalExpenses)}</div></CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Laba Bersih</CardTitle><Scale className="h-4 w-4 text-muted-foreground" /></CardHeader>
+                                <CardContent><div className={cn("text-2xl font-bold", reportData.netProfit >= 0 ? "text-primary" : "text-destructive")}>{formatRupiah(reportData.netProfit)}</div></CardContent>
+                            </Card>
+                        </div>
+
+                        <div className="rounded-md border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>No. Transaksi</TableHead>
+                                        <TableHead>Pelanggan</TableHead>
+                                        <TableHead>Tanggal</TableHead>
+                                        <TableHead className="text-right">Pendapatan</TableHead>
+                                        <TableHead className="text-right">HPP</TableHead>
+                                        <TableHead className="text-right">Laba Kotor</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {reportData.transactionDetails.length > 0 ? (
+                                        reportData.transactionDetails.map(item => (
+                                            <TableRow key={item.id}>
+                                                <TableCell className="font-mono">{item.transactionId}</TableCell>
+                                                <TableCell className="font-medium">{item.customerName}</TableCell>
+                                                <TableCell>{format(new Date(item.createdAt), 'dd MMM yyyy, HH:mm', { locale: id })}</TableCell>
+                                                <TableCell className="text-right">{formatRupiah(item.totalRevenue)}</TableCell>
+                                                <TableCell className="text-right">{formatRupiah(item.totalCOGS)}</TableCell>
+                                                <TableCell className="text-right font-bold text-green-600">{formatRupiah(item.profit)}</TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow><TableCell colSpan={6} className="h-24 text-center">Tidak ada data penjualan terkirim pada rentang tanggal ini.</TableCell></TableRow>
+                                    )}
+                                </TableBody>
+                                <TableRow className="bg-muted/50 font-bold hover:bg-muted/50">
+                                    <TableCell colSpan={3} className="text-right">Total Laba Kotor</TableCell>
+                                    <TableCell className="text-right">{formatRupiah(reportData.totalRevenue)}</TableCell>
+                                    <TableCell className="text-right">{formatRupiah(reportData.totalCOGS)}</TableCell>
+                                    <TableCell className="text-right">{formatRupiah(reportData.grossProfit)}</TableCell>
                                 </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {dataLoading ? (
-                                    <TableRow><TableCell colSpan={6} className="h-24 text-center"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
-                                ) : reportData.length > 0 ? (
-                                    reportData.map(item => (
-                                        <TableRow key={item.id}>
-                                            <TableCell className="font-mono">{item.transactionId}</TableCell>
-                                            <TableCell className="font-medium">{item.customerName}</TableCell>
-                                            <TableCell>{format(new Date(item.createdAt), 'dd MMM yyyy, HH:mm', { locale: id })}</TableCell>
-                                            <TableCell className="text-right">{formatRupiah(item.totalRevenue)}</TableCell>
-                                            <TableCell className="text-right">{formatRupiah(item.totalCOGS)}</TableCell>
-                                            <TableCell className="text-right font-bold text-green-600">{formatRupiah(item.profit)}</TableCell>
-                                        </TableRow>
-                                    ))
-                                ) : (
-                                    <TableRow><TableCell colSpan={6} className="h-24 text-center">Tidak ada data penjualan terkirim pada rentang tanggal ini.</TableCell></TableRow>
-                                )}
-                            </TableBody>
-                             <TableRow className="bg-muted/50 hover:bg-muted/50">
-                                <TableCell colSpan={3} className="font-bold text-right">Total</TableCell>
-                                <TableCell className="text-right font-bold">{formatRupiah(summary.totalRevenue)}</TableCell>
-                                <TableCell className="text-right font-bold">{formatRupiah(summary.totalCOGS)}</TableCell>
-                                <TableCell className="text-right font-bold text-green-700">{formatRupiah(summary.totalProfit)}</TableCell>
-                            </TableRow>
-                        </Table>
-                    </div>
+                            </Table>
+                        </div>
+                    </>
+                    )}
                 </CardContent>
             </Card>
         </div>
     );
 }
+
+    

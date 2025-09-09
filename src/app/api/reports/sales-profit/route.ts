@@ -1,13 +1,25 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/drizzle/db';
-import { shipments as shipmentsTable } from '@/drizzle/schema';
-import { eq, and, gte, lte } from 'drizzle-orm';
+import { shipments as shipmentsTable, financialTransactions as ftTable } from '@/drizzle/schema';
+import { eq, and, gte, lte, ne, sql } from 'drizzle-orm';
 import type { Shipment, ShipmentProduct } from '@/lib/types';
 
-export interface SalesProfitReportData extends Shipment {
+export interface SalesProfitReportData {
+    totalRevenue: number;
     totalCOGS: number;
-    profit: number;
+    grossProfit: number;
+    operationalExpenses: number;
+    netProfit: number;
+    transactionDetails: {
+      id: string;
+      transactionId: string;
+      createdAt: string;
+      customerName: string;
+      totalRevenue: number;
+      totalCOGS: number;
+      profit: number;
+    }[];
 }
 
 export async function GET(request: NextRequest) {
@@ -20,30 +32,67 @@ export async function GET(request: NextRequest) {
     }
 
     try {
+        const dateRangeCondition = and(
+            gte(shipmentsTable.createdAt, new Date(startDate)),
+            lte(shipmentsTable.createdAt, new Date(endDate))
+        );
+
+        // 1. Get all delivered shipments within the date range
         const deliveredShipments = await db.select()
             .from(shipmentsTable)
-            .where(
-                and(
-                    eq(shipmentsTable.status, 'Terkirim'),
-                    gte(shipmentsTable.createdAt, new Date(startDate)),
-                    lte(shipmentsTable.createdAt, new Date(endDate))
-                )
-            );
+            .where(and(eq(shipmentsTable.status, 'Terkirim'), dateRangeCondition));
         
-        const reportData: SalesProfitReportData[] = deliveredShipments.map(shipment => {
-            const totalCOGS = (shipment.products as ShipmentProduct[]).reduce((sum, p) => {
-                // Now using costPrice stored at the time of sale
+        // 2. Calculate Revenue, COGS, and Gross Profit from shipments
+        let totalRevenue = 0;
+        let totalCOGS = 0;
+        const transactionDetails = deliveredShipments.map(shipment => {
+            const cogs = (shipment.products as ShipmentProduct[]).reduce((sum, p) => {
                 return sum + (p.costPrice * p.quantity);
             }, 0);
-
-            const profit = shipment.totalRevenue - totalCOGS;
+            const profit = shipment.totalRevenue - cogs;
+            
+            totalRevenue += shipment.totalRevenue;
+            totalCOGS += cogs;
 
             return {
-                ...shipment,
-                totalCOGS,
-                profit,
+                id: shipment.id,
+                transactionId: shipment.transactionId,
+                createdAt: shipment.createdAt,
+                customerName: shipment.customerName,
+                totalRevenue: shipment.totalRevenue,
+                totalCOGS: cogs,
+                profit: profit,
             };
         });
+
+        const grossProfit = totalRevenue - totalCOGS;
+        
+        // 3. Get all operational expenses from financial transactions within the date range
+        // Exclude 'Pembelian Stok' because it's already accounted for in COGS.
+        const expenses = await db.select({
+                amount: ftTable.amount
+            })
+            .from(ftTable)
+            .where(and(
+                eq(ftTable.type, 'out'),
+                ne(ftTable.category, 'Pembelian Stok'),
+                gte(ftTable.transactionDate, startDate.split('T')[0]),
+                lte(ftTable.transactionDate, endDate.split('T')[0])
+            ));
+
+        const operationalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+
+        // 4. Calculate Net Profit
+        const netProfit = grossProfit - operationalExpenses;
+
+        const reportData: SalesProfitReportData = {
+            totalRevenue,
+            totalCOGS,
+            grossProfit,
+            operationalExpenses,
+            netProfit,
+            transactionDetails,
+        };
 
         return NextResponse.json(reportData);
 
@@ -52,3 +101,5 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }
+
+    
