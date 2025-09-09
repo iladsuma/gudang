@@ -194,11 +194,6 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
         footerY += 40;
         doc.text("(..................)", 20, footerY);
         doc.text("(..................)", 120, footerY);
-
-        footerY += 15;
-        doc.text("Rek Transfer SEABANK : 901597813837 A.N MOCH. MIFTAKHUL RIZAL", 20, footerY, {
-            maxWidth: 200,
-        });
         
         isFirstPage = false;
       });
