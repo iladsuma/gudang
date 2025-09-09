@@ -3,7 +3,7 @@
 'use client';
 
 import * as React from 'react';
-import type { Customer, Shipment } from '@/lib/types';
+import type { Customer, Shipment, Account } from '@/lib/types';
 import {
   Table,
   TableBody,
@@ -28,7 +28,7 @@ import 'jspdf-autotable';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
-import { getUsers } from '@/lib/data';
+import { getUsers, getAccounts } from '@/lib/data';
 
 
 // Extend jsPDF with autoTable, which is a plugin.
@@ -93,7 +93,7 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
     setIsPrinting(true);
 
     try {
-      const allUsers = await getUsers();
+      const [allUsers, allAccounts] = await Promise.all([getUsers(), getAccounts()]);
       const doc = new jsPDF('p', 'pt', 'a4') as jsPDFWithAutoTable;
       const pageWidth = doc.internal.pageSize.getWidth();
       let isFirstPage = true;
@@ -104,6 +104,7 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
         }
         
         const user = allUsers.find(u => u.id === shipment.userId);
+        const account = allAccounts.find(a => a.id === shipment.accountId);
 
         // Header
         doc.setFontSize(14);
@@ -188,6 +189,13 @@ export function InvoicesClient({ shipments: initialShipments }: { shipments: Shi
         // Footer
         let footerY = finalY + 15;
         doc.text("Keterangan:", 20, footerY);
+
+        if (account) {
+            footerY += 15;
+            const accountText = `Rek Transfer ${account.name} : ${account.notes || 'N/A'}`;
+            doc.text(accountText, 20, footerY, { maxWidth: 200 });
+        }
+
         footerY += 25;
         doc.text("Hormat Kami", 20, footerY);
         doc.text("Penerima", 120, footerY);
