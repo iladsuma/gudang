@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, Settings, Truck, ShoppingBag, ShoppingBasket, Undo2, ArrowRightLeft, PackageCheck, BookUser, FileBarChart, History, Scale } from 'lucide-react';
+import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, Settings, Truck, ShoppingBag, ShoppingBasket, Undo2, ArrowRightLeft, PackageCheck, BookUser, FileBarChart, History, Scale, Database } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { Button } from './ui/button';
 import { useRouter, usePathname } from 'next/navigation';
@@ -11,6 +11,7 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
+    DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -121,12 +122,15 @@ export function Header() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
                         <DropdownMenuItem onSelect={() => router.push('/settings')}>Pengaturan Umum</DropdownMenuItem>
+                        <DropdownMenuSeparator/>
                         <DropdownMenuItem onSelect={() => router.push('/settings/products')}>Produk</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => router.push('/settings/customers')}>Pelanggan</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => router.push('/settings/suppliers')}>Supplier</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => router.push('/settings/expeditions')}>Ekspedisi</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => router.push('/settings/packaging')}>Kemasan</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => router.push('/settings/users')}>Pengguna</DropdownMenuItem>
+                        <DropdownMenuSeparator/>
+                        <DropdownMenuItem onSelect={() => router.push('/settings/database')}><Database className="mr-2 h-4 w-4"/> Skema Database</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </>
