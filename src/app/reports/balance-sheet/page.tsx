@@ -5,7 +5,7 @@
 import * as React from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import { getPurchases, getShipments, getFinancialTransactions } from '@/lib/data';
+import { getPurchases, getShipments, getFinancialTransactions, getProducts } from '@/lib/data';
 import {
   Card,
   CardContent,
@@ -20,8 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { format, startOfYear } from 'date-fns';
-import { id } from 'date-fns/locale';
-import { Loader2, FileText, Scale, Landmark, PiggyBank, Package, HandCoins, BookUser, CircleHelp, AlertTriangle } from 'lucide-react';
+import { Loader2, HandCoins, Landmark, Package, BookUser, PiggyBank, Scale, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Table,
@@ -70,22 +69,22 @@ export default function BalanceSheetPage() {
     const { toast } = useToast();
 
     const [balanceSheetData, setBalanceSheetData] = React.useState<BalanceSheetData | null>(null);
-    const [dataLoading, setDataLoading] = React.useState(true);
+    const [dataLoading, setDataLoading] = React.useState(false);
     
     // Manual inputs
     const [bankLoans, setBankLoans] = React.useState(0);
     const [ownerCapital, setOwnerCapital] = React.useState(0);
 
-    const fetchData = React.useCallback(async () => {
+    const handleFetchData = React.useCallback(async () => {
         setDataLoading(true);
         try {
             const today = new Date();
-            const yearStart = startOfYear(today);
             
-            const [allPurchases, allShipments, allTransactions] = await Promise.all([
+            const [allPurchases, allShipments, allTransactions, allProducts] = await Promise.all([
                 getPurchases(),
                 getShipments(),
-                getFinancialTransactions()
+                getFinancialTransactions(),
+                getProducts()
             ]);
 
             // ===== ASET LANCAR (CURRENT ASSETS) =====
@@ -95,11 +94,7 @@ export default function BalanceSheetPage() {
                 .filter(s => s.paymentStatus === 'Belum Lunas')
                 .reduce((sum, s) => sum + s.totalAmount, 0);
             
-            // Note: This inventory calculation is based on current stock, not historical.
-            // It's an approximation for the balance sheet date.
-            const productsResponse = await fetch('/api/products');
-            const products = await productsResponse.json();
-            const inventory = products.reduce((acc:number, p:any) => acc + (p.stock * p.costPrice), 0);
+            const inventory = allProducts.reduce((acc:number, p:any) => acc + (p.stock * p.costPrice), 0);
 
             const totalAssets = cash + accountsReceivable + inventory;
 
@@ -121,7 +116,7 @@ export default function BalanceSheetPage() {
             const grossProfit = totalRevenue - totalCOGS;
 
             const operationalExpenses = allTransactions
-                .filter(tx => tx.type === 'out' && tx.category !== 'Pembelian Stok')
+                .filter(tx => tx.type === 'out' && tx.category !== 'Pembelian Stok' && tx.category !== 'Pelunasan Utang' && !tx.description.includes('Transfer'))
                 .reduce((sum, tx) => sum + tx.amount, 0);
             
             const retainedEarnings = grossProfit - operationalExpenses;
@@ -132,6 +127,7 @@ export default function BalanceSheetPage() {
                 liabilities: { accountsPayable, bankLoans, total: totalLiabilities },
                 equity: { ownerCapital, retainedEarnings, total: totalEquity }
             });
+            toast({ title: 'Sukses', description: 'Data neraca berhasil dihitung ulang.' });
 
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Gagal memuat data neraca.';
@@ -141,19 +137,13 @@ export default function BalanceSheetPage() {
         }
     }, [toast, bankLoans, ownerCapital]);
     
-     React.useEffect(() => {
-        if (user?.role === 'admin') {
-            fetchData();
-        }
-     }, [user, fetchData]);
-
     React.useEffect(() => {
         if (!authLoading && user?.role !== 'admin') {
             router.push('/shipments');
         }
     }, [user, authLoading, router]);
 
-    if (authLoading || (dataLoading && user?.role === 'admin')) {
+    if (authLoading) {
         return (
             <div className="container mx-auto p-4 md:p-8">
                 <Card>
@@ -178,7 +168,7 @@ export default function BalanceSheetPage() {
     }
     
     const totalLiabilitiesAndEquity = (balanceSheetData?.liabilities.total || 0) + (balanceSheetData?.equity.total || 0);
-    const isBalanced = Math.round(balanceSheetData?.assets.total || 0) === Math.round(totalLiabilitiesAndEquity);
+    const isBalanced = balanceSheetData && Math.round(balanceSheetData.assets.total) === Math.round(totalLiabilitiesAndEquity);
 
 
     return (
@@ -188,15 +178,17 @@ export default function BalanceSheetPage() {
                 <p className="text-muted-foreground">Posisi keuangan perusahaan pada <span className='font-semibold text-primary'>{format(new Date(), 'dd MMMM yyyy')}</span>.</p>
             </div>
             
-            <Alert variant={isBalanced ? 'default' : 'destructive'}>
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>{isBalanced ? 'Neraca Seimbang' : 'Neraca Belum Seimbang!'}</AlertTitle>
-                <AlertDescription>
-                    {isBalanced 
-                        ? 'Total Aset sama dengan Total Kewajiban dan Ekuitas. Ini adalah indikator yang baik.' 
-                        : 'Ada selisih antara Total Aset dan Total Kewajiban & Ekuitas. Periksa kembali angka yang Anda masukkan atau transaksi yang tercatat.'}
-                </AlertDescription>
-            </Alert>
+            {balanceSheetData && (
+                <Alert variant={isBalanced ? 'default' : 'destructive'}>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>{isBalanced ? 'Neraca Seimbang' : 'Neraca Belum Seimbang!'}</AlertTitle>
+                    <AlertDescription>
+                        {isBalanced 
+                            ? 'Total Aset sama dengan Total Kewajiban dan Ekuitas. Ini adalah indikator yang baik.' 
+                            : `Ada selisih sebesar ${formatRupiah(Math.abs(balanceSheetData.assets.total - totalLiabilitiesAndEquity))}. Periksa kembali angka yang Anda masukkan atau transaksi yang tercatat.`}
+                    </AlertDescription>
+                </Alert>
+            )}
 
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -216,7 +208,7 @@ export default function BalanceSheetPage() {
                         </div>
                     </CardContent>
                     <CardFooter>
-                         <Button onClick={fetchData}>
+                         <Button onClick={handleFetchData} disabled={dataLoading}>
                             {dataLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                             Hitung Ulang Neraca
                         </Button>
@@ -227,7 +219,7 @@ export default function BalanceSheetPage() {
                     {/* Aset */}
                     <div className="space-y-4">
                         <h2 className="text-xl font-semibold">Aset (Harta)</h2>
-                        {dataLoading ? <Skeleton className="h-64 w-full"/> : balanceSheetData && (
+                        {!balanceSheetData ? <Skeleton className="h-64 w-full"/> : (
                             <Card>
                                 <Table>
                                     <TableHeader>
@@ -249,7 +241,7 @@ export default function BalanceSheetPage() {
                     {/* Kewajiban & Ekuitas */}
                      <div className="space-y-4">
                         <h2 className="text-xl font-semibold">Kewajiban & Ekuitas (Modal)</h2>
-                         {dataLoading ? <Skeleton className="h-64 w-full"/> : balanceSheetData && (
+                         {!balanceSheetData ? <Skeleton className="h-64 w-full"/> : (
                             <Card>
                                 <Table>
                                     <TableHeader>
