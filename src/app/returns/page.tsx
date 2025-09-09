@@ -3,7 +3,7 @@
 'use client';
 
 import * as React from 'react';
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { getReturns, getShipments, addReturn } from '@/lib/data';
@@ -300,21 +300,15 @@ export default function ReturnsPage() {
 
     // Filters
     const [searchTerm, setSearchTerm] = React.useState('');
-    const [customerFilter, setCustomerFilter] = React.useState('all');
-    const [allCustomers, setAllCustomers] = React.useState<{id: string, name: string}[]>([]);
+    const [customerNameFilter, setCustomerNameFilter] = React.useState('all');
+    const [allCustomers, setAllCustomers] = React.useState<string[]>([]);
 
 
     const fetchData = React.useCallback(async () => {
         setDataLoading(true);
         const [data, shipmentsData] = await Promise.all([getReturns(), getShipments()]);
         
-        // Extract unique customers from shipments for the filter dropdown
-        const uniqueCustomers = shipmentsData.reduce((acc, curr) => {
-            if (!acc.find(c => c.id === curr.customerId)) {
-                acc.push({ id: curr.customerId, name: curr.customerName });
-            }
-            return acc;
-        }, [] as {id: string, name: string}[]);
+        const uniqueCustomers = Array.from(new Set(shipmentsData.map(s => s.customerName)));
 
         setReturns(data);
         setAllCustomers(uniqueCustomers);
@@ -335,13 +329,11 @@ export default function ReturnsPage() {
             const matchesSearch = searchTerm === '' ||
                 retur.originalTransactionId.toLowerCase().includes(searchTerm.toLowerCase());
             
-            const originalShipment = getShipments().then(s => s.find(ship => ship.id === retur.originalShipmentId)); // This is async, won't work well here.
-            // Let's assume customer name is on the return object.
-            const matchesCustomer = customerFilter === 'all' || retur.customerName === allCustomers.find(c => c.id === customerFilter)?.name;
+            const matchesCustomer = customerNameFilter === 'all' || retur.customerName === customerNameFilter;
 
             return matchesSearch && matchesCustomer;
         });
-    }, [returns, searchTerm, customerFilter, allCustomers]);
+    }, [returns, searchTerm, customerNameFilter]);
     
     
     if (authLoading || (dataLoading && user?.role === 'admin')) {
@@ -394,13 +386,13 @@ export default function ReturnsPage() {
                          </div>
                          <div className="grid gap-2">
                             <Label htmlFor="filter-customer">Filter Pelanggan</Label>
-                            <Select value={customerFilter} onValueChange={setCustomerFilter}>
+                            <Select value={customerNameFilter} onValueChange={setCustomerNameFilter}>
                                 <SelectTrigger id="filter-customer" className="w-full md:w-[250px]">
                                     <SelectValue placeholder="Semua Pelanggan" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Semua Pelanggan</SelectItem>
-                                    {allCustomers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                    {allCustomers.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                          </div>

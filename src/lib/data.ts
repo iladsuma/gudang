@@ -143,11 +143,16 @@ export async function deleteShipment(shipmentId: string): Promise<void> {
 
 // --- History/Checkout Functions ---
 export async function processShipmentsToPackaging(shipmentIds: string[]): Promise<void> {
-    await fetch(`${API_BASE_URL}/shipments/process-to-packaging`, {
+    const response = await fetch(`${API_BASE_URL}/shipments/process-to-packaging`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ shipmentIds }),
     });
+    // Check if response is ok, otherwise throw error from body
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to process shipments');
+    }
 }
 
 
@@ -365,11 +370,15 @@ export async function updateFinancialTransaction(id: string, data: Partial<Omit<
 }
 
 export async function deleteFinancialTransaction(id: string): Promise<void> {
-    await fetch(`${API_BASE_URL}/financial-transactions/${id}`, { method: 'DELETE' });
+    const response = await fetch(`${API_BASE_URL}/financial-transactions/${id}`, { method: 'DELETE' });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete transaction');
+    }
 }
 
 // --- Report Functions ---
-export async function getSalesProfitReport(startDate: Date, endDate: Date): Promise<any[]> {
+export async function getSalesProfitReport(startDate: Date, endDate: Date): Promise<any> {
     const response = await fetch(`${API_BASE_URL}/reports/sales-profit?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`);
-    return handleResponse<any[]>(response);
+    return handleResponse<any>(response);
 }
