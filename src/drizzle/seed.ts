@@ -51,6 +51,7 @@ async function main() {
     await seedTable('packagingOptions', schema.packagingOptions, initialData.packagingOptions);
     await seedTable('customers', schema.customers, initialData.customers);
     await seedTable('suppliers', schema.suppliers, initialData.suppliers);
+    await seedTable('accounts', schema.accounts, (initialData as any).accounts);
 
     console.log("✅ Database seeding check completed.");
     process.exit(0);
