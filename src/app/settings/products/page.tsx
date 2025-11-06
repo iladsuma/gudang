@@ -360,6 +360,7 @@ function ProductsClient() {
             complete: async (results) => {
                 const dataRows = results.data;
                 const meta = results.meta;
+                console.log("LOG: Raw parsed data rows from CSV:", dataRows);
 
                 if (!meta.fields) {
                     toast({ variant: 'destructive', title: 'Header Tidak Ditemukan', description: 'Pastikan file CSV Anda memiliki baris header.' });
@@ -386,12 +387,17 @@ function ProductsClient() {
                     try {
                         const productData: Partial<Product> = {};
                         
-                        for (const header of lowercaseHeaders) {
-                            const mappedKey = headerMapping[header];
+                        console.log("--- LOG: Processing row:", row);
+
+                        for (const header of meta.fields) { // Use original headers for lookup
+                            const mappedKey = headerMapping[header.toLowerCase().trim()];
                             if(mappedKey) {
                                 let value = row[header];
+
                                 if (mappedKey === 'stock' || mappedKey === 'minStock') {
-                                    value = parseInt(value, 10) || 0;
+                                    console.log(`LOG: Stock value for '${header}' before parse:`, value, `(type: ${typeof value})`);
+                                    value = parseInt(String(value).trim(), 10) || 0;
+                                    console.log(`LOG: Stock value for '${header}' after parse:`, value);
                                 } else if (mappedKey === 'price' || mappedKey === 'costPrice') {
                                     value = parseFloat(String(value).replace(/[^0-9.-]+/g,"")) || 0;
                                 }
@@ -400,7 +406,8 @@ function ProductsClient() {
                         }
 
                         if (!productData.code) {
-                            continue; // Skip rows without a code
+                            console.log("LOG: Skipping row due to missing code:", row);
+                            continue;
                         }
                         
                         const finalProductData = {
@@ -414,6 +421,8 @@ function ProductsClient() {
                             minStock: productData.minStock || 0,
                             imageUrl: 'https://placehold.co/100x100.png',
                         };
+                        
+                        console.log("LOG: Final data to be saved:", finalProductData);
 
                         const existingByCode = products.find(p => p.code.toLowerCase() === finalProductData.code.toLowerCase());
                         
@@ -994,5 +1003,7 @@ export default function ProductsSettingsPage() {
         </div>
     );
 }
+
+    
 
     
