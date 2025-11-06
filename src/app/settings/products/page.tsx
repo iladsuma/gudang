@@ -360,16 +360,13 @@ function ProductsClient() {
             complete: async (results) => {
                 const dataRows = results.data;
                 const meta = results.meta;
-                console.log("LOG: Raw parsed data rows from CSV:", dataRows);
 
                 if (!meta.fields) {
                     toast({ variant: 'destructive', title: 'Header Tidak Ditemukan', description: 'Pastikan file CSV Anda memiliki baris header.' });
                     return;
                 }
-
-                const lowercaseHeaders = meta.fields.map(h => h.toLowerCase().trim());
                 
-                const headerMapping: { [key: string]: keyof Product } = {
+                const headerMapping: { [key: string]: keyof Product | 'Stok' } = {
                     'kode item': 'code',
                     'nama item': 'name',
                     'jenis': 'category',
@@ -380,50 +377,45 @@ function ProductsClient() {
                     'stok minimal': 'minStock'
                 };
                 
+                // Create a reverse map from the code keys to the actual header names from the file
+                const fileHeaders = meta.fields;
+                const fieldMap: { [key: string]: string } = {};
+                for(const fileHeader of fileHeaders) {
+                    const mappedKey = headerMapping[fileHeader.toLowerCase().trim()];
+                    if(mappedKey) {
+                        fieldMap[mappedKey] = fileHeader;
+                    }
+                }
+
+
                 let successCount = 0;
                 let errorCount = 0;
 
                 for (const row of dataRows) {
                     try {
-                        const productData: Partial<Product> = {};
-                        
-                        console.log("--- LOG: Processing row:", row);
-
-                        for (const header of meta.fields) { // Use original headers for lookup
-                            const mappedKey = headerMapping[header.toLowerCase().trim()];
-                            if(mappedKey) {
-                                let value = row[header];
-
-                                if (mappedKey === 'stock' || mappedKey === 'minStock') {
-                                    console.log(`LOG: Stock value for '${header}' before parse:`, value, `(type: ${typeof value})`);
-                                    value = parseInt(String(value).trim(), 10) || 0;
-                                    console.log(`LOG: Stock value for '${header}' after parse:`, value);
-                                } else if (mappedKey === 'price' || mappedKey === 'costPrice') {
-                                    value = parseFloat(String(value).replace(/[^0-9.-]+/g,"")) || 0;
-                                }
-                                (productData as any)[mappedKey] = value;
-                            }
-                        }
-
-                        if (!productData.code) {
+                        const code = row[fieldMap['code']];
+                        if (!code) {
                             console.log("LOG: Skipping row due to missing code:", row);
                             continue;
                         }
+
+                        const stockValue = row[fieldMap['stock']];
+                        console.log(`LOG: Processing row for code ${code}. Raw 'Stok' value:`, stockValue, `(type: ${typeof stockValue})`);
                         
                         const finalProductData = {
-                            code: productData.code!,
-                            name: productData.name || '',
-                            category: productData.category || 'Lainnya',
-                            unit: productData.unit || 'PCS',
-                            stock: productData.stock || 0,
-                            costPrice: productData.costPrice || 0,
-                            price: productData.price || 0,
-                            minStock: productData.minStock || 0,
+                            code: String(code),
+                            name: String(row[fieldMap['name']] || ''),
+                            category: String(row[fieldMap['category']] || 'Lainnya'),
+                            unit: String(row[fieldMap['unit']] || 'PCS'),
+                            stock: parseInt(String(stockValue).trim(), 10) || 0,
+                            costPrice: parseFloat(String(row[fieldMap['costPrice']] || 0).replace(/[^0-9.-]+/g,"")) || 0,
+                            price: parseFloat(String(row[fieldMap['price']] || 0).replace(/[^0-9.-]+/g,"")) || 0,
+                            minStock: parseInt(String(row[fieldMap['minStock']] || 0).trim(), 10) || 0,
                             imageUrl: 'https://placehold.co/100x100.png',
                         };
                         
                         console.log("LOG: Final data to be saved:", finalProductData);
-
+                        
                         const existingByCode = products.find(p => p.code.toLowerCase() === finalProductData.code.toLowerCase());
                         
                         if (existingByCode) {
