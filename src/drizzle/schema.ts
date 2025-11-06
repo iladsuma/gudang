@@ -127,7 +127,7 @@ export const stockMovements = pgTable('stock_movements', {
 
 export const financialTransactions = pgTable('financial_transactions', {
   id: text('id').primaryKey().$defaultFn(() => `ft_${Date.now()}`),
-  accountId: text('account_id').notNull().references(() => accounts.id),
+  accountId: text('account_id').notNull().references(() => accounts.id, { onDelete: 'cascade' }),
   type: transactionTypeEnum('type').notNull(), // 'in' or 'out'
   amount: real('amount').notNull(),
   category: varchar('category', { length: 255 }).notNull(),
@@ -136,6 +136,10 @@ export const financialTransactions = pgTable('financial_transactions', {
   referenceId: text('reference_id'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
+
+export const accountsRelations = relations(accounts, ({ many }) => ({
+  financialTransactions: many(financialTransactions),
+}));
 
 export const financialTransactionsRelations = relations(financialTransactions, ({ one }) => ({
 	account: one(accounts, {
