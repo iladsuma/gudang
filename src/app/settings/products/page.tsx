@@ -358,34 +358,29 @@ function ProductsClient() {
             header: true,
             skipEmptyLines: true,
             complete: async (results) => {
-                const dataRows = results.data;
-                const meta = results.meta;
+                const { data: dataRows, meta } = results;
 
                 if (!meta.fields) {
                     toast({ variant: 'destructive', title: 'Header Tidak Ditemukan', description: 'Pastikan file CSV Anda memiliki baris header.' });
                     return;
                 }
                 
-                const headerMapping: { [key: string]: keyof Product | 'Stok' } = {
-                    'kode item': 'code',
-                    'nama item': 'name',
-                    'jenis': 'category',
-                    'stok': 'stock',
-                    'satuan': 'unit',
-                    'harga pokok': 'costPrice',
-                    'harga jual': 'price',
-                    'stok minimal': 'minStock'
+                console.log("LOG: Header CSV terdeteksi:", meta.fields);
+
+                const headerMapping: { [key: string]: keyof Product } = {
+                    'kode item': 'code', 'nama item': 'name', 'jenis': 'category', 'stok': 'stock',
+                    'satuan': 'unit', 'harga pokok': 'costPrice', 'harga jual': 'price', 'stok minimal': 'minStock'
                 };
                 
-                // Create a reverse map from the code keys to the actual header names from the file
-                const fileHeaders = meta.fields;
-                const fieldMap: { [key: string]: string } = {};
-                for(const fileHeader of fileHeaders) {
-                    const mappedKey = headerMapping[fileHeader.toLowerCase().trim()];
-                    if(mappedKey) {
+                const fieldMap: { [key in keyof Product]?: string } = {};
+                for (const fileHeader of meta.fields) {
+                    const normalizedHeader = fileHeader.toLowerCase().trim();
+                    const mappedKey = headerMapping[normalizedHeader];
+                    if (mappedKey) {
                         fieldMap[mappedKey] = fileHeader;
                     }
                 }
+                console.log("LOG: Pemetaan Header yang berhasil:", fieldMap);
 
 
                 let successCount = 0;
@@ -393,28 +388,33 @@ function ProductsClient() {
 
                 for (const row of dataRows) {
                     try {
-                        const code = row[fieldMap['code']];
+                        const codeKey = fieldMap['code'];
+                        const code = codeKey ? row[codeKey] : undefined;
+
                         if (!code) {
-                            console.log("LOG: Skipping row due to missing code:", row);
+                            console.warn("LOG: Melewati baris karena tidak ada 'Kode Item'", row);
                             continue;
                         }
 
-                        const stockValue = row[fieldMap['stock']];
-                        console.log(`LOG: Processing row for code ${code}. Raw 'Stok' value:`, stockValue, `(type: ${typeof stockValue})`);
+                        const stockKey = fieldMap['stock'];
+                        const rawStockValue = stockKey ? row[stockKey] : '0';
+                        console.log(`LOG (Kode: ${code}): Nilai 'Stok' mentah dari CSV: '${rawStockValue}' (tipe: ${typeof rawStockValue})`);
+
+                        const parsedStock = parseInt(String(rawStockValue).trim(), 10);
+                        const finalStock = isNaN(parsedStock) ? 0 : parsedStock;
+                        console.log(`LOG (Kode: ${code}): Nilai 'Stok' setelah di-parse: ${finalStock}`);
                         
                         const finalProductData = {
                             code: String(code),
-                            name: String(row[fieldMap['name']] || ''),
-                            category: String(row[fieldMap['category']] || 'Lainnya'),
-                            unit: String(row[fieldMap['unit']] || 'PCS'),
-                            stock: parseInt(String(stockValue).trim(), 10) || 0,
-                            costPrice: parseFloat(String(row[fieldMap['costPrice']] || 0).replace(/[^0-9.-]+/g,"")) || 0,
-                            price: parseFloat(String(row[fieldMap['price']] || 0).replace(/[^0-9.-]+/g,"")) || 0,
-                            minStock: parseInt(String(row[fieldMap['minStock']] || 0).trim(), 10) || 0,
+                            name: String(row[fieldMap['name']!] || ''),
+                            category: String(row[fieldMap['category']!] || 'Lainnya'),
+                            unit: String(row[fieldMap['unit']!] || 'PCS'),
+                            stock: finalStock,
+                            costPrice: parseFloat(String(row[fieldMap['costPrice']!] || 0).replace(/[^0-9.-]+/g,"")) || 0,
+                            price: parseFloat(String(row[fieldMap['price']!] || 0).replace(/[^0-9.-]+/g,"")) || 0,
+                            minStock: parseInt(String(row[fieldMap['minStock']!] || 0).trim(), 10) || 0,
                             imageUrl: 'https://placehold.co/100x100.png',
                         };
-                        
-                        console.log("LOG: Final data to be saved:", finalProductData);
                         
                         const existingByCode = products.find(p => p.code.toLowerCase() === finalProductData.code.toLowerCase());
                         
@@ -999,3 +999,4 @@ export default function ProductsSettingsPage() {
     
 
     
+
