@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -337,7 +338,7 @@ function ProductsClient() {
         }));
 
         const csv = Papa.unparse(dataToExport);
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
         link.setAttribute('href', url);
@@ -353,12 +354,20 @@ function ProductsClient() {
         const file = event.target.files?.[0];
         if (!file) return;
 
-        Papa.parse<string[]>(file, {
+        Papa.parse<any>(file, {
+            header: true,
             skipEmptyLines: true,
             complete: async (results) => {
-                const rawData = results.data;
+                const dataRows = results.data;
+                const meta = results.meta;
 
-                // Map of possible header names (case-insensitive) to the desired key
+                if (!meta.fields) {
+                    toast({ variant: 'destructive', title: 'Header Tidak Ditemukan', description: 'Pastikan file CSV Anda memiliki baris header.' });
+                    return;
+                }
+
+                const lowercaseHeaders = meta.fields.map(h => h.toLowerCase().trim());
+                
                 const headerMapping: { [key: string]: keyof Product } = {
                     'kode item': 'code',
                     'nama item': 'name',
@@ -369,68 +378,31 @@ function ProductsClient() {
                     'harga jual': 'price',
                     'stok minimal': 'minStock'
                 };
-
-                let headerRowIndex = -1;
-                let actualHeaders: string[] = [];
-
-                // Find the header row by looking for "Kode Item"
-                for (let i = 0; i < rawData.length; i++) {
-                    const row = rawData[i];
-                    if (row.some(cell => typeof cell === 'string' && cell.toLowerCase().trim().includes('kode item'))) {
-                        headerRowIndex = i;
-                        actualHeaders = row.map(h => h.toLowerCase().trim());
-                        break;
-                    }
-                }
-
-                if (headerRowIndex === -1) {
-                    toast({ variant: 'destructive', title: 'Header Tidak Ditemukan', description: 'Pastikan file CSV Anda memiliki kolom "Kode Item".' });
-                    return;
-                }
-
-                // Create a map from the actual header name to our desired key
-                const headerToKeyMap = actualHeaders.reduce((acc, header, index) => {
-                    for (const [key, value] of Object.entries(headerMapping)) {
-                        if (header.includes(key)) {
-                            acc[index] = value;
-                            break;
-                        }
-                    }
-                    return acc;
-                }, {} as { [index: number]: keyof Product });
                 
-                const dataRows = rawData.slice(headerRowIndex + 1);
-
                 let successCount = 0;
                 let errorCount = 0;
 
                 for (const row of dataRows) {
-                    const codeCellIndex = actualHeaders.findIndex(h => h.includes('kode item'));
-                    const code = (codeCellIndex !== -1) ? row[codeCellIndex] : undefined;
-                     
-                    if (!code) {
-                        continue; // Skip rows without a code
-                    }
-
                     try {
                         const productData: Partial<Product> = {};
-                        for(const index in headerToKeyMap) {
-                            const key = headerToKeyMap[index];
-                            let value: any = row[index];
-                            
-                            // Clean and parse numbers and units
-                            if (key === 'stock' || key === 'minStock') {
-                                value = parseInt(value, 10) || 0;
-                            } else if (key === 'price' || key === 'costPrice') {
-                                value = parseFloat(String(value).replace(/,/g, '')) || 0;
-                            } else if(key === 'unit' && typeof value === 'string') {
-                                value = value.split(' ')[1] || 'PCS';
+                        
+                        for (const header of lowercaseHeaders) {
+                            const mappedKey = headerMapping[header];
+                            if(mappedKey) {
+                                let value = row[header];
+                                if (mappedKey === 'stock' || mappedKey === 'minStock') {
+                                    value = parseInt(value, 10) || 0;
+                                } else if (mappedKey === 'price' || mappedKey === 'costPrice') {
+                                    value = parseFloat(String(value).replace(/[^0-9.-]+/g,"")) || 0;
+                                }
+                                (productData as any)[mappedKey] = value;
                             }
-                            
-                            (productData as any)[key] = value;
+                        }
+
+                        if (!productData.code) {
+                            continue; // Skip rows without a code
                         }
                         
-                        // Default values for any missing fields
                         const finalProductData = {
                             code: productData.code!,
                             name: productData.name || '',
@@ -1022,3 +994,5 @@ export default function ProductsSettingsPage() {
         </div>
     );
 }
+
+    
