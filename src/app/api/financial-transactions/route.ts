@@ -68,5 +68,3 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ message: 'Failed to create financial transaction', error: message }, { status: 500 });
     }
 }
-
-    

@@ -66,7 +66,7 @@ export async function POST(request: Request) {
                 totalRevenue: totalAmount,
             }).returning();
 
-            if (paymentStatus === 'Lunas') {
+            if (paymentStatus === 'Lunas' && accountId) {
                  await tx.insert(financialTransactions).values({
                     accountId: accountId,
                     type: 'in',

@@ -52,4 +52,3 @@ export async function DELETE(
     return NextResponse.json({ message: 'Failed to delete packaging option' }, { status: 500 });
   }
 }
-

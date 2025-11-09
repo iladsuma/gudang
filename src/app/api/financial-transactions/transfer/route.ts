@@ -49,5 +49,3 @@ export async function POST(request: Request) {
         return NextResponse.json({ message: 'Gagal memproses transfer internal', error: errorMessage }, { status: 500 });
     }
 }
-
-    
