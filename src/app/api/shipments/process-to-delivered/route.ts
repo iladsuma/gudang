@@ -1,6 +1,6 @@
 
-import { db } from '@/lib/db';
-import { shipments } from '@/lib/schema';
+import { db } from '@/drizzle/db';
+import { shipments } from '@/drizzle/schema';
 import { inArray } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { getNotificationContext } from '@/context/notification-context';

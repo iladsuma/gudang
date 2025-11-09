@@ -41,6 +41,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",
+    "drizzle-orm": "^0.33.0",
     "embla-carousel-react": "^8.6.0",
     "firebase": "^10.12.2",
     "genkit": "^1.14.1",
