@@ -207,3 +207,20 @@ export interface Transfer {
     transferDate: Date;
     description: string;
 }
+
+export interface SalesProfitReportData {
+    totalRevenue: number;
+    totalCOGS: number;
+    grossProfit: number;
+    operationalExpenses: number;
+    netProfit: number;
+    transactionDetails: {
+        id: string;
+        transactionId: string;
+        createdAt: string;
+        customerName: string;
+        totalRevenue: number;
+        totalCOGS: number;
+        profit: number;
+    }[];
+}
