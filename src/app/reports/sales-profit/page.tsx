@@ -387,11 +387,11 @@ export default function SalesProfitReportPage() {
                                     )}
                                 </TableBody>
                                 {reportData.transactionDetails.length > 0 && <TableFooter>
-                                    <TableRow className="bg-muted/50 font-bold hover:bg-muted/50">
-                                        <TableCell colSpan={4} className="text-right">Total Laba Kotor</TableCell>
+                                    <TableRow>
+                                        <TableCell colSpan={4}>Total</TableCell>
                                         <TableCell className="text-right">{formatRupiah(reportData.totalRevenue)}</TableCell>
                                         <TableCell className="text-right">{formatRupiah(reportData.totalCOGS)}</TableCell>
-                                        <TableCell className="text-right">{formatRupiah(reportData.grossProfit)}</TableCell>
+                                        <TableCell className="text-right font-bold">{formatRupiah(reportData.grossProfit)}</TableCell>
                                     </TableRow>
                                 </TableFooter>}
                             </Table>
