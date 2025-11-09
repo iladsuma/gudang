@@ -1,404 +1,825 @@
-
 'use client';
 
 import type { User, Shipment, Checkout, Expedition, Product, Packaging, Customer, StockMovement, Supplier, Purchase, Return, SortableProductField, SortOrder, FinancialTransaction, ShipmentProduct, Account, Transfer, PaymentStatus, SalesProfitReportData } from './types';
+import { initialData } from './initial-data';
 
-const handleResponse = async (response: Response) => {
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-    }
-    return response.json();
+// This is a client-side in-memory store.
+// In a real app, you'd use a proper state management library or server-side data fetching.
+let data = JSON.parse(JSON.stringify(initialData));
+
+const saveState = () => {
+    // In a browser environment, you could use localStorage. For now, it's in-memory.
 };
 
 export async function login(username: string, password: string): Promise<User> {
-    const response = await fetch('/api/users/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-    });
-    return handleResponse(response);
+    console.log("Attempting login with:", username, password);
+    const user = data.users.find((u: User) => u.username === username && u.password === password);
+    if (user) {
+        console.log("Login successful for:", user.username);
+        const { password, ...userToReturn } = user;
+        return Promise.resolve(userToReturn);
+    } else {
+        console.error("Login failed for:", username);
+        return Promise.reject(new Error('Username atau password salah.'));
+    }
 }
 
 export async function getUsers(): Promise<User[]> {
-    const response = await fetch('/api/users');
-    return handleResponse(response);
+    const users = data.users.map((u: User) => {
+        const { password, ...userToReturn } = u;
+        return userToReturn;
+    });
+    return Promise.resolve(users);
 }
 
 export async function addUser(userData: Omit<User, 'id'>): Promise<User> {
-    const response = await fetch('/api/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData),
-    });
-    return handleResponse(response);
+    const newUser: User = {
+        ...userData,
+        id: `usr_${Date.now()}`,
+    };
+    data.users.push(newUser);
+    saveState();
+    const { password, ...userToReturn } = newUser;
+    return Promise.resolve(userToReturn);
 }
 
 export async function updateUser(id: string, userUpdate: Partial<Omit<User, 'id'>>): Promise<User> {
-    const response = await fetch(`/api/users/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userUpdate),
-    });
-    return handleResponse(response);
+    const userIndex = data.users.findIndex((u: User) => u.id === id);
+    if (userIndex === -1) {
+        return Promise.reject(new Error("User not found"));
+    }
+    const updatedUser = { ...data.users[userIndex], ...userUpdate };
+    data.users[userIndex] = updatedUser;
+    saveState();
+    const { password, ...userToReturn } = updatedUser;
+    return Promise.resolve(userToReturn);
 }
 
 export async function deleteUser(id: string): Promise<void> {
-    const response = await fetch(`/api/users/${id}`, { method: 'DELETE' });
-    await handleResponse(response);
+    data.users = data.users.filter((u: User) => u.id !== id);
+    saveState();
+    return Promise.resolve();
 }
 
 export async function getCustomers(): Promise<Customer[]> {
-    const response = await fetch('/api/customers');
-    return handleResponse(response);
+    return Promise.resolve(data.customers);
 }
 
 export async function addCustomer(customerData: Omit<Customer, 'id'>): Promise<Customer> {
-    const response = await fetch('/api/customers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(customerData),
-    });
-    return handleResponse(response);
+    const newCustomer = { ...customerData, id: `cust_${Date.now()}` };
+    data.customers.push(newCustomer);
+    saveState();
+    return Promise.resolve(newCustomer);
 }
 
 export async function updateCustomer(id: string, customerUpdate: Omit<Customer, 'id'>): Promise<Customer> {
-    const response = await fetch(`/api/customers/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(customerUpdate),
-    });
-    return handleResponse(response);
+    const index = data.customers.findIndex((c: Customer) => c.id === id);
+    if (index === -1) return Promise.reject(new Error("Customer not found"));
+    data.customers[index] = { ...data.customers[index], ...customerUpdate };
+    saveState();
+    return Promise.resolve(data.customers[index]);
 }
 
 export async function deleteCustomer(id: string): Promise<void> {
-    const response = await fetch(`/api/customers/${id}`, { method: 'DELETE' });
-    await handleResponse(response);
+    data.customers = data.customers.filter((c: Customer) => c.id !== id);
+    saveState();
+    return Promise.resolve();
 }
 
 export async function getSuppliers(): Promise<Supplier[]> {
-    const response = await fetch('/api/suppliers');
-    return handleResponse(response);
+    return Promise.resolve(data.suppliers);
 }
 
 export async function addSupplier(supplierData: Omit<Supplier, 'id'>): Promise<Supplier> {
-    const response = await fetch('/api/suppliers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(supplierData),
-    });
-    return handleResponse(response);
+    const newSupplier: Supplier = { ...supplierData, id: `sup_${Date.now()}` };
+    data.suppliers.push(newSupplier);
+    saveState();
+    return Promise.resolve(newSupplier);
 }
 
 export async function updateSupplier(id: string, supplierUpdate: Omit<Supplier, 'id'>): Promise<Supplier> {
-    const response = await fetch(`/api/suppliers/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(supplierUpdate),
-    });
-    return handleResponse(response);
+    const index = data.suppliers.findIndex((s: Supplier) => s.id === id);
+    if (index === -1) return Promise.reject(new Error("Supplier not found"));
+    data.suppliers[index] = { ...data.suppliers[index], ...supplierUpdate };
+    saveState();
+    return Promise.resolve(data.suppliers[index]);
 }
 
 export async function deleteSupplier(id: string): Promise<void> {
-    const response = await fetch(`/api/suppliers/${id}`, { method: 'DELETE' });
-    await handleResponse(response);
+    data.suppliers = data.suppliers.filter((s: Supplier) => s.id !== id);
+    saveState();
+    return Promise.resolve();
 }
 
 export async function getShipments(): Promise<Shipment[]> {
-    const response = await fetch('/api/shipments');
-    return handleResponse(response);
+    // Deep copy to prevent mutations from affecting the in-memory "DB"
+    return Promise.resolve(JSON.parse(JSON.stringify(data.shipments)));
 }
 
-export async function addShipment(shipmentData: any): Promise<Shipment> {
-    const response = await fetch('/api/shipments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(shipmentData),
-    });
-    return handleResponse(response);
+export async function addShipment(shipmentData: Omit<Shipment, 'id'>): Promise<Shipment> {
+    const newShipment: Shipment = {
+        ...shipmentData,
+        id: `ship_${Date.now()}`,
+        createdAt: new Date().toISOString(),
+        status: 'Proses', // Default status
+    };
+    data.shipments.unshift(newShipment);
+    saveState();
+    return Promise.resolve(newShipment);
 }
 
-export async function updateShipment(shipmentId: string, shipmentUpdate: any): Promise<Shipment> {
-    const response = await fetch(`/api/shipments/${shipmentId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(shipmentUpdate),
-    });
-    return handleResponse(response);
+export async function updateShipment(shipmentId: string, shipmentUpdate: Partial<Shipment>): Promise<Shipment> {
+    const index = data.shipments.findIndex((s: Shipment) => s.id === shipmentId);
+    if (index === -1) return Promise.reject(new Error('Shipment not found'));
+    
+    data.shipments[index] = { ...data.shipments[index], ...shipmentUpdate };
+    saveState();
+    return Promise.resolve(data.shipments[index]);
 }
+
 
 export async function deleteShipment(shipmentId: string): Promise<void> {
-    const response = await fetch(`/api/shipments/${shipmentId}`, { method: 'DELETE' });
-    await handleResponse(response);
+    data.shipments = data.shipments.filter((s: Shipment) => s.id !== shipmentId);
+    saveState();
+    return Promise.resolve();
 }
 
 export async function processShipmentsToPackaging(shipmentIds: string[]): Promise<void> {
-    const response = await fetch('/api/shipments/process-to-packaging', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shipmentIds }),
+    shipmentIds.forEach(id => {
+        const shipment = data.shipments.find((s: Shipment) => s.id === id);
+        if (shipment && shipment.status === 'Proses') {
+            shipment.status = 'Pengemasan';
+            
+            // Deduct stock
+            shipment.products.forEach((p: ShipmentProduct) => {
+                const productMaster = data.products.find((prod: Product) => prod.id === p.productId);
+                if (productMaster) {
+                    const stockBefore = productMaster.stock;
+                    productMaster.stock -= p.quantity;
+                    
+                    const movement: StockMovement = {
+                        id: `sm_${Date.now()}`,
+                        productId: p.productId,
+                        referenceId: shipment.id,
+                        type: 'Penjualan',
+                        quantityChange: -p.quantity,
+                        stockBefore,
+                        stockAfter: productMaster.stock,
+                        notes: `Penjualan dari No. Transaksi: ${shipment.transactionId}`,
+                        createdAt: new Date().toISOString()
+                    };
+                    data.stockMovements.push(movement);
+                }
+            });
+        }
     });
-    await handleResponse(response);
+    saveState();
+    return Promise.resolve();
 }
 
+
 export async function processShipmentsToDelivered(shipmentIds: string[]): Promise<void> {
-    const response = await fetch('/api/shipments/process-to-delivered', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shipmentIds }),
+    shipmentIds.forEach(id => {
+        const shipment = data.shipments.find((s: Shipment) => s.id === id);
+        if (shipment && shipment.status === 'Pengemasan') {
+            shipment.status = 'Terkirim';
+             shipment.paymentStatus = 'Lunas'; // Mark as paid
+             shipment.paidAt = new Date().toISOString();
+
+            // Create financial transaction
+            const transaction: FinancialTransaction = {
+                id: `ft_${Date.now()}`,
+                accountId: shipment.accountId,
+                type: 'in',
+                amount: shipment.totalAmount,
+                category: 'Penjualan Online',
+                description: `Penjualan ${shipment.transactionId} kepada ${shipment.customerName}`,
+                transactionDate: new Date().toISOString().split('T')[0],
+                referenceId: shipment.id,
+                createdAt: new Date().toISOString(),
+                account: { name: '' } // placeholder
+            };
+            data.financialTransactions.push(transaction);
+
+            // Update account balance
+            const account = data.accounts.find((acc: Account) => acc.id === shipment.accountId);
+            if (account) {
+                account.balance += shipment.totalAmount;
+            }
+        }
     });
-    await handleResponse(response);
+    saveState();
+    return Promise.resolve();
 }
 
 export async function getExpeditions(): Promise<Expedition[]> {
-    const response = await fetch('/api/expeditions');
-    return handleResponse(response);
+    return Promise.resolve(data.expeditions);
 }
 
 export async function addExpedition(name: string): Promise<Expedition> {
-    const response = await fetch('/api/expeditions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
-    });
-    return handleResponse(response);
+    const newExpedition = { id: `exp_${Date.now()}`, name };
+    data.expeditions.push(newExpedition);
+    saveState();
+    return Promise.resolve(newExpedition);
 }
 
 export async function updateExpedition(id: string, name: string): Promise<Expedition> {
-    const response = await fetch(`/api/expeditions/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
-    });
-    return handleResponse(response);
+    const index = data.expeditions.findIndex((e: Expedition) => e.id === id);
+    if (index === -1) return Promise.reject(new Error("Expedition not found"));
+    data.expeditions[index].name = name;
+    saveState();
+    return Promise.resolve(data.expeditions[index]);
 }
 
 export async function deleteExpedition(id: string): Promise<void> {
-    const response = await fetch(`/api/expeditions/${id}`, { method: 'DELETE' });
-    await handleResponse(response);
+    data.expeditions = data.expeditions.filter((e: Expedition) => e.id !== id);
+    saveState();
+    return Promise.resolve();
 }
 
 export async function getProducts(sortBy: SortableProductField = 'code', sortOrder: SortOrder = 'asc'): Promise<Product[]> {
-    const response = await fetch(`/api/products?sortBy=${sortBy}&sortOrder=${sortOrder}`);
-    return handleResponse(response);
+    const sorted = [...data.products].sort((a, b) => {
+        if (a[sortBy] < b[sortBy]) return sortOrder === 'asc' ? -1 : 1;
+        if (a[sortBy] > b[sortBy]) return sortOrder === 'asc' ? 1 : -1;
+        return 0;
+    });
+    return Promise.resolve(sorted);
 }
 
 export async function addProduct(product: Omit<Product, 'id'>): Promise<Product> {
-    const response = await fetch('/api/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(product),
-    });
-    return handleResponse(response);
+    const newProduct = { ...product, id: `prod_${Date.now()}` };
+    data.products.push(newProduct);
+    saveState();
+    return Promise.resolve(newProduct);
 }
 
 export async function updateProduct(id: string, productUpdate: Partial<Omit<Product, 'id'>>): Promise<Product> {
-    const response = await fetch(`/api/products/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(productUpdate),
-    });
-    return handleResponse(response);
+    const index = data.products.findIndex((p: Product) => p.id === id);
+    if (index === -1) return Promise.reject(new Error("Product not found"));
+    data.products[index] = { ...data.products[index], ...productUpdate };
+    saveState();
+    return Promise.resolve(data.products[index]);
 }
 
 export async function deleteMultipleProducts(ids: string[]): Promise<void> {
-    const response = await fetch('/api/products', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids }),
-    });
-    await handleResponse(response);
+    data.products = data.products.filter((p: Product) => !ids.includes(p.id));
+    saveState();
+    return Promise.resolve();
 }
 
 export async function updateProductStock(id: string, newStock: number, notes: string): Promise<Product> {
-    const response = await fetch(`/api/products/${id}/stock`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ newStock, notes }),
-    });
-    return handleResponse(response);
+    const index = data.products.findIndex((p: Product) => p.id === id);
+    if (index === -1) return Promise.reject(new Error("Product not found"));
+    
+    const product = data.products[index];
+    const stockBefore = product.stock;
+    product.stock = newStock;
+    
+    const movement: StockMovement = {
+        id: `sm_${Date.now()}`,
+        productId: id,
+        type: 'Stok Opname',
+        quantityChange: newStock - stockBefore,
+        stockBefore,
+        stockAfter: newStock,
+        notes,
+        createdAt: new Date().toISOString()
+    };
+    data.stockMovements.push(movement);
+    
+    saveState();
+    return Promise.resolve(product);
 }
 
 export async function bulkUpdateProductStock(updates: { code: string; physicalStock: number; notes: string }[]): Promise<{ success: number; failure: number }> {
-    const response = await fetch(`/api/products/bulk-stock`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ updates }),
+    let success = 0;
+    let failure = 0;
+    updates.forEach(update => {
+        const product = data.products.find((p: Product) => p.code === update.code);
+        if (product) {
+            const stockBefore = product.stock;
+            product.stock = update.physicalStock;
+            const movement: StockMovement = {
+                id: `sm_${Date.now()}`,
+                productId: product.id,
+                referenceId: `opname_${new Date().toISOString()}`,
+                type: 'Stok Opname',
+                quantityChange: update.physicalStock - stockBefore,
+                stockBefore,
+                stockAfter: update.physicalStock,
+                notes: update.notes,
+                createdAt: new Date().toISOString(),
+            };
+            data.stockMovements.push(movement);
+            success++;
+        } else {
+            failure++;
+        }
     });
-    return handleResponse(response);
+    saveState();
+    return Promise.resolve({ success, failure });
 }
 
 export async function getStockMovements(productId: string): Promise<StockMovement[]> {
-    const response = await fetch(`/api/products/${productId}/stock-movements`);
-    return handleResponse(response);
+    const movements = data.stockMovements.filter((m: StockMovement) => m.productId === productId);
+    return Promise.resolve(movements.sort((a: StockMovement, b: StockMovement) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
 }
 
 export async function getPackagingOptions(): Promise<Packaging[]> {
-    const response = await fetch('/api/packaging');
-    return handleResponse(response);
+    return Promise.resolve(data.packagingOptions);
 }
 
 export async function addPackagingOption(packagingData: Omit<Packaging, 'id'>): Promise<Packaging> {
-    const response = await fetch('/api/packaging', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(packagingData),
-    });
-    return handleResponse(response);
+    const newOption = { ...packagingData, id: `pkg_${Date.now()}` };
+    data.packagingOptions.push(newOption);
+    saveState();
+    return Promise.resolve(newOption);
 }
 
 export async function updatePackagingOption(id: string, packagingUpdate: Omit<Packaging, 'id'>): Promise<Packaging> {
-    const response = await fetch(`/api/packaging/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(packagingUpdate),
-    });
-    return handleResponse(response);
+    const index = data.packagingOptions.findIndex((p: Packaging) => p.id === id);
+    if (index === -1) return Promise.reject(new Error("Packaging option not found"));
+    data.packagingOptions[index] = { ...data.packagingOptions[index], ...packagingUpdate };
+    saveState();
+    return Promise.resolve(data.packagingOptions[index]);
 }
 
 export async function deletePackagingOption(id: string): Promise<void> {
-    const response = await fetch(`/api/packaging/${id}`, { method: 'DELETE' });
-    await handleResponse(response);
+    data.packagingOptions = data.packagingOptions.filter((p: Packaging) => p.id !== id);
+    saveState();
+    return Promise.resolve();
 }
 
 export async function getPurchases(): Promise<Purchase[]> {
-    const response = await fetch('/api/purchases');
-    return handleResponse(response);
+    return Promise.resolve(data.purchases);
 }
 
-export async function addPurchase(purchaseData: any): Promise<Purchase> {
-    const response = await fetch('/api/purchases', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(purchaseData),
+export async function addPurchase(purchaseData: Omit<Purchase, 'id'>): Promise<Purchase> {
+    const newPurchase: Purchase = {
+        ...purchaseData,
+        id: `purch_${Date.now()}`,
+        createdAt: new Date().toISOString(),
+    };
+    data.purchases.unshift(newPurchase);
+
+    // Update stock and create stock movements
+    newPurchase.products.forEach(p => {
+        const productMaster = data.products.find((prod: Product) => prod.id === p.productId);
+        if (productMaster) {
+            const stockBefore = productMaster.stock;
+            productMaster.stock += p.quantity;
+            const movement: StockMovement = {
+                id: `sm_${Date.now()}`,
+                productId: p.productId,
+                referenceId: newPurchase.id,
+                type: 'Pembelian',
+                quantityChange: p.quantity,
+                stockBefore,
+                stockAfter: productMaster.stock,
+                notes: `Pembelian dari ${newPurchase.supplierName} - No: ${newPurchase.purchaseNumber}`,
+                createdAt: new Date().toISOString()
+            };
+            data.stockMovements.push(movement);
+        }
     });
-    return handleResponse(response);
+    
+    // Create financial transaction if paid
+    if (newPurchase.paymentStatus === 'Lunas' && newPurchase.accountId) {
+        const transaction: FinancialTransaction = {
+            id: `ft_${Date.now()}`,
+            accountId: newPurchase.accountId,
+            type: 'out',
+            amount: newPurchase.totalAmount,
+            category: 'Pembelian Stok',
+            description: `Pembelian ${newPurchase.purchaseNumber} dari ${newPurchase.supplierName}`,
+            transactionDate: new Date().toISOString().split('T')[0],
+            referenceId: newPurchase.id,
+            createdAt: new Date().toISOString(),
+            account: { name: ''}
+        };
+        data.financialTransactions.push(transaction);
+
+        const account = data.accounts.find((acc: Account) => acc.id === newPurchase.accountId);
+        if (account) {
+            account.balance -= newPurchase.totalAmount;
+        }
+    }
+    
+    saveState();
+    return Promise.resolve(newPurchase);
 }
 
 export async function processDirectSale(user: User, customerId: string, products: ShipmentProduct[], accountId: string, paymentStatus: PaymentStatus): Promise<Shipment> {
-    const response = await fetch('/api/sales/direct', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user, customerId, products, accountId, paymentStatus }),
+    const customer = data.customers.find((c: Customer) => c.id === customerId);
+    if (!customer) throw new Error("Customer not found");
+
+    const totalItems = products.reduce((sum, p) => sum + p.quantity, 0);
+    const totalAmount = products.reduce((sum, p) => sum + (p.price * p.quantity), 0);
+
+    const newShipment: Shipment = {
+        id: `ship_${Date.now()}`,
+        userId: user.id,
+        transactionId: `POS-${user.username.toUpperCase()}-${Date.now()}`,
+        customerId,
+        customerName: customer.name,
+        expedition: 'Penjualan Langsung',
+        packagingId: '',
+        accountId,
+        status: 'Terkirim',
+        paymentStatus,
+        products,
+        totalItems,
+        totalProductCost: totalAmount,
+        totalPackingCost: 0,
+        totalAmount: totalAmount,
+        totalRevenue: totalAmount,
+        createdAt: new Date().toISOString(),
+        paidAt: paymentStatus === 'Lunas' ? new Date().toISOString() : undefined,
+    };
+    data.shipments.unshift(newShipment);
+
+    // Update stock and movements
+    products.forEach(p => {
+        const productMaster = data.products.find((prod: Product) => prod.id === p.productId);
+        if (productMaster) {
+            if (productMaster.stock < p.quantity) {
+                throw new Error(`Insufficient stock for ${p.name}`);
+            }
+            const stockBefore = productMaster.stock;
+            productMaster.stock -= p.quantity;
+            const movement: StockMovement = {
+                id: `sm_${Date.now()}`,
+                productId: p.productId,
+                referenceId: newShipment.id,
+                type: 'Penjualan',
+                quantityChange: -p.quantity,
+                stockBefore,
+                stockAfter: productMaster.stock,
+                notes: `Penjualan langsung: ${newShipment.transactionId}`,
+                createdAt: new Date().toISOString()
+            };
+            data.stockMovements.push(movement);
+        }
     });
-    return handleResponse(response);
+
+    // Create financial transaction
+    if (paymentStatus === 'Lunas') {
+        const transaction: FinancialTransaction = {
+            id: `ft_${Date.now()}`,
+            accountId,
+            type: 'in',
+            amount: totalAmount,
+            category: 'Penjualan Tunai',
+            description: `Penjualan ${newShipment.transactionId} kepada ${customer.name}`,
+            transactionDate: new Date().toISOString().split('T')[0],
+            referenceId: newShipment.id,
+            createdAt: new Date().toISOString(),
+            account: { name: '' }
+        };
+        data.financialTransactions.push(transaction);
+
+        const account = data.accounts.find((acc: Account) => acc.id === accountId);
+        if (account) {
+            account.balance += totalAmount;
+        }
+    }
+    
+    saveState();
+    return Promise.resolve(newShipment);
 }
 
 export async function getReturns(): Promise<Return[]> {
-    const response = await fetch('/api/returns');
-    return handleResponse(response);
+    return Promise.resolve(data.returns);
 }
 
-export async function addReturn(returnData: any): Promise<Return> {
-    const response = await fetch('/api/returns', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(returnData),
+export async function addReturn(returnData: Omit<Return, 'id' | 'createdAt' | 'originalTransactionId' | 'customerName'> & { originalShipmentId: string }): Promise<Return> {
+    const originalShipment = data.shipments.find((s: Shipment) => s.id === returnData.originalShipmentId);
+    if (!originalShipment) throw new Error("Original shipment not found.");
+
+    const totalAmount = returnData.products.reduce((sum, p) => sum + (p.price * p.quantity), 0);
+
+    const newReturn: Return = {
+        ...returnData,
+        id: `ret_${Date.now()}`,
+        originalTransactionId: originalShipment.transactionId,
+        customerName: originalShipment.customerName,
+        totalAmount,
+        createdAt: new Date().toISOString(),
+    };
+    data.returns.unshift(newReturn);
+
+    // Update stock
+    newReturn.products.forEach(p => {
+        const productMaster = data.products.find((prod: Product) => prod.id === p.productId);
+        if (productMaster) {
+            const stockBefore = productMaster.stock;
+            productMaster.stock += p.quantity;
+            const movement: StockMovement = {
+                id: `sm_${Date.now()}`,
+                productId: p.productId,
+                referenceId: newReturn.id,
+                type: 'Retur',
+                quantityChange: p.quantity,
+                stockBefore,
+                stockAfter: productMaster.stock,
+                notes: `Retur dari No. Transaksi: ${newReturn.originalTransactionId}`,
+                createdAt: new Date().toISOString()
+            };
+            data.stockMovements.push(movement);
+        }
     });
-    return handleResponse(response);
+
+    saveState();
+    return Promise.resolve(newReturn);
 }
 
 export async function getStockOpnameMovements(startDate?: Date, endDate?: Date): Promise<(StockMovement & { productCode: string, productName: string })[]> {
-    const params = new URLSearchParams();
-    if (startDate) params.append('startDate', startDate.toISOString());
-    if (endDate) params.append('endDate', endDate.toISOString());
-    const response = await fetch(`/api/stock-movements/opname?${params.toString()}`);
-    return handleResponse(response);
+    let filtered = data.stockMovements.filter((m: StockMovement) => m.type === 'Stok Opname');
+    
+    if (startDate) {
+        filtered = filtered.filter((m: StockMovement) => new Date(m.createdAt) >= startDate);
+    }
+    if (endDate) {
+        filtered = filtered.filter((m: StockMovement) => new Date(m.createdAt) <= endDate);
+    }
+
+    const result = filtered.map((m: StockMovement) => {
+        const product = data.products.find((p: Product) => p.id === m.productId);
+        return {
+            ...m,
+            productCode: product?.code || 'N/A',
+            productName: product?.name || 'N/A',
+        };
+    });
+
+    return Promise.resolve(result.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
 }
 
 export async function getAccounts(): Promise<Account[]> {
-    const response = await fetch('/api/accounts');
-    return handleResponse(response);
+    return Promise.resolve(data.accounts);
 }
 
-export async function addAccount(accountData: Omit<Account, 'id' | 'createdAt' | 'balance'> & { balance?: number }): Promise<Account> {
-    const response = await fetch('/api/accounts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(accountData),
-    });
-    return handleResponse(response);
+export async function addAccount(accountData: Omit<Account, 'id' | 'createdAt'>): Promise<Account> {
+    const newAccount = { ...accountData, id: `acc_${Date.now()}`, createdAt: new Date().toISOString(), balance: accountData.balance || 0 };
+    data.accounts.push(newAccount);
+
+    if (newAccount.balance > 0) {
+        const transaction: FinancialTransaction = {
+            id: `ft_${Date.now()}`,
+            accountId: newAccount.id,
+            type: 'in',
+            amount: newAccount.balance,
+            category: 'Saldo Awal',
+            description: `Saldo awal untuk akun ${newAccount.name}`,
+            transactionDate: new Date().toISOString().split('T')[0],
+            referenceId: `init_${newAccount.id}`,
+            createdAt: new Date().toISOString(),
+            account: { name: '' }
+        };
+        data.financialTransactions.push(transaction);
+    }
+    
+    saveState();
+    return Promise.resolve(newAccount);
 }
 
 export async function updateAccount(id: string, accountUpdate: Partial<Omit<Account, 'id' | 'createdAt' | 'balance'>>): Promise<Account> {
-    const response = await fetch(`/api/accounts/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(accountUpdate),
-    });
-    return handleResponse(response);
+    const index = data.accounts.findIndex((acc: Account) => acc.id === id);
+    if (index === -1) return Promise.reject(new Error("Account not found"));
+    data.accounts[index] = { ...data.accounts[index], ...accountUpdate };
+    saveState();
+    return Promise.resolve(data.accounts[index]);
 }
 
 export async function deleteAccount(id: string): Promise<void> {
-    const response = await fetch(`/api/accounts/${id}`, { method: 'DELETE' });
-    await handleResponse(response);
+    const hasTransactions = data.financialTransactions.some((tx: FinancialTransaction) => tx.accountId === id);
+    if(hasTransactions) {
+        return Promise.reject(new Error('Cannot delete account with existing transactions'));
+    }
+    data.accounts = data.accounts.filter((acc: Account) => acc.id !== id);
+    saveState();
+    return Promise.resolve();
 }
 
 export async function getFinancialTransactions(type?: 'in' | 'out', startDate?: string, endDate?: string): Promise<FinancialTransaction[]> {
-    const params = new URLSearchParams();
-    if (type) params.append('type', type);
-    if (startDate) params.append('startDate', startDate);
-    if (endDate) params.append('endDate', endDate);
-    const response = await fetch(`/api/financial-transactions?${params.toString()}`);
-    return handleResponse(response);
+    let filtered = data.financialTransactions.map((tx: FinancialTransaction) => ({
+        ...tx,
+        account: { name: data.accounts.find((a:Account) => a.id === tx.accountId)?.name || 'Unknown' }
+    }));
+
+    if (type) {
+        filtered = filtered.filter((tx: FinancialTransaction) => tx.type === type);
+    }
+    if (startDate) {
+        filtered = filtered.filter((tx: FinancialTransaction) => tx.transactionDate >= startDate);
+    }
+    if (endDate) {
+        filtered = filtered.filter((tx: FinancialTransaction) => tx.transactionDate <= endDate);
+    }
+
+    return Promise.resolve(filtered.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
 }
 
 export async function addFinancialTransaction(txData: Omit<FinancialTransaction, 'id' | 'createdAt' | 'account'>): Promise<FinancialTransaction> {
-    const response = await fetch('/api/financial-transactions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(txData),
-    });
-    return handleResponse(response);
+    const newTransaction = { ...txData, id: `ft_${Date.now()}`, createdAt: new Date().toISOString(), account: { name: '' } };
+    data.financialTransactions.unshift(newTransaction);
+    
+    const account = data.accounts.find((acc: Account) => acc.id === txData.accountId);
+    if (account) {
+        if (txData.type === 'in') {
+            account.balance += txData.amount;
+        } else {
+            account.balance -= txData.amount;
+        }
+    }
+    
+    saveState();
+    return Promise.resolve(newTransaction);
 }
 
 export async function updateFinancialTransaction(id: string, txUpdate: Partial<Omit<FinancialTransaction, 'id' | 'createdAt' | 'account'>>): Promise<FinancialTransaction> {
-    const response = await fetch(`/api/financial-transactions/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(txUpdate),
-    });
-    return handleResponse(response);
+    const index = data.financialTransactions.findIndex((tx: FinancialTransaction) => tx.id === id);
+    if (index === -1) return Promise.reject(new Error("Transaction not found"));
+
+    const originalTx = data.financialTransactions[index];
+
+    // Revert old transaction from balance
+    const originalAccount = data.accounts.find((acc: Account) => acc.id === originalTx.accountId);
+    if (originalAccount) {
+        originalAccount.balance += originalTx.type === 'in' ? -originalTx.amount : originalTx.amount;
+    }
+
+    const updatedTx = { ...originalTx, ...txUpdate };
+    data.financialTransactions[index] = updatedTx;
+
+    // Apply new transaction to balance
+    const newAccount = data.accounts.find((acc: Account) => acc.id === updatedTx.accountId);
+    if (newAccount) {
+        newAccount.balance += updatedTx.type === 'in' ? updatedTx.amount : -updatedTx.amount;
+    }
+    
+    saveState();
+    return Promise.resolve(updatedTx);
 }
 
 export async function deleteFinancialTransaction(id: string): Promise<void> {
-    const response = await fetch(`/api/financial-transactions/${id}`, { method: 'DELETE' });
-    await handleResponse(response);
+    const index = data.financialTransactions.findIndex((tx: FinancialTransaction) => tx.id === id);
+    if (index === -1) return Promise.reject(new Error("Transaction not found"));
+    
+    const txToDelete = data.financialTransactions[index];
+    if (txToDelete.referenceId) {
+        return Promise.reject(new Error("Cannot delete transactions linked to sales, purchases, or transfers."));
+    }
+
+    const account = data.accounts.find((acc: Account) => acc.id === txToDelete.accountId);
+    if (account) {
+        account.balance += txToDelete.type === 'in' ? -txToDelete.amount : txToDelete.amount;
+    }
+
+    data.financialTransactions.splice(index, 1);
+    saveState();
+    return Promise.resolve();
 }
 
 export async function addInternalTransfer(transferData: Transfer): Promise<{ message: string }> {
-    const response = await fetch('/api/financial-transactions/transfer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(transferData),
-    });
-    return handleResponse(response);
+    const fromAccount = data.accounts.find((acc: Account) => acc.id === transferData.fromAccountId);
+    const toAccount = data.accounts.find((acc: Account) => acc.id === transferData.toAccountId);
+
+    if (!fromAccount || !toAccount) throw new Error("Account not found");
+
+    fromAccount.balance -= transferData.amount;
+    toAccount.balance += transferData.amount;
+    
+    const transferId = `trf_${Date.now()}`;
+    const dateStr = transferData.transferDate.toISOString().split('T')[0];
+
+    data.financialTransactions.unshift(
+        { id: `ft_${Date.now()}_out`, accountId: fromAccount.id, type: 'out', amount: transferData.amount, category: 'Transfer Keluar', description: transferData.description, transactionDate: dateStr, referenceId: transferId, createdAt: new Date().toISOString(), account: { name: '' } },
+        { id: `ft_${Date.now()}_in`, accountId: toAccount.id, type: 'in', amount: transferData.amount, category: 'Transfer Masuk', description: transferData.description, transactionDate: dateStr, referenceId: transferId, createdAt: new Date().toISOString(), account: { name: '' } },
+    );
+    
+    saveState();
+    return Promise.resolve({ message: 'Transfer successful' });
 }
 
 export async function getSalesProfitReport(startDate: Date, endDate: Date, userId: string = 'all'): Promise<SalesProfitReportData> {
-    const params = new URLSearchParams({
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        userId,
+    let deliveredShipments = data.shipments.filter((s: Shipment) => 
+        s.status === 'Terkirim' && 
+        new Date(s.createdAt) >= startDate && 
+        new Date(s.createdAt) <= endDate
+    );
+    
+    if (userId !== 'all') {
+        deliveredShipments = deliveredShipments.filter((s: Shipment) => s.userId === userId);
+    }
+    
+    let totalRevenue = 0;
+    let totalCOGS = 0;
+
+    const transactionDetails = deliveredShipments.map((shipment: Shipment) => {
+        const cogs = shipment.products.reduce((sum, p) => sum + (p.costPrice || 0) * p.quantity, 0);
+        const profit = shipment.totalRevenue - cogs;
+        totalRevenue += shipment.totalRevenue;
+        totalCOGS += cogs;
+        const user = data.users.find((u:User) => u.id === shipment.userId);
+        return {
+            id: shipment.id,
+            transactionId: shipment.transactionId,
+            createdAt: shipment.createdAt,
+            customerName: shipment.customerName,
+            userId: shipment.userId,
+            userName: user?.username || 'N/A',
+            totalRevenue: shipment.totalRevenue,
+            totalCOGS: cogs,
+            profit: profit,
+        };
     });
-    const response = await fetch(`/api/reports/sales-profit?${params.toString()}`);
-    return handleResponse(response);
+    
+    const grossProfit = totalRevenue - totalCOGS;
+
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+
+    const expenses = data.financialTransactions.filter((tx: FinancialTransaction) => 
+        tx.type === 'out' && 
+        tx.category !== 'Pembelian Stok' && 
+        tx.category !== 'Pelunasan Utang' &&
+        tx.transactionDate >= startDateStr &&
+        tx.transactionDate <= endDateStr
+    );
+    
+    const operationalExpenses = expenses.reduce((sum: number, tx: FinancialTransaction) => sum + tx.amount, 0);
+    const netProfit = grossProfit - operationalExpenses;
+
+    const reportData: SalesProfitReportData = {
+        totalRevenue,
+        totalCOGS,
+        grossProfit,
+        operationalExpenses,
+        netProfit,
+        transactionDetails,
+    };
+
+    return Promise.resolve(reportData);
 }
 
 export async function payReceivable(shipmentId: string, accountId: string, paidAt: Date): Promise<void> {
-    const response = await fetch(`/api/receivables/${shipmentId}/pay`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accountId, paidAt: paidAt.toISOString() }),
-    });
-    await handleResponse(response);
+    const shipment = data.shipments.find((s: Shipment) => s.id === shipmentId);
+    if (!shipment) throw new Error("Shipment not found");
+
+    shipment.paymentStatus = 'Lunas';
+    shipment.paidAt = paidAt.toISOString();
+
+    const transaction: FinancialTransaction = {
+        id: `ft_${Date.now()}`,
+        accountId: accountId,
+        type: 'in',
+        amount: shipment.totalAmount,
+        category: 'Penerimaan Piutang',
+        description: `Penerimaan pembayaran untuk ${shipment.transactionId} dari ${shipment.customerName}`,
+        transactionDate: paidAt.toISOString().split('T')[0],
+        referenceId: shipment.id,
+        createdAt: new Date().toISOString(),
+        account: { name: '' }
+    };
+    data.financialTransactions.push(transaction);
+
+    const account = data.accounts.find((acc: Account) => acc.id === accountId);
+    if (account) {
+        account.balance += shipment.totalAmount;
+    }
+
+    saveState();
+    return Promise.resolve();
 }
 
 export async function payPayable(purchaseId: string, accountId: string, paidAt: Date): Promise<void> {
-    const response = await fetch(`/api/payables/${purchaseId}/pay`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accountId, paidAt: paidAt.toISOString() }),
-    });
-    await handleResponse(response);
+    const purchase = data.purchases.find((p: Purchase) => p.id === purchaseId);
+    if (!purchase) throw new Error("Purchase not found");
+    
+    purchase.paymentStatus = 'Lunas';
+    purchase.paidAt = paidAt.toISOString();
+    purchase.accountId = accountId;
+
+    const transaction: FinancialTransaction = {
+        id: `ft_${Date.now()}`,
+        accountId: accountId,
+        type: 'out',
+        amount: purchase.totalAmount,
+        category: 'Pelunasan Utang',
+        description: `Pembayaran utang untuk pembelian ${purchase.purchaseNumber} dari ${purchase.supplierName}`,
+        transactionDate: paidAt.toISOString().split('T')[0],
+        referenceId: purchase.id,
+        createdAt: new Date().toISOString(),
+        account: { name: '' }
+    };
+    data.financialTransactions.push(transaction);
+
+    const account = data.accounts.find((acc: Account) => acc.id === accountId);
+    if (account) {
+        account.balance -= purchase.totalAmount;
+    }
+
+    saveState();
+    return Promise.resolve();
 }

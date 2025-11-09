@@ -1,11 +1,7 @@
+// This file serves as the initial state for the client-side in-memory data store.
+// In a real application, this would likely be replaced by data fetched from a server.
 
-'use client';
-
-// This file is no longer used for direct data access.
-// The new architecture uses API routes and a database.
-// This file is kept for reference or potential seeding scripts.
-
-import type { User, Product, Expedition, Packaging, Shipment, Checkout, Customer, StockMovement, Supplier, Purchase, Return } from './types';
+import type { User, Product, Expedition, Packaging, Shipment, Checkout, Customer, StockMovement, Supplier, Purchase, Return, Account, FinancialTransaction } from './types';
 
 interface DbData {
   users: User[];
@@ -19,6 +15,8 @@ interface DbData {
   stockMovements: StockMovement[];
   purchases: Purchase[];
   returns: Return[];
+  accounts: Account[];
+  financialTransactions: FinancialTransaction[];
 }
 
 export const initialData: DbData = {
@@ -75,44 +73,44 @@ export const initialData: DbData = {
     }
   ],
   expeditions: [
-    {
-      id: "exp_1",
-      name: "JNE"
-    },
-    {
-      id: "exp_2",
-      name: "POS"
-    },
-    {
-      id: "exp_3",
-      name: "J&T"
-    },
-    {
-      id: "exp_4",
-      name: "ANTERAJA"
-    },
-    {
-      id: "exp_5",
-      name: "SICEPAT"
-    }
+    { id: "exp_1", name: "JNE" },
+    { id: "exp_2", name: "POS" },
+    { id: "exp_3", name: "J&T" },
+    { id: "exp_4", name: "ANTERAJA" },
+    { id: "exp_5", name: "SICEPAT" }
   ],
   packagingOptions: [
+    { id: "pkg_1", name: "Plastik", cost: 500 },
+    { id: "pkg_2", name: "Kardus Kecil", cost: 1500 },
+    { id: "pkg_3", name: "Kardus + Bubble Wrap", cost: 3000 }
+  ],
+  accounts: [
     {
-      id: "pkg_1",
-      name: "Plastik",
-      cost: 500
+        id: "acc_1",
+        name: "Kas Tunai",
+        type: "Cash",
+        balance: 5000000,
+        notes: "Kas fisik yang dipegang di toko.",
+        createdAt: new Date().toISOString()
     },
     {
-      id: "pkg_2",
-      name: "Kardus Kecil",
-      cost: 1500
+        id: "acc_2",
+        name: "Bank BCA",
+        type: "Bank",
+        balance: 25000000,
+        notes: "Rekening operasional utama",
+        createdAt: new Date().toISOString()
     },
     {
-      id: "pkg_3",
-      name: "Kardus + Bubble Wrap",
-      cost: 3000
+        id: "acc_3",
+        name: "GoPay",
+        type: "E-Wallet",
+        balance: 1500000,
+        notes: "E-Wallet untuk transaksi digital",
+        createdAt: new Date().toISOString()
     }
   ],
+  financialTransactions: [],
   shipments: [],
   checkoutHistory: [],
   customers: [
