@@ -1,74 +1,99 @@
-{
-  "name": "nextn",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev --turbopack -p 9002",
-    "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
-    "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@genkit-ai/googleai": "^1.14.1",
-    "@genkit-ai/next": "^1.14.1",
-    "@hookform/resolvers": "^4.1.3",
-    "@radix-ui/react-accordion": "^1.2.3",
-    "@radix-ui/react-alert-dialog": "^1.1.6",
-    "@radix-ui/react-avatar": "^1.1.3",
-    "@radix-ui/react-checkbox": "^1.1.4",
-    "@radix-ui/react-collapsible": "^1.1.11",
-    "@radix-ui/react-dialog": "^1.1.6",
-    "@radix-ui/react-dropdown-menu": "^2.1.6",
-    "@radix-ui/react-label": "^2.1.2",
-    "@radix-ui/react-menubar": "^1.1.6",
-    "@radix-ui/react-popover": "^1.1.6",
-    "@radix-ui/react-progress": "^1.1.2",
-    "@radix-ui/react-radio-group": "^1.2.3",
-    "@radix-ui/react-scroll-area": "^1.2.3",
-    "@radix-ui/react-select": "^2.1.6",
-    "@radix-ui/react-separator": "^1.1.2",
-    "@radix-ui/react-slider": "^1.2.3",
-    "@radix-ui/react-slot": "^1.2.3",
-    "@radix-ui/react-switch": "^1.1.3",
-    "@radix-ui/react-tabs": "^1.1.3",
-    "@radix-ui/react-toast": "^1.2.6",
-    "@radix-ui/react-tooltip": "^1.1.8",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "cmdk": "^1.0.0",
-    "date-fns": "^3.6.0",
-    "embla-carousel-react": "^8.6.0",
-    "firebase": "^11.9.1",
-    "genkit": "^1.14.1",
-    "jspdf": "^2.5.1",
-    "jspdf-autotable": "^3.8.2",
-    "lucide-react": "^0.475.0",
-    "next": "15.3.3",
-    "papaparse": "^5.4.1",
-    "patch-package": "^8.0.0",
-    "pdf-lib": "^1.17.1",
-    "react": "^18.3.1",
-    "react-day-picker": "^8.10.1",
-    "react-dom": "^18.3.1",
-    "react-hook-form": "^7.54.2",
-    "recharts": "^2.15.1",
-    "tailwind-merge": "^3.0.1",
-    "tailwindcss-animate": "^1.0.7",
-    "zod": "^3.24.2"
-  },
-  "devDependencies": {
-    "@types/jspdf": "^2.0.0",
-    "@types/node": "^20",
-    "@types/papaparse": "^5.3.14",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
-    "genkit-cli": "^1.14.1",
-    "postcss": "^8",
-    "tailwindcss": "^3.4.1",
-    "tsx": "^4.16.2",
-    "typescript": "^5"
-  }
+
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/drizzle/db';
+import {
+    purchases as purchasesTable,
+    products as productsTable,
+    stockMovements as stockMovementsTable,
+    financialTransactions as ftTable,
+    accounts
+} from '@/drizzle/schema';
+import { desc, eq, sql } from 'drizzle-orm';
+import type { Purchase } from '@/lib/types';
+import { format } from 'date-fns';
+
+export async function GET() {
+    try {
+        const allPurchases = await db.select().from(purchasesTable).orderBy(desc(purchasesTable.createdAt));
+        return NextResponse.json(allPurchases);
+    } catch (error) {
+        return NextResponse.json({ error: 'Failed to fetch purchases' }, { status: 500 });
+    }
+}
+
+export async function POST(request: NextRequest) {
+    try {
+        const body = await request.json();
+        const { supplierId, supplierName, purchaseNumber, accountId, paymentStatus, products } = body;
+        
+        let newPurchase: Purchase;
+
+        if (!products || products.length === 0) {
+            throw new Error("Purchase must have at least one product.");
+        }
+
+        await db.transaction(async (tx) => {
+            const totalAmount = products.reduce((sum: number, p: any) => sum + p.costPrice * p.quantity, 0);
+
+            const purchaseData: Omit<Purchase, 'id' | 'createdAt'> = {
+                supplierId,
+                supplierName,
+                purchaseNumber,
+                accountId,
+                status: 'Selesai',
+                paymentStatus,
+                products,
+                totalAmount,
+            };
+
+            const [insertedPurchase] = await tx.insert(purchasesTable).values(purchaseData as any).returning();
+            newPurchase = insertedPurchase;
+
+            for (const product of products) {
+                const currentProduct = await tx.query.products.findFirst({ where: eq(productsTable.id, product.productId) });
+                if (!currentProduct) {
+                    throw new Error(`Product with ID ${product.productId} not found during purchase process.`);
+                }
+                const stockBefore = currentProduct.stock;
+                const stockAfter = stockBefore + product.quantity;
+
+                await tx.update(productsTable)
+                    .set({ stock: sql`${productsTable.stock} + ${product.quantity}` })
+                    .where(eq(productsTable.id, product.productId));
+
+                await tx.insert(stockMovementsTable).values({
+                    productId: product.productId,
+                    referenceId: newPurchase.id,
+                    type: 'Pembelian',
+                    quantityChange: product.quantity,
+                    stockBefore: stockBefore,
+                    stockAfter: stockAfter,
+                    notes: `Pembelian dari ${supplierName} - No: ${purchaseNumber}`,
+                });
+            }
+
+            if (paymentStatus === 'Lunas') {
+                if (!accountId) throw new Error("Account ID is required for paid purchases.");
+                await tx.insert(ftTable).values({
+                    accountId,
+                    type: 'out',
+                    amount: totalAmount,
+                    category: 'Pembelian Stok',
+                    description: `Pembelian ${purchaseNumber} dari ${supplierName}`,
+                    transactionDate: format(new Date(), 'yyyy-MM-dd'),
+                    referenceId: newPurchase.id,
+                });
+                
+                await tx.update(accounts)
+                    .set({ balance: sql`${accounts.balance} - ${totalAmount}`})
+                    .where(eq(accounts.id, accountId));
+            }
+
+        });
+
+        return NextResponse.json(newPurchase!, { status: 201 });
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to create purchase';
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
+    }
 }

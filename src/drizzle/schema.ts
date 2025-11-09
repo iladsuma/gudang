@@ -1,74 +1,152 @@
-{
-  "name": "nextn",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev --turbopack -p 9002",
-    "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
-    "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@genkit-ai/googleai": "^1.14.1",
-    "@genkit-ai/next": "^1.14.1",
-    "@hookform/resolvers": "^4.1.3",
-    "@radix-ui/react-accordion": "^1.2.3",
-    "@radix-ui/react-alert-dialog": "^1.1.6",
-    "@radix-ui/react-avatar": "^1.1.3",
-    "@radix-ui/react-checkbox": "^1.1.4",
-    "@radix-ui/react-collapsible": "^1.1.11",
-    "@radix-ui/react-dialog": "^1.1.6",
-    "@radix-ui/react-dropdown-menu": "^2.1.6",
-    "@radix-ui/react-label": "^2.1.2",
-    "@radix-ui/react-menubar": "^1.1.6",
-    "@radix-ui/react-popover": "^1.1.6",
-    "@radix-ui/react-progress": "^1.1.2",
-    "@radix-ui/react-radio-group": "^1.2.3",
-    "@radix-ui/react-scroll-area": "^1.2.3",
-    "@radix-ui/react-select": "^2.1.6",
-    "@radix-ui/react-separator": "^1.1.2",
-    "@radix-ui/react-slider": "^1.2.3",
-    "@radix-ui/react-slot": "^1.2.3",
-    "@radix-ui/react-switch": "^1.1.3",
-    "@radix-ui/react-tabs": "^1.1.3",
-    "@radix-ui/react-toast": "^1.2.6",
-    "@radix-ui/react-tooltip": "^1.1.8",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "cmdk": "^1.0.0",
-    "date-fns": "^3.6.0",
-    "embla-carousel-react": "^8.6.0",
-    "firebase": "^11.9.1",
-    "genkit": "^1.14.1",
-    "jspdf": "^2.5.1",
-    "jspdf-autotable": "^3.8.2",
-    "lucide-react": "^0.475.0",
-    "next": "15.3.3",
-    "papaparse": "^5.4.1",
-    "patch-package": "^8.0.0",
-    "pdf-lib": "^1.17.1",
-    "react": "^18.3.1",
-    "react-day-picker": "^8.10.1",
-    "react-dom": "^18.3.1",
-    "react-hook-form": "^7.54.2",
-    "recharts": "^2.15.1",
-    "tailwind-merge": "^3.0.1",
-    "tailwindcss-animate": "^1.0.7",
-    "zod": "^3.24.2"
-  },
-  "devDependencies": {
-    "@types/jspdf": "^2.0.0",
-    "@types/node": "^20",
-    "@types/papaparse": "^5.3.14",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
-    "genkit-cli": "^1.14.1",
-    "postcss": "^8",
-    "tailwindcss": "^3.4.1",
-    "tsx": "^4.16.2",
-    "typescript": "^5"
-  }
-}
+
+import { pgTable, text, varchar, real, integer, timestamp, pgEnum, jsonb, boolean, date } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
+
+export const userRoleEnum = pgEnum('user_role', ['admin', 'user']);
+export const shipmentStatusEnum = pgEnum('shipment_status', ['Proses', 'Pengemasan', 'Terkirim']);
+export const purchaseStatusEnum = pgEnum('purchase_status', ['Selesai', 'Draf']);
+export const stockMovementTypeEnum = pgEnum('stock_movement_type', ['Stok Awal', 'Penjualan', 'Stok Opname', 'Pembelian', 'Retur']);
+export const transactionTypeEnum = pgEnum('transaction_type', ['in', 'out']);
+export const accountTypeEnum = pgEnum('account_type', ['Cash', 'Bank', 'E-Wallet', 'Other']);
+export const paymentStatusEnum = pgEnum('payment_status', ['Lunas', 'Belum Lunas']);
+
+
+export const users = pgTable('users', {
+  id: text('id').primaryKey().$defaultFn(() => `usr_${Date.now()}`),
+  username: varchar('username', { length: 255 }).notNull().unique(),
+  role: userRoleEnum('role').notNull(),
+  password: text('password').notNull(),
+});
+
+export const accounts = pgTable('accounts', {
+    id: text('id').primaryKey().$defaultFn(() => `acc_${Date.now()}`),
+    name: varchar('name', { length: 255 }).notNull(),
+    type: accountTypeEnum('type').notNull().default('Bank'),
+    balance: real('balance').notNull().default(0),
+    notes: text('notes'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const products = pgTable('products', {
+  id: text('id').primaryKey().$defaultFn(() => `prod_${Date.now()}`),
+  code: varchar('code', { length: 255 }).notNull().unique(),
+  name: varchar('name', { length: 255 }).notNull(),
+  price: real('price').notNull(),
+  costPrice: real('cost_price').notNull(),
+  stock: integer('stock').notNull(),
+  minStock: integer('min_stock').notNull(),
+  unit: varchar('unit', { length: 50 }).notNull(),
+  category: varchar('category', { length: 255 }).notNull(),
+  imageUrl: text('image_url'),
+});
+
+export const expeditions = pgTable('expeditions', {
+  id: text('id').primaryKey().$defaultFn(() => `exp_${Date.now()}`),
+  name: varchar('name', { length: 255 }).notNull(),
+});
+
+export const packagingOptions = pgTable('packaging_options', {
+  id: text('id').primaryKey().$defaultFn(() => `pkg_${Date.now()}`),
+  name: varchar('name', { length: 255 }).notNull(),
+  cost: real('cost').notNull(),
+});
+
+export const customers = pgTable('customers', {
+  id: text('id').primaryKey().$defaultFn(() => `cust_${Date.now()}`),
+  name: varchar('name', { length: 255 }).notNull(),
+  address: text('address'),
+  phone: varchar('phone', { length: 50 }),
+});
+
+export const suppliers = pgTable('suppliers', {
+  id: text('id').primaryKey().$defaultFn(() => `sup_${Date.now()}`),
+  name: varchar('name', { length: 255 }).notNull(),
+  address: text('address'),
+  phone: varchar('phone', { length: 50 }),
+});
+
+export const shipments = pgTable('shipments', {
+  id: text('id').primaryKey().$defaultFn(() => `ship_${Date.now()}`),
+  userId: text('user_id').notNull().references(() => users.id),
+  transactionId: varchar('transaction_id', { length: 255 }).notNull(),
+  customerId: text('customer_id').notNull().references(() => customers.id),
+  customerName: varchar('customer_name', { length: 255 }).notNull(),
+  expedition: varchar('expedition', { length: 255 }).notNull(),
+  packagingId: text('packaging_id'),
+  accountId: text('account_id'), // Can be null for 'Proses'/'Pengemasan'
+  status: shipmentStatusEnum('status').notNull(),
+  paymentStatus: paymentStatusEnum('payment_status').notNull().default('Belum Lunas'),
+  receipt: jsonb('receipt'), // { fileName: string, dataUrl: string }
+  products: jsonb('products').notNull(), // ShipmentProduct[]
+  totalItems: integer('total_items').notNull(),
+  totalProductCost: real('total_product_cost').notNull(),
+  totalPackingCost: real('total_packing_cost').notNull(),
+  totalAmount: real('total_amount').notNull(),
+  totalRevenue: real('total_revenue').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  paidAt: timestamp('paid_at'),
+});
+
+export const purchases = pgTable('purchases', {
+    id: text('id').primaryKey().$defaultFn(() => `purch_${Date.now()}`),
+    supplierId: text('supplier_id').notNull().references(() => suppliers.id),
+    supplierName: varchar('supplier_name', { length: 255 }).notNull(),
+    purchaseNumber: varchar('purchase_number', { length: 255 }).notNull(),
+    accountId: text('account_id'), // Akun yang digunakan untuk membayar, bisa null jika belum lunas
+    status: purchaseStatusEnum('status').notNull(),
+    paymentStatus: paymentStatusEnum('payment_status').notNull().default('Belum Lunas'),
+    products: jsonb('products').notNull(), // PurchaseProduct[]
+    totalAmount: real('total_amount').notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    paidAt: timestamp('paid_at'),
+});
+
+export const returns = pgTable('returns', {
+    id: text('id').primaryKey().$defaultFn(() => `ret_${Date.now()}`),
+    originalShipmentId: text('original_shipment_id').notNull(),
+    originalTransactionId: varchar('original_transaction_id', { length: 255 }).notNull(),
+    customerName: varchar('customer_name', { length: 255 }).notNull(),
+    products: jsonb('products').notNull(), // ReturnedProduct[]
+    reason: text('reason').notNull(),
+    totalAmount: real('total_amount').notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+
+export const stockMovements = pgTable('stock_movements', {
+    id: text('id').primaryKey().$defaultFn(() => `sm_${Date.now()}`),
+    productId: text('product_id').notNull().references(() => products.id),
+    referenceId: text('reference_id'),
+    type: stockMovementTypeEnum('type').notNull(),
+    quantityChange: integer('quantity_change').notNull(),
+    stockBefore: integer('stock_before').notNull(),
+    stockAfter: integer('stock_after').notNull(),
+    notes: text('notes'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const financialTransactions = pgTable('financial_transactions', {
+  id: text('id').primaryKey().$defaultFn(() => `ft_${Date.now()}`),
+  accountId: text('account_id').notNull().references(() => accounts.id),
+  type: transactionTypeEnum('type').notNull(), // 'in' or 'out'
+  amount: real('amount').notNull(),
+  category: varchar('category', { length: 255 }).notNull(),
+  description: text('description').notNull(),
+  transactionDate: date('transaction_date').notNull(),
+  referenceId: text('reference_id'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const financialTransactionsRelations = relations(financialTransactions, ({ one }) => ({
+	account: one(accounts, {
+		fields: [financialTransactions.accountId],
+		references: [accounts.id],
+	}),
+}));
+
+export const stockMovementsRelations = relations(stockMovements, ({ one }) => ({
+	product: one(products, {
+		fields: [stockMovements.productId],
+		references: [products.id],
+	}),
+}));

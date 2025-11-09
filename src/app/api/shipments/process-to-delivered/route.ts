@@ -1,74 +1,60 @@
-{
-  "name": "nextn",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev --turbopack -p 9002",
-    "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
-    "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@genkit-ai/googleai": "^1.14.1",
-    "@genkit-ai/next": "^1.14.1",
-    "@hookform/resolvers": "^4.1.3",
-    "@radix-ui/react-accordion": "^1.2.3",
-    "@radix-ui/react-alert-dialog": "^1.1.6",
-    "@radix-ui/react-avatar": "^1.1.3",
-    "@radix-ui/react-checkbox": "^1.1.4",
-    "@radix-ui/react-collapsible": "^1.1.11",
-    "@radix-ui/react-dialog": "^1.1.6",
-    "@radix-ui/react-dropdown-menu": "^2.1.6",
-    "@radix-ui/react-label": "^2.1.2",
-    "@radix-ui/react-menubar": "^1.1.6",
-    "@radix-ui/react-popover": "^1.1.6",
-    "@radix-ui/react-progress": "^1.1.2",
-    "@radix-ui/react-radio-group": "^1.2.3",
-    "@radix-ui/react-scroll-area": "^1.2.3",
-    "@radix-ui/react-select": "^2.1.6",
-    "@radix-ui/react-separator": "^1.1.2",
-    "@radix-ui/react-slider": "^1.2.3",
-    "@radix-ui/react-slot": "^1.2.3",
-    "@radix-ui/react-switch": "^1.1.3",
-    "@radix-ui/react-tabs": "^1.1.3",
-    "@radix-ui/react-toast": "^1.2.6",
-    "@radix-ui/react-tooltip": "^1.1.8",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "cmdk": "^1.0.0",
-    "date-fns": "^3.6.0",
-    "embla-carousel-react": "^8.6.0",
-    "firebase": "^11.9.1",
-    "genkit": "^1.14.1",
-    "jspdf": "^2.5.1",
-    "jspdf-autotable": "^3.8.2",
-    "lucide-react": "^0.475.0",
-    "next": "15.3.3",
-    "papaparse": "^5.4.1",
-    "patch-package": "^8.0.0",
-    "pdf-lib": "^1.17.1",
-    "react": "^18.3.1",
-    "react-day-picker": "^8.10.1",
-    "react-dom": "^18.3.1",
-    "react-hook-form": "^7.54.2",
-    "recharts": "^2.15.1",
-    "tailwind-merge": "^3.0.1",
-    "tailwindcss-animate": "^1.0.7",
-    "zod": "^3.24.2"
-  },
-  "devDependencies": {
-    "@types/jspdf": "^2.0.0",
-    "@types/node": "^20",
-    "@types/papaparse": "^5.3.14",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
-    "genkit-cli": "^1.14.1",
-    "postcss": "^8",
-    "tailwindcss": "^3.4.1",
-    "tsx": "^4.16.2",
-    "typescript": "^5"
-  }
+
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/drizzle/db';
+import { shipments, financialTransactions, accounts } from '@/drizzle/schema';
+import { inArray, eq, sql } from 'drizzle-orm';
+import { format } from 'date-fns';
+
+
+export async function POST(request: NextRequest) {
+    const { shipmentIds } = await request.json();
+
+    if (!shipmentIds || !Array.isArray(shipmentIds) || shipmentIds.length === 0) {
+        return NextResponse.json({ error: 'Shipment IDs are required' }, { status: 400 });
+    }
+    
+    try {
+        await db.transaction(async (tx) => {
+            for (const id of shipmentIds) {
+                const shipmentToDeliver = await tx.query.shipments.findFirst({
+                    where: eq(shipments.id, id),
+                });
+                
+                if (!shipmentToDeliver) {
+                    throw new Error(`Shipment with ID ${id} not found.`);
+                }
+                
+                if (!shipmentToDeliver.accountId) {
+                    throw new Error(`Shipment ${shipmentToDeliver.transactionId} is missing an account ID.`);
+                }
+
+                // Update shipment status
+                await tx.update(shipments)
+                    .set({ status: 'Terkirim', paymentStatus: 'Lunas', paidAt: new Date() })
+                    .where(eq(shipments.id, id));
+
+                // Create financial transaction
+                await tx.insert(financialTransactions).values({
+                    accountId: shipmentToDeliver.accountId,
+                    type: 'in',
+                    amount: shipmentToDeliver.totalAmount,
+                    category: 'Penjualan Online',
+                    description: `Penjualan ${shipmentToDeliver.transactionId} kepada ${shipmentToDeliver.customerName}`,
+                    transactionDate: format(new Date(), 'yyyy-MM-dd'),
+                    referenceId: id,
+                });
+                
+                // Update account balance
+                await tx.update(accounts)
+                    .set({ balance: sql`${accounts.balance} + ${shipmentToDeliver.totalAmount}`})
+                    .where(eq(accounts.id, shipmentToDeliver.accountId));
+            }
+        });
+        
+         return NextResponse.json({ message: 'Shipments processed to delivered successfully.' });
+
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to process shipments';
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
+    }
 }

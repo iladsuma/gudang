@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
                     category: 'Saldo Awal',
                     description: `Saldo awal untuk akun ${newAccount.name}`,
                     transactionDate: new Date().toISOString().split('T')[0],
-                    referenceId: newAccount.id,
+                    referenceId: `init_${newAccount.id}`,
                 });
             }
         });

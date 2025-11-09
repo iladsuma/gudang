@@ -1,74 +1,90 @@
-{
-  "name": "nextn",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev --turbopack -p 9002",
-    "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
-    "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@genkit-ai/googleai": "^1.14.1",
-    "@genkit-ai/next": "^1.14.1",
-    "@hookform/resolvers": "^4.1.3",
-    "@radix-ui/react-accordion": "^1.2.3",
-    "@radix-ui/react-alert-dialog": "^1.1.6",
-    "@radix-ui/react-avatar": "^1.1.3",
-    "@radix-ui/react-checkbox": "^1.1.4",
-    "@radix-ui/react-collapsible": "^1.1.11",
-    "@radix-ui/react-dialog": "^1.1.6",
-    "@radix-ui/react-dropdown-menu": "^2.1.6",
-    "@radix-ui/react-label": "^2.1.2",
-    "@radix-ui/react-menubar": "^1.1.6",
-    "@radix-ui/react-popover": "^1.1.6",
-    "@radix-ui/react-progress": "^1.1.2",
-    "@radix-ui/react-radio-group": "^1.2.3",
-    "@radix-ui/react-scroll-area": "^1.2.3",
-    "@radix-ui/react-select": "^2.1.6",
-    "@radix-ui/react-separator": "^1.1.2",
-    "@radix-ui/react-slider": "^1.2.3",
-    "@radix-ui/react-slot": "^1.2.3",
-    "@radix-ui/react-switch": "^1.1.3",
-    "@radix-ui/react-tabs": "^1.1.3",
-    "@radix-ui/react-toast": "^1.2.6",
-    "@radix-ui/react-tooltip": "^1.1.8",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "cmdk": "^1.0.0",
-    "date-fns": "^3.6.0",
-    "embla-carousel-react": "^8.6.0",
-    "firebase": "^11.9.1",
-    "genkit": "^1.14.1",
-    "jspdf": "^2.5.1",
-    "jspdf-autotable": "^3.8.2",
-    "lucide-react": "^0.475.0",
-    "next": "15.3.3",
-    "papaparse": "^5.4.1",
-    "patch-package": "^8.0.0",
-    "pdf-lib": "^1.17.1",
-    "react": "^18.3.1",
-    "react-day-picker": "^8.10.1",
-    "react-dom": "^18.3.1",
-    "react-hook-form": "^7.54.2",
-    "recharts": "^2.15.1",
-    "tailwind-merge": "^3.0.1",
-    "tailwindcss-animate": "^1.0.7",
-    "zod": "^3.24.2"
-  },
-  "devDependencies": {
-    "@types/jspdf": "^2.0.0",
-    "@types/node": "^20",
-    "@types/papaparse": "^5.3.14",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
-    "genkit-cli": "^1.14.1",
-    "postcss": "^8",
-    "tailwindcss": "^3.4.1",
-    "tsx": "^4.16.2",
-    "typescript": "^5"
-  }
+
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/drizzle/db';
+import { shipments, financialTransactions, users } from '@/drizzle/schema';
+import { and, gte, lte, eq, sql, sum, ne } from 'drizzle-orm';
+import type { SalesProfitReportData } from '@/lib/types';
+import { format } from 'date-fns';
+
+export async function GET(request: NextRequest) {
+    const { searchParams } = new URL(request.url);
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
+    const userId = searchParams.get('userId');
+
+    if (!startDate || !endDate) {
+        return NextResponse.json({ error: 'Start date and end date are required' }, { status: 400 });
+    }
+
+    try {
+        // Build conditions for shipments
+        let shipmentConditions = [
+            eq(shipments.status, 'Terkirim' as const),
+            gte(shipments.createdAt, new Date(startDate)),
+            lte(shipments.createdAt, new Date(endDate)),
+        ];
+        if (userId && userId !== 'all') {
+            shipmentConditions.push(eq(shipments.userId, userId));
+        }
+
+        const deliveredShipments = await db.query.shipments.findMany({
+            where: and(...shipmentConditions),
+            with: { user: { columns: { username: true } } }
+        });
+
+        let totalRevenue = 0;
+        let totalCOGS = 0;
+        const transactionDetails = deliveredShipments.map(shipment => {
+            const cogs = (shipment.products as any[]).reduce((sum, p) => sum + (p.costPrice || 0) * p.quantity, 0);
+            const profit = shipment.totalRevenue - cogs;
+
+            totalRevenue += shipment.totalRevenue;
+            totalCOGS += cogs;
+
+            return {
+                id: shipment.id,
+                transactionId: shipment.transactionId,
+                createdAt: shipment.createdAt.toISOString(),
+                customerName: shipment.customerName,
+                userId: shipment.userId,
+                userName: (shipment as any).user?.username || 'N/A',
+                totalRevenue: shipment.totalRevenue,
+                totalCOGS: cogs,
+                profit: profit,
+            };
+        });
+
+        const grossProfit = totalRevenue - totalCOGS;
+
+        // Build conditions for expenses
+        let expenseConditions = [
+            eq(financialTransactions.type, 'out' as const),
+            ne(financialTransactions.category, 'Pembelian Stok'),
+            ne(financialTransactions.category, 'Pelunasan Utang'),
+            gte(financialTransactions.transactionDate, format(new Date(startDate), 'yyyy-MM-dd')),
+            lte(financialTransactions.transactionDate, format(new Date(endDate), 'yyyy-MM-dd')),
+        ];
+
+        const expensesResult = await db.select({
+            total: sum(financialTransactions.amount)
+        }).from(financialTransactions).where(and(...expenseConditions));
+        
+        const operationalExpenses = parseFloat(expensesResult[0]?.total || '0');
+        const netProfit = grossProfit - operationalExpenses;
+        
+        const reportData: SalesProfitReportData = {
+            totalRevenue,
+            totalCOGS,
+            grossProfit,
+            operationalExpenses,
+            netProfit,
+            transactionDetails,
+        };
+
+        return NextResponse.json(reportData);
+
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to generate sales profit report';
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
+    }
 }

@@ -1,74 +1,95 @@
-{
-  "name": "nextn",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev --turbopack -p 9002",
-    "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
-    "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@genkit-ai/googleai": "^1.14.1",
-    "@genkit-ai/next": "^1.14.1",
-    "@hookform/resolvers": "^4.1.3",
-    "@radix-ui/react-accordion": "^1.2.3",
-    "@radix-ui/react-alert-dialog": "^1.1.6",
-    "@radix-ui/react-avatar": "^1.1.3",
-    "@radix-ui/react-checkbox": "^1.1.4",
-    "@radix-ui/react-collapsible": "^1.1.11",
-    "@radix-ui/react-dialog": "^1.1.6",
-    "@radix-ui/react-dropdown-menu": "^2.1.6",
-    "@radix-ui/react-label": "^2.1.2",
-    "@radix-ui/react-menubar": "^1.1.6",
-    "@radix-ui/react-popover": "^1.1.6",
-    "@radix-ui/react-progress": "^1.1.2",
-    "@radix-ui/react-radio-group": "^1.2.3",
-    "@radix-ui/react-scroll-area": "^1.2.3",
-    "@radix-ui/react-select": "^2.1.6",
-    "@radix-ui/react-separator": "^1.1.2",
-    "@radix-ui/react-slider": "^1.2.3",
-    "@radix-ui/react-slot": "^1.2.3",
-    "@radix-ui/react-switch": "^1.1.3",
-    "@radix-ui/react-tabs": "^1.1.3",
-    "@radix-ui/react-toast": "^1.2.6",
-    "@radix-ui/react-tooltip": "^1.1.8",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "cmdk": "^1.0.0",
-    "date-fns": "^3.6.0",
-    "embla-carousel-react": "^8.6.0",
-    "firebase": "^11.9.1",
-    "genkit": "^1.14.1",
-    "jspdf": "^2.5.1",
-    "jspdf-autotable": "^3.8.2",
-    "lucide-react": "^0.475.0",
-    "next": "15.3.3",
-    "papaparse": "^5.4.1",
-    "patch-package": "^8.0.0",
-    "pdf-lib": "^1.17.1",
-    "react": "^18.3.1",
-    "react-day-picker": "^8.10.1",
-    "react-dom": "^18.3.1",
-    "react-hook-form": "^7.54.2",
-    "recharts": "^2.15.1",
-    "tailwind-merge": "^3.0.1",
-    "tailwindcss-animate": "^1.0.7",
-    "zod": "^3.24.2"
-  },
-  "devDependencies": {
-    "@types/jspdf": "^2.0.0",
-    "@types/node": "^20",
-    "@types/papaparse": "^5.3.14",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
-    "genkit-cli": "^1.14.1",
-    "postcss": "^8",
-    "tailwindcss": "^3.4.1",
-    "tsx": "^4.16.2",
-    "typescript": "^5"
-  }
+
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/drizzle/db';
+import { shipments, customers, users, products, stockMovements, financialTransactions, accounts } from '@/drizzle/schema';
+import { eq, sql } from 'drizzle-orm';
+import type { ShipmentProduct } from '@/lib/types';
+
+export async function POST(request: NextRequest) {
+    const body = await request.json();
+    const { user: userData, customerId, products: productItems, accountId, paymentStatus } = body;
+
+    if (!userData || !customerId || !productItems || !accountId) {
+        return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    try {
+        const newShipment = await db.transaction(async (tx) => {
+            const customer = await tx.query.customers.findFirst({ where: eq(customers.id, customerId) });
+            if (!customer) throw new Error('Customer not found');
+
+            const totalItems = productItems.reduce((sum: number, p: ShipmentProduct) => sum + p.quantity, 0);
+            const totalProductCost = productItems.reduce((sum: number, p: ShipmentProduct) => sum + p.price * p.quantity, 0);
+            const totalAmount = totalProductCost; // No packaging cost for direct sales
+
+            const shipmentData = {
+                userId: userData.id,
+                transactionId: `POS-${userData.username.toUpperCase()}-${Date.now()}`,
+                customerId,
+                customerName: customer.name,
+                expedition: 'Penjualan Langsung',
+                status: 'Terkirim' as const,
+                paymentStatus,
+                products: productItems,
+                totalItems,
+                totalProductCost,
+                totalPackingCost: 0,
+                totalAmount,
+                totalRevenue: totalAmount,
+                accountId,
+                createdAt: new Date(),
+                paidAt: paymentStatus === 'Lunas' ? new Date() : undefined,
+            };
+
+            const [insertedShipment] = await tx.insert(shipments).values(shipmentData as any).returning();
+            
+            // Reduce stock
+            for (const item of productItems) {
+                const product = await tx.query.products.findFirst({ where: eq(products.id, item.productId) });
+                if (!product || product.stock < item.quantity) {
+                    throw new Error(`Insufficient stock for ${item.name}`);
+                }
+                
+                await tx.update(products)
+                    .set({ stock: sql`${products.stock} - ${item.quantity}` })
+                    .where(eq(products.id, item.productId));
+
+                await tx.insert(stockMovements).values({
+                    productId: item.productId,
+                    referenceId: insertedShipment.id,
+                    type: 'Penjualan',
+                    quantityChange: -item.quantity,
+                    stockBefore: product.stock,
+                    stockAfter: product.stock - item.quantity,
+                    notes: `Penjualan langsung: ${insertedShipment.transactionId}`
+                });
+            }
+            
+            // Create financial transaction if paid
+            if (paymentStatus === 'Lunas') {
+                 await tx.insert(financialTransactions).values({
+                    accountId,
+                    type: 'in',
+                    amount: totalAmount,
+                    category: 'Penjualan Tunai',
+                    description: `Penjualan ${insertedShipment.transactionId} kepada ${customer.name}`,
+                    transactionDate: new Date().toISOString().split('T')[0],
+                    referenceId: insertedShipment.id,
+                 });
+                 
+                 await tx.update(accounts)
+                    .set({ balance: sql`${accounts.balance} + ${totalAmount}`})
+                    .where(eq(accounts.id, accountId));
+            }
+
+
+            return insertedShipment;
+        });
+
+        return NextResponse.json(newShipment);
+
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to process direct sale';
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
+    }
 }

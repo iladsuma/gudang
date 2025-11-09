@@ -1,8 +1,8 @@
 
 import {NextRequest, NextResponse} from 'next/server';
 import {db} from '@/drizzle/db';
-import {shipments as shipmentsTable, customers, users as usersTable, products as productsTable, financialTransactions as ftTable} from '@/drizzle/schema';
-import {desc, eq} from 'drizzle-orm';
+import {shipments as shipmentsTable, customers, users as usersTable, products as productsTable, financialTransactions as ftTable, stockMovements} from '@/drizzle/schema';
+import {desc, eq, sql} from 'drizzle-orm';
 import type {Shipment, ShipmentProduct} from '@/lib/types';
 import { format } from 'date-fns';
 
@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
                 customerName: customer.name,
                 customerId: customer.id,
                 status: 'Proses',
+                paymentStatus: 'Belum Lunas',
                 products: productsWithCostPrice,
                 totalItems,
                 totalProductCost,
@@ -58,9 +59,12 @@ export async function POST(request: NextRequest) {
             const [insertedShipment] = await tx.insert(shipmentsTable).values(newShipmentData as any).returning();
             newShipment = insertedShipment;
             
-            // If the shipment is created with status "Terkirim" (like from direct sales), create financial record.
+            // If the shipment is created with status "Terkirim" (like from direct sales), do all processing here
             if(newShipment.status === 'Terkirim') {
+                 // 1. Create financial record
+                 if (!newShipment.accountId) throw new Error("Account ID is required for 'Terkirim' status");
                  await tx.insert(ftTable).values({
+                    accountId: newShipment.accountId,
                     type: 'in',
                     amount: newShipment.totalAmount,
                     category: 'Penjualan Tunai',
@@ -68,6 +72,29 @@ export async function POST(request: NextRequest) {
                     transactionDate: format(new Date(), 'yyyy-MM-dd'),
                     referenceId: newShipment.id,
                 });
+                await tx.update(shipmentsTable).set({ paymentStatus: 'Lunas', paidAt: new Date() }).where(eq(shipmentsTable.id, newShipment.id));
+
+
+                 // 2. Reduce stock
+                 for (const product of newShipment.products) {
+                    const currentProduct = await tx.query.products.findFirst({where: eq(productsTable.id, product.productId)});
+                    if (!currentProduct) throw new Error(`Product ${product.name} not found`);
+                    if (currentProduct.stock < product.quantity) throw new Error(`Insufficient stock for ${product.name}`);
+
+                    await tx.update(productsTable)
+                        .set({ stock: sql`${productsTable.stock} - ${product.quantity}`})
+                        .where(eq(productsTable.id, product.productId));
+                    
+                    await tx.insert(stockMovements).values({
+                        productId: product.productId,
+                        referenceId: newShipment.id,
+                        type: 'Penjualan',
+                        quantityChange: -product.quantity,
+                        stockBefore: currentProduct.stock,
+                        stockAfter: currentProduct.stock - product.quantity,
+                        notes: `Penjualan Langsung: ${newShipment.transactionId}`
+                    })
+                 }
             }
         });
         return NextResponse.json(newShipment!, {status: 201});

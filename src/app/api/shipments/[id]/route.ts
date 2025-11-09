@@ -9,7 +9,7 @@ export async function PUT(request: NextRequest, {params}: { params: { id: string
     try {
         const {id} = params;
         const body = await request.json();
-        const {customerId, packagingCost, user: username, ...restOfBody} = body;
+        const {customerId, packagingCost, user: username, products, ...restOfBody} = body;
 
         const customer = await db.query.customers.findFirst({where: eq(customers.id, customerId)});
         const user = await db.query.users.findFirst({where: eq(usersTable.username, username)});
