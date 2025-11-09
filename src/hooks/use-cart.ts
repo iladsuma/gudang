@@ -1,12 +1,25 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, createContext, useContext, useMemo } from 'react';
 import type { CartItem, Product, ShipmentProduct } from '@/lib/types';
 import { useToast } from './use-toast';
 import { useAuth } from '@/context/auth-context';
 
-export const useCart = () => {
+interface CartContextType {
+    cart: CartItem[];
+    addToCart: (products: Product[], quantity?: number, silent?: boolean) => CartItem[] | undefined;
+    updateQuantity: (productId: string, quantity: number) => void;
+    removeFromCart: (productId: string) => void;
+    clearCart: () => void;
+    totalItems: number;
+    reduceCartQuantities: (shippedProducts: ShipmentProduct[]) => void;
+    saveCartToLocalStorage: (cart: CartItem[]) => void;
+}
+
+const CartContext = createContext<CartContextType | null,>(null);
+
+export function CartProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [cart, setCart] = useState<CartItem[]>([]);
   const { toast } = useToast();
@@ -42,7 +55,7 @@ export const useCart = () => {
     }
   }, [CART_STORAGE_KEY]);
 
-  const addToCart = (products: Product[], quantity: number = 1, silent: boolean = false): CartItem[] | undefined => {
+  const addToCart = useCallback((products: Product[], quantity: number = 1, silent: boolean = false): CartItem[] | undefined => {
     if (!user) {
         if (!silent) toast({ variant: 'destructive', title: 'Harus Login', description: 'Anda harus login untuk menambah item ke keranjang.' });
         return;
@@ -72,7 +85,6 @@ export const useCart = () => {
     });
 
     if (silent) {
-      // Need to compute the updated cart state without using React state setters
       const currentCart = cart; 
       const newCart = [...currentCart];
       products.forEach(product => {
@@ -83,15 +95,15 @@ export const useCart = () => {
       });
       return newCart;
     }
-    return undefined; // To match signature
-  };
+    return undefined;
+  }, [user, toast, saveCartToLocalStorage, cart]);
 
-  const updateQuantity = (productId: string, quantity: number) => {
-    let updatedCart: CartItem[] = [];
+  const updateQuantity = useCallback((productId: string, quantity: number) => {
     setCart(prevCart => {
       const itemToUpdate = prevCart.find(item => item.id === productId);
       if (!itemToUpdate) return prevCart;
 
+      let updatedCart: CartItem[];
       if (quantity <= 0) {
           updatedCart = prevCart.filter(item => item.id !== productId);
       } else if (quantity > itemToUpdate.stock) {
@@ -108,29 +120,48 @@ export const useCart = () => {
       saveCartToLocalStorage(updatedCart);
       return updatedCart;
     });
-  };
+  }, [toast, saveCartToLocalStorage]);
   
-  const reduceCartQuantities = (shippedProducts: ShipmentProduct[]) => {
+  const reduceCartQuantities = useCallback((shippedProducts: ShipmentProduct[]) => {
     // Do nothing, as per user request to not clear/reduce cart items automatically.
-  };
+  }, []);
 
 
-  const removeFromCart = (productId: string) => {
+  const removeFromCart = useCallback((productId: string) => {
     setCart(prevCart => {
       const updatedCart = prevCart.filter(item => item.id !== productId);
       saveCartToLocalStorage(updatedCart);
       return updatedCart;
     });
-  };
+  }, [saveCartToLocalStorage]);
 
-  const clearCart = () => {
+  const clearCart = useCallback(() => {
     setCart([]);
     if (CART_STORAGE_KEY) {
         localStorage.removeItem(CART_STORAGE_KEY);
     }
-  };
+  }, [CART_STORAGE_KEY]);
   
   const totalItems = cart.length;
 
-  return { cart, addToCart, updateQuantity, removeFromCart, clearCart, totalItems, reduceCartQuantities, saveCartToLocalStorage };
+  const value = useMemo(() => ({
+    cart,
+    addToCart,
+    updateQuantity,
+    removeFromCart,
+    clearCart,
+    totalItems,
+    reduceCartQuantities,
+    saveCartToLocalStorage
+  }), [cart, addToCart, updateQuantity, removeFromCart, clearCart, totalItems, reduceCartQuantities, saveCartToLocalStorage]);
+
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+}
+
+export const useCart = () => {
+  const context = useContext(CartContext);
+  if (!context) {
+    throw new Error('useCart must be used within a CartProvider');
+  }
+  return context;
 };

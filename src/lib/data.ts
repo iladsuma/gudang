@@ -2,8 +2,7 @@
 
 import type { User, Shipment, Checkout, Expedition, Product, Packaging, Customer, StockMovement, Supplier, Purchase, Return, SortableProductField, SortOrder, FinancialTransaction, ShipmentProduct, Account, Transfer, PaymentStatus, SalesProfitReportData } from './types';
 import { initialData } from './initial-data';
-import { createNotification as createFirebaseNotification } from './notifications';
-
+import { getNotificationContext } from '@/context/notification-context';
 
 // This is a client-side in-memory store.
 // In a real app, you'd use a proper state management library or server-side data fetching.
@@ -11,6 +10,11 @@ let data = JSON.parse(JSON.stringify(initialData));
 
 const saveState = () => {
     // In a browser environment, you could use localStorage. For now, it's in-memory.
+};
+
+const createNotification = (notification: { recipientId: string; message: string; url?: string }) => {
+    const { createNotification: create } = getNotificationContext();
+    create(notification);
 };
 
 export async function login(username: string, password: string): Promise<User> {
@@ -43,8 +47,7 @@ export async function addUser(userData: Omit<User, 'id'>): Promise<User> {
     saveState();
     const { password, ...userToReturn } = newUser;
     
-    // Create notification for admin
-    await createFirebaseNotification({
+    createNotification({
         recipientId: 'admin',
         message: `Pengguna baru '${newUser.username}' telah ditambahkan.`,
     });
@@ -135,8 +138,7 @@ export async function addShipment(shipmentData: Omit<Shipment, 'id' | 'createdAt
     data.shipments.unshift(newShipment);
     saveState();
 
-    // Create notification for admin
-    await createFirebaseNotification({
+    createNotification({
         recipientId: 'admin',
         message: `Pengiriman baru #${newShipment.transactionId} telah dibuat oleh ${shipmentData.user}.`,
         url: '/shipments'
@@ -190,8 +192,7 @@ export async function processShipmentsToPackaging(shipmentIds: string[]): Promis
                 }
             });
 
-            // Create notification for user
-            createFirebaseNotification({
+            createNotification({
                 recipientId: shipment.userId,
                 message: `Pesanan #${shipment.transactionId} sedang dikemas.`,
                 url: '/my-shipments'
@@ -232,8 +233,7 @@ export async function processShipmentsToDelivered(shipmentIds: string[]): Promis
                 account.balance += shipment.totalAmount;
             }
 
-            // Create notification for user
-            createFirebaseNotification({
+            createNotification({
                 recipientId: shipment.userId,
                 message: `Pesanan #${shipment.transactionId} telah dikirim.`,
                 url: '/my-shipments'

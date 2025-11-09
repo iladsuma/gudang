@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { Header } from '@/components/header';
 import { AuthProvider } from '@/context/auth-context';
 import { NotificationProvider } from '@/context/notification-context';
+import { CartProvider } from '@/hooks/use-cart';
 
 export const metadata: Metadata = {
   title: 'GudangCheckout',
@@ -26,11 +27,13 @@ export default function RootLayout({
       <body className={cn('min-h-screen bg-background font-body antialiased')}>
         <AuthProvider>
           <NotificationProvider>
-            <div className="relative flex min-h-dvh flex-col">
-              <Header />
-              <main className="flex-1">{children}</main>
-            </div>
-            <Toaster />
+            <CartProvider>
+              <div className="relative flex min-h-dvh flex-col">
+                <Header />
+                <main className="flex-1">{children}</main>
+              </div>
+              <Toaster />
+            </CartProvider>
           </NotificationProvider>
         </AuthProvider>
       </body>
