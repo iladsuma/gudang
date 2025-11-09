@@ -1,11 +1,12 @@
 
-import { db } from '@/drizzle/db';
+import { db } from '@/lib/db';
 import { shipments, packagingOptions, financialTransactions } from '@/drizzle/schema';
 import { desc, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import type { ShipmentProduct } from '@/lib/types';
 
 export async function GET() {
+    console.log("==============================================");
     console.log("LOG: Menerima permintaan GET untuk /api/shipments");
     try {
         const allShipments = await db.select().from(shipments).orderBy(desc(shipments.createdAt));
@@ -13,8 +14,8 @@ export async function GET() {
         return NextResponse.json(allShipments);
     } catch (error) {
         console.error('LOG: Gagal mengambil data pengiriman:', error);
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        return NextResponse.json({ message: 'Gagal mengambil data pengiriman', error: errorMessage }, { status: 500 });
+        const message = error instanceof Error ? error.message : "Unknown error";
+        return NextResponse.json({ message: 'Gagal mengambil data pengiriman', error: message }, { status: 500 });
     }
 }
 
@@ -81,7 +82,7 @@ export async function POST(request: Request) {
                 expedition,
                 packagingId,
                 accountId: paymentStatus === 'Lunas' ? accountId : null,
-                status: 'Proses', // Status awal
+                status: 'Proses' as const, // Status awal
                 paymentStatus: paymentStatus,
                 products: shipmentProducts,
                 receipt,
@@ -101,7 +102,7 @@ export async function POST(request: Request) {
                  console.log("LOG: Status 'Lunas', membuat transaksi keuangan...");
                  const financialDataToInsert = {
                     accountId: accountId,
-                    type: 'in',
+                    type: 'in' as const,
                     amount: totalAmount,
                     category: 'Penjualan',
                     description: `Penjualan dari transaksi ${transactionId}`,
@@ -123,6 +124,4 @@ export async function POST(request: Request) {
     } catch (error) {
         console.error('FATAL: Gagal membuat pengiriman pada /api/shipments/route.ts:', error);
         const message = error instanceof Error ? error.message : "Unknown error";
-        return NextResponse.json({ message: 'failed to create shipment', error: message }, { status: 500 });
-    }
-}
+        return NextResponse.json({ message: 'failed to create shipment', error: message }, { status: 500

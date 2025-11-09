@@ -76,7 +76,7 @@ export default function InvoicesPage() {
       <Tabs defaultValue="packaging">
         <div className="flex justify-between items-end mb-4">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Pengiriman & Arsip</h1>
+              <h1 className="text-3xl font-bold tracking-tight">Manajemen Pengiriman</h1>
               <p className="text-muted-foreground">Kelola pengiriman yang siap dikirim dan lihat arsip yang sudah selesai.</p>
             </div>
             <TabsList>
@@ -124,4 +124,3 @@ export default function InvoicesPage() {
     </div>
   );
 }
-

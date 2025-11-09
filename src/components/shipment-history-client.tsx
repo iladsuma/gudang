@@ -56,13 +56,26 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
       
       const matchesUser = userFilter === 'all' || s.userId === userFilter;
       
-      const matchesDate = dateRange?.from && dateRange?.to 
-        ? shipmentDate >= startOfDay(dateRange.from) && shipmentDate <= endOfDay(dateRange.to)
-        : true;
+      const fromDate = dateRange?.from ? startOfDay(dateRange.from) : null;
+      const toDate = dateRange?.to ? endOfDay(dateRange.to) : null;
 
+      let matchesDate = true;
+      if(fromDate && toDate) {
+          matchesDate = shipmentDate >= fromDate && shipmentDate <= toDate;
+      } else if (fromDate) {
+          matchesDate = shipmentDate >= fromDate;
+      } else if (toDate) {
+          matchesDate = shipmentDate <= toDate;
+      }
+
+      // 'all' preset logic
+      if (activePreset === 'all') {
+         return matchesUser;
+      }
+      
       return matchesUser && matchesDate;
     });
-  }, [shipments, userFilter, dateRange]);
+  }, [shipments, userFilter, dateRange, activePreset]);
 
 
   const formatRupiah = (number: number) => {
@@ -198,29 +211,23 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
   const handleDatePreset = (preset: DatePreset) => {
     setActivePreset(preset);
     const today = new Date();
-    switch (preset) {
-        case '1d':
-            setDateRange({ from: today, to: today });
-            break;
-        case '3d':
-            setDateRange({ from: subDays(today, 2), to: today });
-            break;
-        case '7d':
-            setDateRange({ from: subDays(today, 6), to: today });
-            break;
-        case '30d':
-            setDateRange({ from: subDays(today, 29), to: today });
-            break;
-        case 'all':
-            setDateRange({ from: undefined, to: undefined });
-            break;
-        default:
-             setDateRange({ from: undefined, to: undefined });
+    if (preset === 'all') {
+        setDateRange({ from: undefined, to: undefined });
+    } else {
+        let fromDate;
+        switch (preset) {
+            case '1d': fromDate = subDays(today, 0); break;
+            case '3d': fromDate = subDays(today, 2); break;
+            case '7d': fromDate = subDays(today, 6); break;
+            case '30d': fromDate = subDays(today, 29); break;
+            default: fromDate = undefined;
+        }
+        setDateRange({ from: fromDate, to: today });
     }
   }
 
   const presetLabels: Record<NonNullable<DatePreset>, string> = {
-    '1d': '1 Hari Terakhir',
+    '1d': '1 Hari Ini',
     '3d': '3 Hari Terakhir',
     '7d': '7 Hari Terakhir',
     '30d': '30 Hari Terakhir',
@@ -253,7 +260,7 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
-                        <DropdownMenuItem onSelect={() => handleDatePreset('1d')}>1 Hari Terakhir</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => handleDatePreset('1d')}>Hari Ini</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => handleDatePreset('3d')}>3 Hari Terakhir</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => handleDatePreset('7d')}>7 Hari Terakhir</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => handleDatePreset('30d')}>30 Hari Terakhir</DropdownMenuItem>
@@ -355,4 +362,3 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
     </div>
   );
 }
-

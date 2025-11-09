@@ -1,5 +1,5 @@
 
-import { db } from '@/drizzle/db';
+import { db } from '@/lib/db';
 import { shipments } from '@/drizzle/schema';
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
@@ -51,22 +51,4 @@ export async function PUT(
 export async function DELETE(
   request: Request,
   { params }: { params: { id: string } }
-) {
-  try {
-    const { id } = params;
-    const [deletedShipment] = await db.delete(shipments).where(eq(shipments.id, id)).returning();
-
-    if (!deletedShipment) {
-      return NextResponse.json({ message: 'Shipment not found' }, { status: 404 });
-    }
-    
-    // Note: In a real-world app, you might also want to delete related financial transactions
-    // or create a reversing entry. For now, we just delete the shipment.
-
-    return NextResponse.json({ message: 'Shipment deleted successfully' });
-  } catch (error) {
-    console.error(`Failed to delete shipment ${params.id}:`, error);
-    const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ message: 'Failed to delete shipment', error: message }, { status: 500 });
-  }
-}
+)
