@@ -1,4 +1,5 @@
 
+
 import { db } from '@/drizzle/db';
 import { shipments, products, stockMovements } from '@/drizzle/schema';
 import { inArray, eq } from 'drizzle-orm';
@@ -35,6 +36,9 @@ export async function POST(request: Request) {
 
     // Validasi stok
     for (const shipment of shipmentsToProcess) {
+        if (shipment.status !== 'Proses') {
+            return NextResponse.json({ message: `Pengiriman ${shipment.transactionId} sudah diproses sebelumnya.` }, { status: 400 });
+        }
         for (const product of shipment.products) {
             const stockInfo = productStockMap.get(product.productId);
             if (!stockInfo || stockInfo.stock < product.quantity) {
@@ -75,13 +79,6 @@ export async function POST(request: Request) {
         }
       }
     });
-
-    // Kirim notifikasi (di luar transaksi db)
-    for (const shipment of shipmentsToProcess) {
-        // Asumsi notifikasi dikirim ke user yang membuat shipment
-        // Di aplikasi nyata, ini bisa lebih kompleks (misal: kirim via WebSocket)
-        console.log(`INFO: Notifikasi seharusnya dikirim untuk user ${shipment.userId} bahwa transaksi ${shipment.transactionId} sedang dikemas.`);
-    }
 
     return NextResponse.json({ message: `${shipmentIds.length} pengiriman berhasil diproses ke pengemasan.` });
   } catch (error) {
