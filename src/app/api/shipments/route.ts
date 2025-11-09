@@ -124,4 +124,6 @@ export async function POST(request: Request) {
     } catch (error) {
         console.error('FATAL: Gagal membuat pengiriman pada /api/shipments/route.ts:', error);
         const message = error instanceof Error ? error.message : "Unknown error";
-        return NextResponse.json({ message: 'failed to create shipment', error: message }, { status: 500
+        return NextResponse.json({ message: 'failed to create shipment', error: message }, { status: 500 });
+    }
+}
