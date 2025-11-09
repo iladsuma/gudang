@@ -226,3 +226,12 @@ export interface SalesProfitReportData {
         profit: number;
     }[];
 }
+
+export interface Notification {
+    id: string;
+    recipientId: string; // 'admin' or a specific user ID
+    message: string;
+    url?: string;
+    isRead: boolean;
+    createdAt: number; // timestamp
+}

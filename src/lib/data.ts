@@ -2,6 +2,8 @@
 
 import type { User, Shipment, Checkout, Expedition, Product, Packaging, Customer, StockMovement, Supplier, Purchase, Return, SortableProductField, SortOrder, FinancialTransaction, ShipmentProduct, Account, Transfer, PaymentStatus, SalesProfitReportData } from './types';
 import { initialData } from './initial-data';
+import { createNotification as createFirebaseNotification } from './notifications';
+
 
 // This is a client-side in-memory store.
 // In a real app, you'd use a proper state management library or server-side data fetching.
@@ -40,6 +42,13 @@ export async function addUser(userData: Omit<User, 'id'>): Promise<User> {
     data.users.push(newUser);
     saveState();
     const { password, ...userToReturn } = newUser;
+    
+    // Create notification for admin
+    await createFirebaseNotification({
+        recipientId: 'admin',
+        message: `Pengguna baru '${newUser.username}' telah ditambahkan.`,
+    });
+
     return Promise.resolve(userToReturn);
 }
 
@@ -116,7 +125,7 @@ export async function getShipments(): Promise<Shipment[]> {
     return Promise.resolve(JSON.parse(JSON.stringify(data.shipments)));
 }
 
-export async function addShipment(shipmentData: Omit<Shipment, 'id'>): Promise<Shipment> {
+export async function addShipment(shipmentData: Omit<Shipment, 'id' | 'createdAt' | 'status'>): Promise<Shipment> {
     const newShipment: Shipment = {
         ...shipmentData,
         id: `ship_${Date.now()}`,
@@ -125,8 +134,17 @@ export async function addShipment(shipmentData: Omit<Shipment, 'id'>): Promise<S
     };
     data.shipments.unshift(newShipment);
     saveState();
+
+    // Create notification for admin
+    await createFirebaseNotification({
+        recipientId: 'admin',
+        message: `Pengiriman baru #${newShipment.transactionId} telah dibuat oleh ${shipmentData.user}.`,
+        url: '/shipments'
+    });
+
     return Promise.resolve(newShipment);
 }
+
 
 export async function updateShipment(shipmentId: string, shipmentUpdate: Partial<Shipment>): Promise<Shipment> {
     const index = data.shipments.findIndex((s: Shipment) => s.id === shipmentId);
@@ -171,6 +189,13 @@ export async function processShipmentsToPackaging(shipmentIds: string[]): Promis
                     data.stockMovements.push(movement);
                 }
             });
+
+            // Create notification for user
+            createFirebaseNotification({
+                recipientId: shipment.userId,
+                message: `Pesanan #${shipment.transactionId} sedang dikemas.`,
+                url: '/my-shipments'
+            });
         }
     });
     saveState();
@@ -206,6 +231,13 @@ export async function processShipmentsToDelivered(shipmentIds: string[]): Promis
             if (account) {
                 account.balance += shipment.totalAmount;
             }
+
+            // Create notification for user
+            createFirebaseNotification({
+                recipientId: shipment.userId,
+                message: `Pesanan #${shipment.transactionId} telah dikirim.`,
+                url: '/my-shipments'
+            });
         }
     });
     saveState();
@@ -354,7 +386,7 @@ export async function getPurchases(): Promise<Purchase[]> {
     return Promise.resolve(data.purchases);
 }
 
-export async function addPurchase(purchaseData: Omit<Purchase, 'id'>): Promise<Purchase> {
+export async function addPurchase(purchaseData: Omit<Purchase, 'id' | 'createdAt'>): Promise<Purchase> {
     const newPurchase: Purchase = {
         ...purchaseData,
         id: `purch_${Date.now()}`,
@@ -415,6 +447,8 @@ export async function processDirectSale(user: User, customerId: string, products
 
     const totalItems = products.reduce((sum, p) => sum + p.quantity, 0);
     const totalAmount = products.reduce((sum, p) => sum + (p.price * p.quantity), 0);
+    const totalCOGS = products.reduce((sum, p) => sum + (p.costPrice * p.quantity), 0);
+    const totalRevenue = totalAmount; // For direct sale, revenue is total amount
 
     const newShipment: Shipment = {
         id: `ship_${Date.now()}`,
@@ -424,15 +458,16 @@ export async function processDirectSale(user: User, customerId: string, products
         customerName: customer.name,
         expedition: 'Penjualan Langsung',
         packagingId: '',
+        packagingCost: 0,
         accountId,
-        status: 'Terkirim',
+        status: 'Terkirim', // Direct sales are immediately 'Terkirim'
         paymentStatus,
         products,
         totalItems,
-        totalProductCost: totalAmount,
+        totalProductCost: totalCOGS, // totalProductCost should be COGS
         totalPackingCost: 0,
         totalAmount: totalAmount,
-        totalRevenue: totalAmount,
+        totalRevenue: totalRevenue,
         createdAt: new Date().toISOString(),
         paidAt: paymentStatus === 'Lunas' ? new Date().toISOString() : undefined,
     };
