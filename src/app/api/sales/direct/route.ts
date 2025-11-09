@@ -1,119 +1,74 @@
-
-import {NextRequest, NextResponse} from 'next/server';
-import {db} from '@/drizzle/db';
-import {
-    shipments as shipmentsTable,
-    products as productsTable,
-    stockMovements as stockMovementsTable,
-    customers as customersTable,
-    users as usersTable,
-    financialTransactions as ftTable,
-    accounts as accountsTable,
-} from '@/drizzle/schema';
-import {eq, sql} from 'drizzle-orm';
-import type {Shipment, ShipmentProduct} from '@/lib/types';
-import { format } from 'date-fns';
-
-export async function POST(request: NextRequest) {
-    try {
-        const body = await request.json();
-        const {user: userAuth, customerId, products, accountId, paymentStatus} = body;
-        
-        let newShipment: Shipment;
-
-        await db.transaction(async (tx) => {
-            const customer = await tx.query.customers.findFirst({where: eq(customersTable.id, customerId)});
-            const user = await tx.query.users.findFirst({where: eq(usersTable.username, userAuth.username)});
-
-            if (!customer) throw new Error('Customer not found');
-            if (!user) throw new Error('User not found');
-            if (!products || products.length === 0) throw new Error('Cannot process sale with no products');
-            if (!accountId && paymentStatus === 'Lunas') throw new Error('Payment account must be selected for paid sales');
-
-            const totalItems = products.reduce((sum: number, p: ShipmentProduct) => sum + p.quantity, 0);
-            const totalAmount = products.reduce((sum: number, p: ShipmentProduct) => sum + p.price * p.quantity, 0);
-
-            const transactionId = `POS-${user.username.toUpperCase()}-${Date.now()}`;
-            
-            const productsWithCostPrice = await Promise.all(products.map(async (p: ShipmentProduct) => {
-                const productData = await tx.query.products.findFirst({
-                    where: eq(productsTable.id, p.productId),
-                    columns: { costPrice: true }
-                });
-                return { ...p, costPrice: productData?.costPrice || 0 };
-            }));
-
-            const newShipmentData: Omit<Shipment, 'id' | 'createdAt' | 'totalRevenue' | 'accountId' | 'paymentStatus'> = {
-                userId: user.id,
-                transactionId,
-                customerId: customer.id,
-                customerName: customer.name,
-                expedition: 'Penjualan Langsung',
-                packagingId: '', // No packaging for direct sale
-                status: 'Terkirim',
-                products: productsWithCostPrice,
-                totalItems,
-                totalProductCost: totalAmount,
-                totalPackingCost: 0,
-                totalAmount: totalAmount,
-            };
-
-            const [insertedShipment] = await tx.insert(shipmentsTable).values({...newShipmentData, totalRevenue: totalAmount, accountId: accountId, paymentStatus: paymentStatus } as any).returning();
-            newShipment = insertedShipment;
-
-             for (const product of products) {
-                const currentProduct = await tx.query.products.findFirst({
-                    where: eq(productsTable.id, product.productId),
-                });
-
-                if (!currentProduct) {
-                    throw new Error(`Product ${product.name} not found.`);
-                }
-                if (currentProduct.stock < product.quantity) {
-                    throw new Error(`Stok tidak cukup untuk produk ${product.name}.`);
-                }
-                
-                const stockBefore = currentProduct.stock;
-                const stockAfter = stockBefore - product.quantity;
-                
-                await tx.update(productsTable)
-                    .set({stock: sql`${productsTable.stock} - ${product.quantity}`})
-                    .where(eq(productsTable.id, product.productId));
-
-                await tx.insert(stockMovementsTable).values({
-                    productId: product.productId,
-                    referenceId: newShipment.id,
-                    type: 'Penjualan',
-                    quantityChange: -product.quantity,
-                    stockBefore: stockBefore,
-                    stockAfter: stockAfter,
-                    notes: `Penjualan langsung: ${newShipment.transactionId}`,
-                });
-            }
-            
-            // Automatically add to financial transactions if it's paid
-            if (newShipment.paymentStatus === 'Lunas' && newShipment.accountId) {
-                 await tx.insert(ftTable).values({
-                    accountId: newShipment.accountId,
-                    type: 'in',
-                    amount: newShipment.totalAmount,
-                    category: 'Penjualan Tunai',
-                    description: `Penjualan ${newShipment.transactionId} kepada ${newShipment.customerName}`,
-                    transactionDate: format(new Date(), 'yyyy-MM-dd'),
-                    referenceId: newShipment.id,
-                });
-                
-                // Update account balance
-                await tx.update(accountsTable)
-                    .set({ balance: sql`${accountsTable.balance} + ${newShipment.totalAmount}`})
-                    .where(eq(accountsTable.id, newShipment.accountId));
-            }
-
-        });
-
-        return NextResponse.json(newShipment!, {status: 201});
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Failed to process direct sale';
-        return NextResponse.json({error: errorMessage}, {status: 500});
-    }
+{
+  "name": "nextn",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack -p 9002",
+    "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
+    "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@genkit-ai/googleai": "^1.14.1",
+    "@genkit-ai/next": "^1.14.1",
+    "@hookform/resolvers": "^4.1.3",
+    "@radix-ui/react-accordion": "^1.2.3",
+    "@radix-ui/react-alert-dialog": "^1.1.6",
+    "@radix-ui/react-avatar": "^1.1.3",
+    "@radix-ui/react-checkbox": "^1.1.4",
+    "@radix-ui/react-collapsible": "^1.1.11",
+    "@radix-ui/react-dialog": "^1.1.6",
+    "@radix-ui/react-dropdown-menu": "^2.1.6",
+    "@radix-ui/react-label": "^2.1.2",
+    "@radix-ui/react-menubar": "^1.1.6",
+    "@radix-ui/react-popover": "^1.1.6",
+    "@radix-ui/react-progress": "^1.1.2",
+    "@radix-ui/react-radio-group": "^1.2.3",
+    "@radix-ui/react-scroll-area": "^1.2.3",
+    "@radix-ui/react-select": "^2.1.6",
+    "@radix-ui/react-separator": "^1.1.2",
+    "@radix-ui/react-slider": "^1.2.3",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-switch": "^1.1.3",
+    "@radix-ui/react-tabs": "^1.1.3",
+    "@radix-ui/react-toast": "^1.2.6",
+    "@radix-ui/react-tooltip": "^1.1.8",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cmdk": "^1.0.0",
+    "date-fns": "^3.6.0",
+    "embla-carousel-react": "^8.6.0",
+    "firebase": "^11.9.1",
+    "genkit": "^1.14.1",
+    "jspdf": "^2.5.1",
+    "jspdf-autotable": "^3.8.2",
+    "lucide-react": "^0.475.0",
+    "next": "15.3.3",
+    "papaparse": "^5.4.1",
+    "patch-package": "^8.0.0",
+    "pdf-lib": "^1.17.1",
+    "react": "^18.3.1",
+    "react-day-picker": "^8.10.1",
+    "react-dom": "^18.3.1",
+    "react-hook-form": "^7.54.2",
+    "recharts": "^2.15.1",
+    "tailwind-merge": "^3.0.1",
+    "tailwindcss-animate": "^1.0.7",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/jspdf": "^2.0.0",
+    "@types/node": "^20",
+    "@types/papaparse": "^5.3.14",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "genkit-cli": "^1.14.1",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "tsx": "^4.16.2",
+    "typescript": "^5"
+  }
 }

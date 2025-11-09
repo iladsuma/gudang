@@ -1,149 +1,74 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/drizzle/db';
-import { products as productsTable, financialTransactions as ftTable, shipments as shipmentsTable, purchases as purchasesTable } from '@/drizzle/schema';
-import { eq, and, gte, lte, sql, sum, ne } from 'drizzle-orm';
-import { startOfYear } from 'date-fns';
-
-export interface BalanceSheetData {
-    assets: {
-        cashAndEquivalents: number;
-        inventory: number;
-        accountsReceivable: number;
-        total: number;
-    };
-    liabilities: {
-        accountsPayable: number;
-        total: number;
-    };
-    equity: {
-        retainedEarnings: number;
-        total: number;
-    };
-}
-
-
-export async function GET(request: NextRequest) {
-    const { searchParams } = new URL(request.url);
-    const asOfDate = searchParams.get('asOfDate') ? new Date(searchParams.get('asOfDate')!) : new Date();
-
-    try {
-        // ========== ASET (ASSETS) ==========
-
-        // 1. Kas & Setara Kas (Cash & Equivalents)
-        const cashResult = await db.select({
-            total: sql<number>`SUM(CASE WHEN ${ftTable.type} = 'in' THEN ${ftTable.amount} ELSE -${ftTable.amount} END)`.mapWith(Number)
-        }).from(ftTable)
-        .where(lte(ftTable.transactionDate, asOfDate.toISOString().split('T')[0]));
-        const cashAndEquivalents = cashResult[0]?.total || 0;
-        
-        // 2. Piutang Usaha (Accounts Receivable)
-        const receivableResult = await db.select({
-            total: sum(shipmentsTable.totalAmount)
-        }).from(shipmentsTable)
-        .where(and(
-            eq(shipmentsTable.paymentStatus, 'Belum Lunas'),
-            lte(shipmentsTable.createdAt, asOfDate)
-        ));
-        const accountsReceivable = receivableResult[0]?.total || 0;
-
-        // 3. Persediaan (Inventory)
-        // This is a simplified calculation. A more accurate one would require historical inventory tracking.
-        // For now, we use current stock value as an approximation.
-        const inventoryResult = await db.select({
-            total: sum(sql`${productsTable.stock} * ${productsTable.costPrice}`)
-        }).from(productsTable);
-        const inventory = inventoryResult[0]?.total || 0;
-
-        const totalAssets = cashAndEquivalents + accountsReceivable + inventory;
-
-
-        // ========== KEWAJIBAN (LIABILITIES) ==========
-
-        // 1. Utang Usaha (Accounts Payable)
-        const payableResult = await db.select({
-            total: sum(purchasesTable.totalAmount)
-        }).from(purchasesTable)
-        .where(and(
-            eq(purchasesTable.paymentStatus, 'Belum Lunas'),
-            lte(purchasesTable.createdAt, asOfDate)
-        ));
-        const accountsPayable = payableResult[0]?.total || 0;
-
-        const totalLiabilities = accountsPayable;
-
-        // ========== EKUITAS (EQUITY) ==========
-        
-        // 1. Laba Ditahan (Retained Earnings)
-        // Calculated as (Revenue - COGS - Operational Expenses) from the beginning of the year until asOfDate.
-        const yearStart = startOfYear(asOfDate);
-        
-        // Revenue from delivered shipments
-        const revenueResult = await db.select({
-            total: sum(shipmentsTable.totalAmount)
-        }).from(shipmentsTable)
-        .where(and(
-            eq(shipmentsTable.status, 'Terkirim'),
-            gte(shipmentsTable.createdAt, yearStart),
-            lte(shipmentsTable.createdAt, asOfDate)
-        ));
-        const totalRevenue = revenueResult[0]?.total || 0;
-
-        // COGS from delivered shipments
-        // This requires products JSON to be parsed, which is complex in SQL.
-        // We'll fetch the shipments and calculate COGS in code.
-        const deliveredShipments = await db.select({ products: shipmentsTable.products, totalRevenue: shipmentsTable.totalRevenue })
-            .from(shipmentsTable)
-            .where(and(
-                eq(shipmentsTable.status, 'Terkirim'),
-                gte(shipmentsTable.createdAt, yearStart),
-                lte(shipmentsTable.createdAt, asOfDate)
-            ));
-
-        const totalCOGS = deliveredShipments.reduce((acc, shipment) => {
-            const cogs = (shipment.products as any[]).reduce((sum, p) => sum + (p.costPrice || 0) * p.quantity, 0);
-            return acc + cogs;
-        }, 0);
-
-        const grossProfit = totalRevenue - totalCOGS;
-
-        // Operational Expenses
-        const expensesResult = await db.select({
-            total: sum(ftTable.amount)
-        }).from(ftTable)
-        .where(and(
-            eq(ftTable.type, 'out'),
-            ne(ftTable.category, 'Pembelian Stok'), // Exclude stock purchases
-            gte(ftTable.transactionDate, yearStart.toISOString().split('T')[0]),
-            lte(ftTable.transactionDate, asOfDate.toISOString().split('T')[0])
-        ));
-        const operationalExpenses = expensesResult[0]?.total || 0;
-
-        const retainedEarnings = grossProfit - operationalExpenses;
-
-        const totalEquity = retainedEarnings; // For now, Owner's Capital is manual on client.
-
-        const reportData: BalanceSheetData = {
-            assets: {
-                cashAndEquivalents,
-                inventory,
-                accountsReceivable,
-                total: totalAssets
-            },
-            liabilities: {
-                accountsPayable,
-                total: totalLiabilities
-            },
-            equity: {
-                retainedEarnings,
-                total: totalEquity
-            }
-        };
-
-        return NextResponse.json(reportData);
-
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Failed to fetch balance sheet data';
-        console.error("Balance Sheet Error:", errorMessage);
-        return NextResponse.json({ error: errorMessage }, { status: 500 });
-    }
+{
+  "name": "nextn",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack -p 9002",
+    "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
+    "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@genkit-ai/googleai": "^1.14.1",
+    "@genkit-ai/next": "^1.14.1",
+    "@hookform/resolvers": "^4.1.3",
+    "@radix-ui/react-accordion": "^1.2.3",
+    "@radix-ui/react-alert-dialog": "^1.1.6",
+    "@radix-ui/react-avatar": "^1.1.3",
+    "@radix-ui/react-checkbox": "^1.1.4",
+    "@radix-ui/react-collapsible": "^1.1.11",
+    "@radix-ui/react-dialog": "^1.1.6",
+    "@radix-ui/react-dropdown-menu": "^2.1.6",
+    "@radix-ui/react-label": "^2.1.2",
+    "@radix-ui/react-menubar": "^1.1.6",
+    "@radix-ui/react-popover": "^1.1.6",
+    "@radix-ui/react-progress": "^1.1.2",
+    "@radix-ui/react-radio-group": "^1.2.3",
+    "@radix-ui/react-scroll-area": "^1.2.3",
+    "@radix-ui/react-select": "^2.1.6",
+    "@radix-ui/react-separator": "^1.1.2",
+    "@radix-ui/react-slider": "^1.2.3",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-switch": "^1.1.3",
+    "@radix-ui/react-tabs": "^1.1.3",
+    "@radix-ui/react-toast": "^1.2.6",
+    "@radix-ui/react-tooltip": "^1.1.8",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cmdk": "^1.0.0",
+    "date-fns": "^3.6.0",
+    "embla-carousel-react": "^8.6.0",
+    "firebase": "^11.9.1",
+    "genkit": "^1.14.1",
+    "jspdf": "^2.5.1",
+    "jspdf-autotable": "^3.8.2",
+    "lucide-react": "^0.475.0",
+    "next": "15.3.3",
+    "papaparse": "^5.4.1",
+    "patch-package": "^8.0.0",
+    "pdf-lib": "^1.17.1",
+    "react": "^18.3.1",
+    "react-day-picker": "^8.10.1",
+    "react-dom": "^18.3.1",
+    "react-hook-form": "^7.54.2",
+    "recharts": "^2.15.1",
+    "tailwind-merge": "^3.0.1",
+    "tailwindcss-animate": "^1.0.7",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/jspdf": "^2.0.0",
+    "@types/node": "^20",
+    "@types/papaparse": "^5.3.14",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "genkit-cli": "^1.14.1",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "tsx": "^4.16.2",
+    "typescript": "^5"
+  }
 }

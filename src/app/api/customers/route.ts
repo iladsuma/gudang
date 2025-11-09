@@ -1,25 +1,74 @@
-
-import {NextRequest, NextResponse} from 'next/server';
-import {db} from '@/drizzle/db';
-import {customers as customersTable} from '@/drizzle/schema';
-import {asc} from 'drizzle-orm';
-
-export async function GET() {
-    try {
-        const allCustomers = await db.select().from(customersTable).orderBy(asc(customersTable.name));
-        return NextResponse.json(allCustomers);
-    } catch (error) {
-        return NextResponse.json({error: 'Failed to fetch customers'}, {status: 500});
-    }
-}
-
-export async function POST(request: NextRequest) {
-    try {
-        const body = await request.json();
-        const [newCustomer] = await db.insert(customersTable).values(body).returning();
-        return NextResponse.json(newCustomer);
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Failed to create customer';
-        return NextResponse.json({error: errorMessage}, {status: 500});
-    }
+{
+  "name": "nextn",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack -p 9002",
+    "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
+    "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@genkit-ai/googleai": "^1.14.1",
+    "@genkit-ai/next": "^1.14.1",
+    "@hookform/resolvers": "^4.1.3",
+    "@radix-ui/react-accordion": "^1.2.3",
+    "@radix-ui/react-alert-dialog": "^1.1.6",
+    "@radix-ui/react-avatar": "^1.1.3",
+    "@radix-ui/react-checkbox": "^1.1.4",
+    "@radix-ui/react-collapsible": "^1.1.11",
+    "@radix-ui/react-dialog": "^1.1.6",
+    "@radix-ui/react-dropdown-menu": "^2.1.6",
+    "@radix-ui/react-label": "^2.1.2",
+    "@radix-ui/react-menubar": "^1.1.6",
+    "@radix-ui/react-popover": "^1.1.6",
+    "@radix-ui/react-progress": "^1.1.2",
+    "@radix-ui/react-radio-group": "^1.2.3",
+    "@radix-ui/react-scroll-area": "^1.2.3",
+    "@radix-ui/react-select": "^2.1.6",
+    "@radix-ui/react-separator": "^1.1.2",
+    "@radix-ui/react-slider": "^1.2.3",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-switch": "^1.1.3",
+    "@radix-ui/react-tabs": "^1.1.3",
+    "@radix-ui/react-toast": "^1.2.6",
+    "@radix-ui/react-tooltip": "^1.1.8",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cmdk": "^1.0.0",
+    "date-fns": "^3.6.0",
+    "embla-carousel-react": "^8.6.0",
+    "firebase": "^11.9.1",
+    "genkit": "^1.14.1",
+    "jspdf": "^2.5.1",
+    "jspdf-autotable": "^3.8.2",
+    "lucide-react": "^0.475.0",
+    "next": "15.3.3",
+    "papaparse": "^5.4.1",
+    "patch-package": "^8.0.0",
+    "pdf-lib": "^1.17.1",
+    "react": "^18.3.1",
+    "react-day-picker": "^8.10.1",
+    "react-dom": "^18.3.1",
+    "react-hook-form": "^7.54.2",
+    "recharts": "^2.15.1",
+    "tailwind-merge": "^3.0.1",
+    "tailwindcss-animate": "^1.0.7",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/jspdf": "^2.0.0",
+    "@types/node": "^20",
+    "@types/papaparse": "^5.3.14",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "genkit-cli": "^1.14.1",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "tsx": "^4.16.2",
+    "typescript": "^5"
+  }
 }
