@@ -1,6 +1,6 @@
 
-import { db } from '@/drizzle/db';
-import { packagingOptions } from '@/drizzle/schema';
+import { db } from '@/lib/db';
+import { packagingOptions } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
@@ -29,8 +29,9 @@ export async function PUT(
 
     return NextResponse.json(updatedOption);
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error(`Failed to update packaging option ${params.id}:`, error);
-    return NextResponse.json({ message: 'Failed to update packaging option' }, { status: 500 });
+    return NextResponse.json({ message: 'Failed to update packaging option', error: message }, { status: 500 });
   }
 }
 
@@ -48,7 +49,8 @@ export async function DELETE(
 
     return NextResponse.json({ message: 'Packaging option deleted successfully' });
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error(`Failed to delete packaging option ${params.id}:`, error);
-    return NextResponse.json({ message: 'Failed to delete packaging option' }, { status: 500 });
+    return NextResponse.json({ message: 'Failed to delete packaging option', error: message }, { status: 500 });
   }
 }

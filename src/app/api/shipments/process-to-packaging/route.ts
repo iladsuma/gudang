@@ -1,6 +1,6 @@
 
-import { db } from '@/drizzle/db';
-import { shipments, products, stockMovements } from '@/drizzle/schema';
+import { db } from '@/lib/db';
+import { shipments, products, stockMovements } from '@/lib/schema';
 import { inArray, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { getNotificationContext } from '@/context/notification-context';
@@ -25,6 +25,11 @@ export async function POST(request: Request) {
 
     const allProductIds = shipmentsToProcess.flatMap(s => s.products.map((p: any) => p.productId));
     const uniqueProductIds = [...new Set(allProductIds)];
+    
+    if (uniqueProductIds.length === 0) {
+        // Handle case where there are no products in the selected shipments
+        return NextResponse.json({ message: 'Tidak ada produk dalam pengiriman yang dipilih.' }, { status: 400 });
+    }
     
     const productStocks = await db.query.products.findMany({
         where: inArray(products.id, uniqueProductIds),

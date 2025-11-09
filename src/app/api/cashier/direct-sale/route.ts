@@ -1,6 +1,6 @@
 
-import { db } from '@/drizzle/db';
-import { shipments, products, stockMovements, financialTransactions } from '@/drizzle/schema';
+import { db } from '@/lib/db';
+import { shipments, products, stockMovements, financialTransactions } from '@/lib/schema';
 import { eq, inArray } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import type { ShipmentProduct, Customer } from '@/lib/types';
@@ -53,9 +53,9 @@ export async function POST(request: Request) {
                 customerId,
                 customerName: customer.name,
                 expedition: 'Penjualan Langsung',
-                packagingId: 'N/A',
+                packagingId: 'pkg_direct_sale', // Placeholder for direct sales
                 accountId: paymentStatus === 'Lunas' ? accountId : null,
-                status: 'Terkirim',
+                status: 'Terkirim', // Direct sales are immediately considered 'Delivered'
                 paymentStatus,
                 products: saleProducts,
                 totalItems: saleProducts.reduce((sum: number, p: ShipmentProduct) => sum + p.quantity, 0),

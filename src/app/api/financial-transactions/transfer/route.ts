@@ -1,6 +1,6 @@
 
-import { db } from '@/drizzle/db';
-import { financialTransactions } from '@/drizzle/schema';
+import { db } from '@/lib/db';
+import { financialTransactions } from '@/lib/schema';
 import { NextResponse } from 'next/server';
 import { format } from 'date-fns';
 
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
                 type: 'out',
                 amount: Number(amount),
                 category: 'Transfer Keluar',
-                description: `Transfer ke: ${description}`,
+                description: `Transfer ke akun lain: ${description}`,
                 transactionDate: date,
             });
 
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
                 type: 'in',
                 amount: Number(amount),
                 category: 'Transfer Masuk',
-                description: `Transfer dari: ${description}`,
+                description: `Transfer dari akun lain: ${description}`,
                 transactionDate: date,
             });
         });

@@ -1,6 +1,6 @@
 
-import { db } from '@/drizzle/db';
-import { financialTransactions, accounts } from '@/drizzle/schema';
+import { db } from '@/lib/db';
+import { financialTransactions, accounts } from '@/lib/schema';
 import { and, asc, desc, eq, gte, lte } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -68,4 +68,3 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ message: 'Failed to create financial transaction', error: message }, { status: 500 });
     }
 }
-
