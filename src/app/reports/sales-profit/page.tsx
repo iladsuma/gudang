@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { getSalesProfitReport } from '@/lib/data';
-import type { SalesProfitReportData } from '@/app/api/reports/sales-profit/route';
+import type { SalesProfitReportData } from '@/lib/types';
 import {
   Card,
   CardContent,
@@ -23,6 +23,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableFooter
 } from '@/components/ui/table';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import type { DateRange } from 'react-day-picker';
@@ -313,12 +314,14 @@ export default function SalesProfitReportPage() {
                                         <TableRow><TableCell colSpan={6} className="h-24 text-center">Tidak ada data penjualan terkirim pada rentang tanggal ini.</TableCell></TableRow>
                                     )}
                                 </TableBody>
-                                <TableRow className="bg-muted/50 font-bold hover:bg-muted/50">
-                                    <TableCell colSpan={3} className="text-right">Total Laba Kotor</TableCell>
-                                    <TableCell className="text-right">{formatRupiah(reportData.totalRevenue)}</TableCell>
-                                    <TableCell className="text-right">{formatRupiah(reportData.totalCOGS)}</TableCell>
-                                    <TableCell className="text-right">{formatRupiah(reportData.grossProfit)}</TableCell>
-                                </TableRow>
+                                <TableFooter>
+                                    <TableRow className="bg-muted/50 font-bold hover:bg-muted/50">
+                                        <TableCell colSpan={3} className="text-right">Total Laba Kotor</TableCell>
+                                        <TableCell className="text-right">{formatRupiah(reportData.totalRevenue)}</TableCell>
+                                        <TableCell className="text-right">{formatRupiah(reportData.totalCOGS)}</TableCell>
+                                        <TableCell className="text-right">{formatRupiah(reportData.grossProfit)}</TableCell>
+                                    </TableRow>
+                                </TableFooter>
                             </Table>
                         </div>
                     </>
