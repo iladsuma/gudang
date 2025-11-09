@@ -272,12 +272,12 @@ export async function getStockMovements(productId: string): Promise<StockMovemen
 
 // --- Packaging Functions ---
 export async function getPackagingOptions(): Promise<Packaging[]> {
-    const response = await fetch(`${API_BASE_URL}/packaging-options`);
+    const response = await fetch(`${API_BASE_URL}/packaging`);
     return handleResponse<Packaging[]>(response);
 }
 
 export async function addPackagingOption(data: Omit<Packaging, 'id'>): Promise<Packaging> {
-     const response = await fetch(`${API_BASE_URL}/packaging-options`, {
+     const response = await fetch(`${API_BASE_URL}/packaging`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -286,7 +286,7 @@ export async function addPackagingOption(data: Omit<Packaging, 'id'>): Promise<P
 }
 
 export async function updatePackagingOption(id: string, data: Omit<Packaging, 'id'>): Promise<Packaging> {
-    const response = await fetch(`${API_BASE_URL}/packaging-options/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/packaging/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -295,7 +295,7 @@ export async function updatePackagingOption(id: string, data: Omit<Packaging, 'i
 }
 
 export async function deletePackagingOption(id: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/packaging-options/${id}`, { method: 'DELETE' });
+    const response = await fetch(`${API_BASE_URL}/packaging/${id}`, { method: 'DELETE' });
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred.' }));
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
@@ -395,13 +395,13 @@ export async function getFinancialTransactions(type?: 'in' | 'out', startDate?: 
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
     
-    const response = await fetch(`${API_BASE_URL}/financials/transactions?${params.toString()}`);
+    const response = await fetch(`${API_BASE_URL}/financial-transactions?${params.toString()}`);
     return handleResponse<FinancialTransaction[]>(response);
 }
 
 
 export async function addFinancialTransaction(data: Omit<FinancialTransaction, 'id' | 'createdAt' | 'account'>): Promise<FinancialTransaction> {
-    const response = await fetch(`${API_BASE_URL}/financials/transactions`, {
+    const response = await fetch(`${API_BASE_URL}/financial-transactions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -410,7 +410,7 @@ export async function addFinancialTransaction(data: Omit<FinancialTransaction, '
 }
 
 export async function updateFinancialTransaction(id: string, data: Partial<Omit<FinancialTransaction, 'id' | 'createdAt' | 'account'>>): Promise<FinancialTransaction> {
-    const response = await fetch(`${API_BASE_URL}/financials/transactions/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/financial-transactions/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -419,7 +419,7 @@ export async function updateFinancialTransaction(id: string, data: Partial<Omit<
 }
 
 export async function deleteFinancialTransaction(id: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/financials/transactions/${id}`, { method: 'DELETE' });
+    const response = await fetch(`${API_BASE_URL}/financial-transactions/${id}`, { method: 'DELETE' });
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred.' }));
         throw new Error(errorData.message || 'Failed to delete transaction');
@@ -427,7 +427,7 @@ export async function deleteFinancialTransaction(id: string): Promise<void> {
 }
 
 export async function addInternalTransfer(data: Transfer): Promise<{ message: string }> {
-    const response = await fetch(`${API_BASE_URL}/financials/transfers`, {
+    const response = await fetch(`${API_BASE_URL}/financial-transactions/transfer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -470,5 +470,3 @@ export async function payPayable(purchaseId: string, accountId: string, paidAt: 
         throw new Error(errorData.message || 'Failed to process payable payment');
     }
 }
-
-    
