@@ -2,374 +2,473 @@
 'use client';
 
 import type { User, Shipment, Checkout, Expedition, Product, Packaging, Customer, StockMovement, Supplier, Purchase, Return, SortableProductField, SortOrder, FinancialTransaction, ShipmentProduct, Account, Transfer, PaymentStatus, SalesProfitReportData } from './types';
+// =================================================================
+// API Client Functions
+// =================================================================
 
-// This is a client-side in-memory store.
-// In a real app, you'd use a proper state management library or server-side data fetching.
-// let data = JSON.parse(JSON.stringify(initialData));
+const API_BASE_URL = '/api';
 
-// const saveState = () => {
-//     // In a browser environment, you could use localStorage. For now, it's in-memory.
-// };
-
-// const createNotification = (notification: { recipientId: string; message: string; url?: string }) => {
-//     const { createNotification: create } = getNotificationContext();
-//     create(notification);
-// };
-
-
-async function fetchWrapper(url: string, options?: RequestInit) {
-    const response = await fetch(url, options);
+async function handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred.' }));
-        throw new Error(errorData.message || 'Server responded with an error');
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
     }
     return response.json();
 }
 
+// --- User Functions ---
 export async function login(username: string, password: string): Promise<User> {
-    return fetchWrapper('/api/users/login', {
+    const response = await fetch(`${API_BASE_URL}/users/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
     });
+    return handleResponse<User>(response);
 }
 
 export async function getUsers(): Promise<User[]> {
-    return fetchWrapper('/api/users');
+    const response = await fetch(`${API_BASE_URL}/users`);
+    return handleResponse<User[]>(response);
 }
 
-export async function addUser(userData: Omit<User, 'id'>): Promise<User> {
-     return fetchWrapper('/api/users', {
+export async function addUser(data: Omit<User, 'id'>): Promise<User> {
+    const response = await fetch(`${API_BASE_URL}/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData),
+        body: JSON.stringify(data),
     });
+    return handleResponse<User>(response);
 }
 
-export async function updateUser(id: string, userUpdate: Partial<Omit<User, 'id'>>): Promise<User> {
-     return fetchWrapper(`/api/users/${id}`, {
+export async function updateUser(id: string, data: Partial<Omit<User, 'id'>>): Promise<User> {
+    const response = await fetch(`${API_BASE_URL}/users/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userUpdate),
+        body: JSON.stringify(data),
     });
+    return handleResponse<User>(response);
 }
 
 export async function deleteUser(id: string): Promise<void> {
-    await fetch(`/api/users/${id}`, { method: 'DELETE' });
+    const response = await fetch(`${API_BASE_URL}/users/${id}`, { method: 'DELETE' });
+     if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred.' }));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
 }
 
+
+// --- Customer Functions ---
 export async function getCustomers(): Promise<Customer[]> {
-    return fetchWrapper('/api/customers');
+    const response = await fetch(`${API_BASE_URL}/customers`);
+    return handleResponse<Customer[]>(response);
 }
 
-export async function addCustomer(customerData: Omit<Customer, 'id'>): Promise<Customer> {
-     return fetchWrapper('/api/customers', {
+export async function addCustomer(data: Omit<Customer, 'id'>): Promise<Customer> {
+    const response = await fetch(`${API_BASE_URL}/customers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(customerData),
+        body: JSON.stringify(data),
     });
+    return handleResponse<Customer>(response);
 }
 
-export async function updateCustomer(id: string, customerUpdate: Omit<Customer, 'id'>): Promise<Customer> {
-    return fetchWrapper(`/api/customers/${id}`, {
+export async function updateCustomer(id: string, data: Omit<Customer, 'id'>): Promise<Customer> {
+    const response = await fetch(`${API_BASE_URL}/customers/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(customerUpdate),
+        body: JSON.stringify(data),
     });
+    return handleResponse<Customer>(response);
 }
 
 export async function deleteCustomer(id: string): Promise<void> {
-    await fetch(`/api/customers/${id}`, { method: 'DELETE' });
+    const response = await fetch(`${API_BASE_URL}/customers/${id}`, { method: 'DELETE' });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred.' }));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
 }
 
+// --- Supplier Functions ---
 export async function getSuppliers(): Promise<Supplier[]> {
-    return fetchWrapper('/api/suppliers');
+    const response = await fetch(`${API_BASE_URL}/suppliers`);
+    return handleResponse<Supplier[]>(response);
 }
 
-export async function addSupplier(supplierData: Omit<Supplier, 'id'>): Promise<Supplier> {
-     return fetchWrapper('/api/suppliers', {
+export async function addSupplier(data: Omit<Supplier, 'id'>): Promise<Supplier> {
+    const response = await fetch(`${API_BASE_URL}/suppliers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(supplierData),
+        body: JSON.stringify(data),
     });
+    return handleResponse<Supplier>(response);
 }
 
-export async function updateSupplier(id: string, supplierUpdate: Omit<Supplier, 'id'>): Promise<Supplier> {
-    return fetchWrapper(`/api/suppliers/${id}`, {
+export async function updateSupplier(id: string, data: Omit<Supplier, 'id'>): Promise<Supplier> {
+    const response = await fetch(`${API_BASE_URL}/suppliers/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(supplierUpdate),
+        body: JSON.stringify(data),
     });
+    return handleResponse<Supplier>(response);
 }
 
 export async function deleteSupplier(id: string): Promise<void> {
-    await fetch(`/api/suppliers/${id}`, { method: 'DELETE' });
+    const response = await fetch(`${API_BASE_URL}/suppliers/${id}`, { method: 'DELETE' });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred.' }));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
 }
 
+
+// --- Shipment Functions ---
 export async function getShipments(): Promise<Shipment[]> {
-    return fetchWrapper('/api/shipments');
+    const response = await fetch(`${API_BASE_URL}/shipments`);
+    return handleResponse<Shipment[]>(response);
 }
 
-export async function addShipment(shipmentData: Omit<Shipment, 'id' | 'createdAt' | 'status'>): Promise<Shipment> {
-    return fetchWrapper('/api/shipments', {
+export async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'status'>): Promise<Shipment> {
+    const response = await fetch(`${API_BASE_URL}/shipments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(shipmentData),
+        body: JSON.stringify(data),
     });
+    return handleResponse<Shipment>(response);
 }
 
-
-export async function updateShipment(shipmentId: string, shipmentUpdate: Partial<Shipment>): Promise<Shipment> {
-    return fetchWrapper(`/api/shipments/${shipmentId}`, {
+export async function updateShipment(shipmentId: string, data: Partial<Shipment>): Promise<Shipment> {
+    const response = await fetch(`${API_BASE_URL}/shipments/${shipmentId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(shipmentUpdate),
+        body: JSON.stringify(data),
     });
+    return handleResponse<Shipment>(response);
 }
-
 
 export async function deleteShipment(shipmentId: string): Promise<void> {
-    await fetch(`/api/shipments/${shipmentId}`, { method: 'DELETE' });
+    const response = await fetch(`${API_BASE_URL}/shipments/${shipmentId}`, { method: 'DELETE' });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred.' }));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
 }
 
-export async function processShipmentsToPackaging(shipmentIds: string[]): Promise<void> {
-    return fetchWrapper('/api/shipments/process-to-packaging', {
+
+// --- History/Checkout Functions ---
+export async function processShipmentsToPackaging(shipmentIds: string[]): Promise<{message: string}> {
+    const response = await fetch(`${API_BASE_URL}/shipments/process-to-packaging`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ shipmentIds }),
     });
+    return handleResponse(response);
 }
 
 
-export async function processShipmentsToDelivered(shipmentIds: string[]): Promise<void> {
-    return fetchWrapper('/api/shipments/process-to-delivered', {
+export async function processShipmentsToDelivered(shipmentIds: string[]): Promise<{message: string}> {
+     const response = await fetch(`${API_BASE_URL}/shipments/process-to-delivered`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ shipmentIds }),
     });
+    return handleResponse(response);
 }
 
+// --- Expedition Functions ---
 export async function getExpeditions(): Promise<Expedition[]> {
-    return fetchWrapper('/api/expeditions');
+    const response = await fetch(`${API_BASE_URL}/expeditions`);
+    return handleResponse<Expedition[]>(response);
 }
 
 export async function addExpedition(name: string): Promise<Expedition> {
-     return fetchWrapper('/api/expeditions', {
+    const response = await fetch(`${API_BASE_URL}/expeditions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),
     });
+    return handleResponse<Expedition>(response);
 }
 
 export async function updateExpedition(id: string, name: string): Promise<Expedition> {
-    return fetchWrapper(`/api/expeditions/${id}`, {
+     const response = await fetch(`${API_BASE_URL}/expeditions/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),
     });
+    return handleResponse<Expedition>(response);
 }
 
 export async function deleteExpedition(id: string): Promise<void> {
-     await fetch(`/api/expeditions/${id}`, { method: 'DELETE' });
+    const response = await fetch(`${API_BASE_URL}/expeditions/${id}`, { method: 'DELETE' });
+     if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred.' }));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
 }
 
+// --- Master Product Functions ---
 export async function getProducts(sortBy: SortableProductField = 'code', sortOrder: SortOrder = 'asc'): Promise<Product[]> {
-    const url = new URL('/api/products', window.location.origin);
-    url.searchParams.append('sortBy', sortBy);
-    url.searchParams.append('sortOrder', sortOrder);
-    return fetchWrapper(url.toString());
+    const response = await fetch(`${API_BASE_URL}/products?sortBy=${sortBy}&sortOrder=${sortOrder}`);
+    return handleResponse<Product[]>(response);
 }
 
 export async function addProduct(product: Omit<Product, 'id'>): Promise<Product> {
-     return fetchWrapper('/api/products', {
+    const response = await fetch(`${API_BASE_URL}/products`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(product),
     });
+    return handleResponse<Product>(response);
 }
 
 export async function updateProduct(id: string, productUpdate: Partial<Omit<Product, 'id'>>): Promise<Product> {
-     return fetchWrapper(`/api/products/${id}`, {
+     const response = await fetch(`${API_BASE_URL}/products/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(productUpdate),
     });
+    return handleResponse<Product>(response);
 }
 
+
 export async function deleteMultipleProducts(ids: string[]): Promise<void> {
-    return fetchWrapper('/api/products/bulk-delete', {
+     const response = await fetch(`${API_BASE_URL}/products/bulk-delete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids }),
     });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred.' }));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
 }
 
+
 export async function updateProductStock(id: string, newStock: number, notes: string): Promise<Product> {
-     return fetchWrapper(`/api/products/${id}/stock`, {
+    const response = await fetch(`${API_BASE_URL}/products/${id}/stock`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ newStock, notes }),
     });
+    return handleResponse<Product>(response);
 }
 
 export async function bulkUpdateProductStock(updates: { code: string; physicalStock: number; notes: string }[]): Promise<{ success: number; failure: number }> {
-    return fetchWrapper('/api/products/bulk-stock-update', {
+    const response = await fetch(`${API_BASE_URL}/products/bulk-stock-update`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ updates }),
     });
+    return handleResponse<{ success: number; failure: number }>(response);
 }
+
 
 export async function getStockMovements(productId: string): Promise<StockMovement[]> {
-    return fetchWrapper(`/api/products/${productId}/stock-movements`);
+    const response = await fetch(`${API_BASE_URL}/products/${productId}/stock-movements`);
+    return handleResponse<StockMovement[]>(response);
 }
 
+// --- Packaging Functions ---
 export async function getPackagingOptions(): Promise<Packaging[]> {
-    return fetchWrapper('/api/packaging-options');
+    const response = await fetch(`${API_BASE_URL}/packaging-options`);
+    return handleResponse<Packaging[]>(response);
 }
 
-export async function addPackagingOption(packagingData: Omit<Packaging, 'id'>): Promise<Packaging> {
-    return fetchWrapper('/api/packaging-options', {
+export async function addPackagingOption(data: Omit<Packaging, 'id'>): Promise<Packaging> {
+     const response = await fetch(`${API_BASE_URL}/packaging-options`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(packagingData),
+        body: JSON.stringify(data),
     });
+    return handleResponse<Packaging>(response);
 }
 
-export async function updatePackagingOption(id: string, packagingUpdate: Omit<Packaging, 'id'>): Promise<Packaging> {
-    return fetchWrapper(`/api/packaging-options/${id}`, {
+export async function updatePackagingOption(id: string, data: Omit<Packaging, 'id'>): Promise<Packaging> {
+    const response = await fetch(`${API_BASE_URL}/packaging-options/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(packagingUpdate),
+        body: JSON.stringify(data),
     });
+    return handleResponse<Packaging>(response);
 }
 
 export async function deletePackagingOption(id: string): Promise<void> {
-     await fetch(`/api/packaging-options/${id}`, { method: 'DELETE' });
+    const response = await fetch(`${API_BASE_URL}/packaging-options/${id}`, { method: 'DELETE' });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred.' }));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
 }
 
+// --- Purchase Functions ---
 export async function getPurchases(): Promise<Purchase[]> {
-    return fetchWrapper('/api/purchases');
+    const response = await fetch(`${API_BASE_URL}/purchases`);
+    return handleResponse<Purchase[]>(response);
 }
 
-export async function addPurchase(purchaseData: Omit<Purchase, 'id' | 'createdAt'>): Promise<Purchase> {
-    return fetchWrapper('/api/purchases', {
+export async function addPurchase(data: Omit<Purchase, 'id' | 'createdAt'>): Promise<Purchase> {
+    const response = await fetch(`${API_BASE_URL}/purchases`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(purchaseData),
+        body: JSON.stringify(data),
     });
+    return handleResponse<Purchase>(response);
 }
 
-export async function processDirectSale(user: User, customerId: string, products: ShipmentProduct[], accountId: string, paymentStatus: PaymentStatus): Promise<Shipment> {
-    return fetchWrapper('/api/cashier/direct-sale', {
+// --- Direct Sale Function ---
+export async function processDirectSale(
+    user: User, 
+    customerId: string,
+    products: ShipmentProduct[],
+    accountId: string,
+    paymentStatus: PaymentStatus,
+): Promise<Shipment> {
+     const response = await fetch(`${API_BASE_URL}/cashier/direct-sale`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, customerId, products, accountId, paymentStatus }),
     });
+    return handleResponse<Shipment>(response);
 }
 
+// --- Return Functions ---
 export async function getReturns(): Promise<Return[]> {
-    return fetchWrapper('/api/returns');
+    const response = await fetch(`${API_BASE_URL}/returns`);
+    return handleResponse<Return[]>(response);
 }
 
-export async function addReturn(returnData: Omit<Return, 'id' | 'createdAt' | 'originalTransactionId' | 'customerName'> & { originalShipmentId: string }): Promise<Return> {
-    return fetchWrapper('/api/returns', {
+
+export async function addReturn(data: { originalShipmentId: string, products: any[], reason: string }): Promise<Return> {
+    const response = await fetch(`${API_BASE_URL}/returns`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(returnData),
+        body: JSON.stringify(data),
     });
+    return handleResponse<Return>(response);
 }
 
 export async function getStockOpnameMovements(startDate?: Date, endDate?: Date): Promise<(StockMovement & { productCode: string, productName: string })[]> {
-    const url = new URL('/api/reports/stock-opname', window.location.origin);
-    if (startDate) url.searchParams.append('startDate', startDate.toISOString());
-    if (endDate) url.searchParams.append('endDate', endDate.toISOString());
-    return fetchWrapper(url.toString());
+    if (!startDate || !endDate) return [];
+    const response = await fetch(`${API_BASE_URL}/reports/stock-opname?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`);
+    return handleResponse<(StockMovement & { productCode: string, productName: string })[]>(response);
 }
 
+// --- Financial Account Functions ---
 export async function getAccounts(): Promise<Account[]> {
-    return fetchWrapper('/api/accounts');
+    const response = await fetch(`${API_BASE_URL}/accounts`);
+    return handleResponse<Account[]>(response);
 }
 
-export async function addAccount(accountData: Omit<Account, 'id' | 'createdAt'>): Promise<Account> {
-     return fetchWrapper('/api/accounts', {
+export async function addAccount(data: Omit<Account, 'id' | 'createdAt' | 'balance'> & { balance?: number }): Promise<Account> {
+    const response = await fetch(`${API_BASE_URL}/accounts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(accountData),
+        body: JSON.stringify(data),
     });
+    return handleResponse<Account>(response);
 }
 
-export async function updateAccount(id: string, accountUpdate: Partial<Omit<Account, 'id' | 'createdAt' | 'balance'>>): Promise<Account> {
-     return fetchWrapper(`/api/accounts/${id}`, {
+export async function updateAccount(id: string, data: Partial<Omit<Account, 'id' | 'createdAt' | 'balance'>>): Promise<Account> {
+    const response = await fetch(`${API_BASE_URL}/accounts/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(accountUpdate),
+        body: JSON.stringify(data),
     });
+    return handleResponse<Account>(response);
 }
 
 export async function deleteAccount(id: string): Promise<void> {
-    await fetch(`/api/accounts/${id}`, { method: 'DELETE' });
+    const response = await fetch(`${API_BASE_URL}/accounts/${id}`, { method: 'DELETE' });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred.' }));
+        throw new Error(errorData.message || 'Failed to delete account');
+    }
 }
 
+
+// --- Financial Transaction Functions ---
 export async function getFinancialTransactions(type?: 'in' | 'out', startDate?: string, endDate?: string): Promise<FinancialTransaction[]> {
-    const url = new URL('/api/financials/transactions', window.location.origin);
-    if(type) url.searchParams.append('type', type);
-    if(startDate) url.searchParams.append('startDate', startDate);
-    if(endDate) url.searchParams.append('endDate', endDate);
-    return fetchWrapper(url.toString());
+    const params = new URLSearchParams();
+    if (type) params.append('type', type);
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    
+    const response = await fetch(`${API_BASE_URL}/financials/transactions?${params.toString()}`);
+    return handleResponse<FinancialTransaction[]>(response);
 }
 
-export async function addFinancialTransaction(txData: Omit<FinancialTransaction, 'id' | 'createdAt' | 'account'>): Promise<FinancialTransaction> {
-    return fetchWrapper('/api/financials/transactions', {
+
+export async function addFinancialTransaction(data: Omit<FinancialTransaction, 'id' | 'createdAt' | 'account'>): Promise<FinancialTransaction> {
+    const response = await fetch(`${API_BASE_URL}/financials/transactions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(txData),
+        body: JSON.stringify(data),
     });
+    return handleResponse<FinancialTransaction>(response);
 }
 
-export async function updateFinancialTransaction(id: string, txUpdate: Partial<Omit<FinancialTransaction, 'id' | 'createdAt' | 'account'>>): Promise<FinancialTransaction> {
-    return fetchWrapper(`/api/financials/transactions/${id}`, {
+export async function updateFinancialTransaction(id: string, data: Partial<Omit<FinancialTransaction, 'id' | 'createdAt' | 'account'>>): Promise<FinancialTransaction> {
+    const response = await fetch(`${API_BASE_URL}/financials/transactions/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(txUpdate),
+        body: JSON.stringify(data),
     });
+    return handleResponse<FinancialTransaction>(response);
 }
 
 export async function deleteFinancialTransaction(id: string): Promise<void> {
-    await fetch(`/api/financials/transactions/${id}`, { method: 'DELETE' });
+    const response = await fetch(`${API_BASE_URL}/financials/transactions/${id}`, { method: 'DELETE' });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred.' }));
+        throw new Error(errorData.message || 'Failed to delete transaction');
+    }
 }
 
-export async function addInternalTransfer(transferData: Transfer): Promise<{ message: string }> {
-     return fetchWrapper('/api/financials/transfers', {
+export async function addInternalTransfer(data: Transfer): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE_URL}/financials/transfers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(transferData),
+        body: JSON.stringify(data),
     });
+    return handleResponse<{ message: string }>(response);
 }
 
-export async function getSalesProfitReport(startDate: Date, endDate: Date, userId: string = 'all'): Promise<SalesProfitReportData> {
-    const url = new URL('/api/reports/sales-profit', window.location.origin);
-    url.searchParams.append('startDate', startDate.toISOString());
-    url.searchParams.append('endDate', endDate.toISOString());
-    url.searchParams.append('userId', userId);
-    return fetchWrapper(url.toString());
+
+// --- Report Functions ---
+export async function getSalesProfitReport(startDate: Date, endDate: Date, userId: string): Promise<SalesProfitReportData> {
+    const params = new URLSearchParams();
+    params.append('startDate', startDate.toISOString());
+    params.append('endDate', endDate.toISOString());
+    params.append('userId', userId);
+    const response = await fetch(`${API_BASE_URL}/reports/sales-profit?${params.toString()}`);
+    return handleResponse<SalesProfitReportData>(response);
 }
 
+// --- Payment Functions ---
 export async function payReceivable(shipmentId: string, accountId: string, paidAt: Date): Promise<void> {
-    return fetchWrapper(`/api/receivables/${shipmentId}/pay`, {
+    const response = await fetch(`${API_BASE_URL}/receivables/${shipmentId}/pay`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ accountId, paidAt: paidAt.toISOString() }),
     });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred.' }));
+        throw new Error(errorData.message || 'Failed to process receivable payment');
+    }
 }
 
 export async function payPayable(purchaseId: string, accountId: string, paidAt: Date): Promise<void> {
-     return fetchWrapper(`/api/payables/${purchaseId}/pay`, {
+    const response = await fetch(`${API_BASE_URL}/payables/${purchaseId}/pay`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ accountId, paidAt: paidAt.toISOString() }),
     });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred.' }));
+        throw new Error(errorData.message || 'Failed to process payable payment');
+    }
 }
-
 
     
