@@ -23,11 +23,14 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const { toast } = useToast();
-  const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
 
-  useEffect(() => {
-    // We need to create the Audio object on the client side.
-    setAudio(new Audio(NOTIFICATION_SOUND_PATH));
+  const audio = useMemo(() => {
+    if (typeof window !== 'undefined') {
+        const audioInstance = new Audio(NOTIFICATION_SOUND_PATH);
+        audioInstance.load();
+        return audioInstance;
+    }
+    return null;
   }, []);
 
   const createNotification = useCallback((notification: Omit<Notification, 'id' | 'createdAt' | 'isRead'>) => {
