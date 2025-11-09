@@ -82,6 +82,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
   }, [shipments, searchTerm]);
   
   const formatRupiah = (number: number) => {
+    if (number === null || typeof number === 'undefined' || isNaN(number)) return 'Rp 0';
     return new Intl.NumberFormat('id-ID', {
         style: 'currency',
         currency: 'IDR',

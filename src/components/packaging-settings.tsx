@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -52,6 +53,7 @@ export function PackagingSettings() {
   });
   
   const formatRupiah = (number: number) => {
+    if (isNaN(number)) return 'Rp 0';
     return new Intl.NumberFormat('id-ID', {
         style: 'currency',
         currency: 'IDR',
