@@ -12,13 +12,13 @@ export async function PUT(
     const { id } = params;
     const body = await request.json();
     
-    // Recalculate totals server-side
+    // Recalculate totals server-side for safety
     const { products: shipmentProducts, packagingCost, ...restOfBody } = body;
     const totalItems = shipmentProducts.reduce((sum: number, p: any) => sum + p.quantity, 0);
     const totalProductCost = shipmentProducts.reduce((sum: number, p: any) => sum + p.price * p.quantity, 0);
     const totalPackingCost = packagingCost || 0;
     const totalAmount = totalProductCost + totalPackingCost;
-    const totalRevenue = totalAmount;
+    const totalRevenue = totalAmount; // For now, revenue is the same as total amount
 
     const updateData = {
         ...restOfBody,

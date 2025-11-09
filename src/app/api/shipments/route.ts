@@ -25,8 +25,12 @@ export async function POST(request: Request) {
             packagingId, accountId, products: shipmentProducts, receipt, paymentStatus
         } = body;
 
-        if (!userId || !transactionId || !customerId || !customerName || !expedition || !packagingId || !accountId || !shipmentProducts || !paymentStatus) {
+        if (!userId || !transactionId || !customerId || !customerName || !expedition || !packagingId || !paymentStatus) {
              return NextResponse.json({ message: 'Data yang dikirim tidak lengkap.' }, { status: 400 });
+        }
+        
+        if (paymentStatus === 'Lunas' && !accountId) {
+             return NextResponse.json({ message: 'Akun pembayaran harus dipilih untuk transaksi lunas.' }, { status: 400 });
         }
 
         const totalItems = shipmentProducts.reduce((sum: number, p: ShipmentProduct) => sum + p.quantity, 0);
@@ -34,9 +38,9 @@ export async function POST(request: Request) {
         
         let totalPackingCost = 0;
         if (packagingId) {
-            const [packagingOption] = await db.select({cost: packagingOptions.cost}).from(packagingOptions).where(eq(packagingOptions.id, packagingId)).limit(1);
-            if (packagingOption) {
-                totalPackingCost = packagingOption.cost;
+            const packagingResult = await db.select({cost: packagingOptions.cost}).from(packagingOptions).where(eq(packagingOptions.id, packagingId)).limit(1);
+            if (packagingResult.length > 0) {
+                totalPackingCost = packagingResult[0].cost;
             }
         }
         
