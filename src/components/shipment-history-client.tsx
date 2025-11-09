@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -5,7 +6,7 @@ import type { Shipment, User } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { FileDown, Loader2, Send, Printer } from 'lucide-react';
+import { FileDown, Loader2, Send, Printer, ChevronDown } from 'lucide-react';
 import { Badge } from './ui/badge';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -18,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { DateRangePicker } from './ui/date-range-picker';
 import type { DateRange } from "react-day-picker";
 import { cn } from '@/lib/utils';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 
 interface jsPDFWithAutoTable extends jsPDF {
   autoTable: (options: any) => jsPDF;
@@ -30,7 +32,7 @@ interface ShipmentHistoryClientProps {
   tableType: 'packaging' | 'archive';
 }
 
-type DatePreset = '1d' | '3d' | '7d' | '30d' | null;
+type DatePreset = '1d' | '3d' | '7d' | '30d' | 'all' | null;
 
 export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType }: ShipmentHistoryClientProps) {
   const [selectedShipments, setSelectedShipments] = React.useState<string[]>([]);
@@ -209,10 +211,22 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
         case '30d':
             setDateRange({ from: subDays(today, 29), to: today });
             break;
+        case 'all':
+            setDateRange({ from: undefined, to: undefined });
+            break;
         default:
              setDateRange({ from: undefined, to: undefined });
     }
   }
+
+  const presetLabels: Record<NonNullable<DatePreset>, string> = {
+    '1d': '1 Hari Terakhir',
+    '3d': '3 Hari Terakhir',
+    '7d': '7 Hari Terakhir',
+    '30d': '30 Hari Terakhir',
+    'all': 'Semua Waktu',
+  };
+
 
   return (
     <div className='space-y-4'>
@@ -231,19 +245,30 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
             </Select>
 
             <div className="flex items-center gap-2">
-                <Button variant={activePreset === '1d' ? 'default' : 'outline'} size="sm" onClick={() => handleDatePreset('1d')}>1H</Button>
-                <Button variant={activePreset === '3d' ? 'default' : 'outline'} size="sm" onClick={() => handleDatePreset('3d')}>3H</Button>
-                <Button variant={activePreset === '7d' ? 'default' : 'outline'} size="sm" onClick={() => handleDatePreset('7d')}>7H</Button>
-                <Button variant={activePreset === '30d' ? 'default' : 'outline'} size="sm" onClick={() => handleDatePreset('30d')}>30H</Button>
+                 <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="w-full sm:w-[180px] justify-between">
+                            {activePreset ? presetLabels[activePreset] : "Pilih Periode"}
+                            <ChevronDown className="ml-2 h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                        <DropdownMenuItem onSelect={() => handleDatePreset('1d')}>1 Hari Terakhir</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => handleDatePreset('3d')}>3 Hari Terakhir</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => handleDatePreset('7d')}>7 Hari Terakhir</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => handleDatePreset('30d')}>30 Hari Terakhir</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => handleDatePreset('all')}>Semua Waktu</DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
+                <DateRangePicker 
+                    date={dateRange} 
+                    onDateChange={(range) => {
+                        setDateRange(range);
+                        setActivePreset(null);
+                    }} 
+                />
             </div>
-            
-            <DateRangePicker 
-                date={dateRange} 
-                onDateChange={(range) => {
-                    setDateRange(range);
-                    setActivePreset(null);
-                }} 
-            />
         </div>
 
 
@@ -330,3 +355,4 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
     </div>
   );
 }
+
