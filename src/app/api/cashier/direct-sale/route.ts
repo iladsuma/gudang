@@ -1,6 +1,6 @@
 
-import { db } from '@/lib/db';
-import { shipments, products, stockMovements, financialTransactions } from '@/lib/schema';
+import { db } from '@/drizzle/db';
+import { shipments, products, stockMovements, financialTransactions } from '@/drizzle/schema';
 import { eq, inArray } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import type { ShipmentProduct, Customer } from '@/lib/types';

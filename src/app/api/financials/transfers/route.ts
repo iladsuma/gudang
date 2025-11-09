@@ -1,6 +1,6 @@
 
-import { db } from '@/lib/db';
-import { financialTransactions } from '@/lib/schema';
+import { db } from '@/drizzle/db';
+import { financialTransactions } from '@/drizzle/schema';
 import { NextResponse } from 'next/server';
 import { format } from 'date-fns';
 

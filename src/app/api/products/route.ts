@@ -1,7 +1,7 @@
 
 import {NextRequest, NextResponse} from 'next/server';
-import {db} from '@/lib/db';
-import {products, stockMovements} from '@/lib/schema';
+import {db} from '@/drizzle/db';
+import {products, stockMovements} from '@/drizzle/schema';
 import {asc, desc} from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {

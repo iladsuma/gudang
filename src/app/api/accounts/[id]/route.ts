@@ -1,6 +1,6 @@
 
-import { db } from '@/lib/db';
-import { accounts } from '@/lib/schema';
+import { db } from '@/drizzle/db';
+import { accounts } from '@/drizzle/schema';
 import { eq, sql } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
