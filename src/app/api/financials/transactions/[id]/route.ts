@@ -30,7 +30,8 @@ export async function PUT(
     return NextResponse.json(updatedTransaction);
   } catch (error) {
     console.error(`Failed to update transaction ${params.id}:`, error);
-    return NextResponse.json({ message: 'Failed to update transaction' }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ message: 'Failed to update transaction', error: message }, { status: 500 });
   }
 }
 
@@ -56,6 +57,7 @@ export async function DELETE(
     return NextResponse.json({ message: 'Transaction deleted successfully' });
   } catch (error) {
     console.error(`Failed to delete transaction ${params.id}:`, error);
-    return NextResponse.json({ message: 'Failed to delete transaction' }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ message: 'Failed to delete transaction', error: message }, { status: 500 });
   }
 }

@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
         }
 
         const allTransactions = await db.query.financialTransactions.findMany({
-            where: and(...conditions),
+            where: conditions.length > 0 ? and(...conditions) : undefined,
             with: {
                 account: {
                     columns: {
@@ -64,6 +64,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(newTransaction, { status: 201 });
     } catch (error) {
         console.error('Failed to create financial transaction:', error);
-        return NextResponse.json({ message: 'Failed to create financial transaction' }, { status: 500 });
+        const message = error instanceof Error ? error.message : "Unknown error";
+        return NextResponse.json({ message: 'Failed to create financial transaction', error: message }, { status: 500 });
     }
 }
+

@@ -27,7 +27,7 @@ export async function POST(request: Request) {
                 type: 'out',
                 amount: Number(amount),
                 category: 'Transfer Keluar',
-                description: `Transfer ke akun tujuan: ${description}`,
+                description: `Transfer ke: ${description}`,
                 transactionDate: date,
             });
 
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
                 type: 'in',
                 amount: Number(amount),
                 category: 'Transfer Masuk',
-                description: `Transfer dari akun sumber: ${description}`,
+                description: `Transfer dari: ${description}`,
                 transactionDate: date,
             });
         });

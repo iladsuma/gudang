@@ -30,7 +30,8 @@ export async function PUT(
     return NextResponse.json(updatedOption);
   } catch (error) {
     console.error(`Failed to update packaging option ${params.id}:`, error);
-    return NextResponse.json({ message: 'Failed to update packaging option' }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ message: 'Failed to update packaging option', error: message }, { status: 500 });
   }
 }
 
@@ -49,6 +50,8 @@ export async function DELETE(
     return NextResponse.json({ message: 'Packaging option deleted successfully' });
   } catch (error) {
     console.error(`Failed to delete packaging option ${params.id}:`, error);
-    return NextResponse.json({ message: 'Failed to delete packaging option' }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ message: 'Failed to delete packaging option', error: message }, { status: 500 });
   }
 }
+
