@@ -1,10 +1,9 @@
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/auth-context';
-import { getShipments, processShipmentsToDelivered } from '@/lib/data';
-import type { Shipment } from '@/lib/types';
+import { getShipments, getUsers } from '@/lib/data';
+import type { Shipment, User } from '@/lib/types';
 import {
   Card,
   CardHeader,
@@ -13,24 +12,25 @@ import {
   CardContent,
 } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { InvoicesClient } from '@/components/invoices-client';
 import { useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PackagingQueueClient } from '@/components/packaging-queue-client';
+import { ShipmentHistoryClient } from '@/components/shipment-history-client';
+
 
 export default function InvoicesPage() {
   const { user, loading: authLoading } = useAuth();
   const [shipments, setShipments] = useState<Shipment[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const router = useRouter();
 
   const fetchShipments = useCallback(async () => {
     if (user?.role === 'admin') {
       setDataLoading(true);
-      getShipments().then(data => {
-        setShipments(data.filter(s => s.status === 'Terkirim' || s.status === 'Pengemasan'));
-        setDataLoading(false);
-      });
+      const [shipmentsData, usersData] = await Promise.all([getShipments(), getUsers()]);
+      setShipments(shipmentsData);
+      setAllUsers(usersData);
+      setDataLoading(false);
     }
   }, [user]);
 
@@ -93,7 +93,12 @@ export default function InvoicesPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <PackagingQueueClient shipments={packagingShipments} onUpdate={fetchShipments} />
+                  <ShipmentHistoryClient 
+                    shipments={packagingShipments} 
+                    allUsers={allUsers}
+                    onUpdate={fetchShipments} 
+                    tableType="packaging"
+                  />
                 </CardContent>
             </Card>
         </TabsContent>
@@ -106,7 +111,12 @@ export default function InvoicesPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <InvoicesClient shipments={deliveredShipments} />
+                    <ShipmentHistoryClient 
+                        shipments={deliveredShipments} 
+                        allUsers={allUsers}
+                        onUpdate={fetchShipments} 
+                        tableType="archive"
+                    />
                 </CardContent>
             </Card>
         </TabsContent>
@@ -114,3 +124,4 @@ export default function InvoicesPage() {
     </div>
   );
 }
+
