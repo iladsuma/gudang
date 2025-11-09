@@ -123,6 +123,7 @@
   "shipments": [],
   "checkoutHistory": [],
   "stockMovements": [],
+  "financialTransactions": [],
   "customers": [
     {
       "id": "cust_1",
