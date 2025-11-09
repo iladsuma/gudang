@@ -1,6 +1,6 @@
 
-import { db } from '@/lib/db';
-import { shipments, packagingOptions, financialTransactions } from '@/drizzle/schema';
+import { db } from '../../../lib/db';
+import { shipments, packagingOptions, financialTransactions } from '../../../drizzle/schema';
 import { desc, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import type { ShipmentProduct } from '@/lib/types';
