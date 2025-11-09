@@ -291,7 +291,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
       </DialogHeader>
     <Form {...form}>
         <form id="shipment-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4 flex-1 flex flex-col min-h-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-1 overflow-y-auto">
               <FormField
               control={form.control}
               name="user"
