@@ -737,10 +737,11 @@ export async function addInternalTransfer(transferData: Transfer): Promise<{ mes
 
 
 // --- Report Functions ---
-export async function getSalesProfitReport(startDate: Date, endDate: Date): Promise<SalesProfitReportData> {
-    const deliveredShipments = data.shipments.filter(s => {
+export async function getSalesProfitReport(startDate: Date, endDate: Date, userId: string = 'all'): Promise<SalesProfitReportData> {
+    let deliveredShipments = data.shipments.filter(s => {
         const shipmentDate = new Date(s.createdAt);
-        return s.status === 'Terkirim' && shipmentDate >= startDate && shipmentDate <= endDate;
+        const userMatch = userId === 'all' || s.userId === userId;
+        return s.status === 'Terkirim' && shipmentDate >= startDate && shipmentDate <= endDate && userMatch;
     });
 
     let totalRevenue = 0;
@@ -748,6 +749,7 @@ export async function getSalesProfitReport(startDate: Date, endDate: Date): Prom
     const transactionDetails = deliveredShipments.map(shipment => {
         const cogs = shipment.products.reduce((sum, p) => sum + (p.costPrice || 0) * p.quantity, 0);
         const profit = shipment.totalRevenue - cogs;
+        const user = data.users.find(u => u.id === shipment.userId);
         
         totalRevenue += shipment.totalRevenue;
         totalCOGS += cogs;
@@ -757,6 +759,8 @@ export async function getSalesProfitReport(startDate: Date, endDate: Date): Prom
             transactionId: shipment.transactionId,
             createdAt: shipment.createdAt,
             customerName: shipment.customerName,
+            userId: shipment.userId,
+            userName: user?.username || 'N/A',
             totalRevenue: shipment.totalRevenue,
             totalCOGS: cogs,
             profit: profit,
@@ -769,6 +773,7 @@ export async function getSalesProfitReport(startDate: Date, endDate: Date): Prom
         const txDate = new Date(tx.transactionDate);
         return tx.type === 'out' 
             && tx.category !== 'Pembelian Stok'
+            && tx.category !== 'Pelunasan Utang' // Exclude payable payments
             && txDate >= startDate 
             && txDate <= endDate;
     });

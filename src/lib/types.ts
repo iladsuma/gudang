@@ -219,6 +219,8 @@ export interface SalesProfitReportData {
         transactionId: string;
         createdAt: string;
         customerName: string;
+        userId: string;
+        userName: string;
         totalRevenue: number;
         totalCOGS: number;
         profit: number;
