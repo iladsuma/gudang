@@ -3,7 +3,7 @@
 import * as React from 'react';
 import type { Shipment, User } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
-import { format, subDays } from 'date-fns';
+import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { FileDown, Loader2, Send, Printer } from 'lucide-react';
 import { Badge } from './ui/badge';
@@ -14,8 +14,9 @@ import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
 import { processShipmentsToDelivered } from '@/lib/data';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
-import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { DateRangePicker } from './ui/date-range-picker';
+import type { DateRange } from "react-day-picker";
 
 interface jsPDFWithAutoTable extends jsPDF {
   autoTable: (options: any) => jsPDF;
@@ -32,33 +33,30 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
   const [selectedShipments, setSelectedShipments] = React.useState<string[]>([]);
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [isPrinting, setIsPrinting] = React.useState(false);
-  const [dateFilter, setDateFilter] = React.useState('all');
+  const [userFilter, setUserFilter] = React.useState('all');
+  const [dateRange, setDateRange] = React.useState<DateRange | undefined>({
+    from: subDays(new Date(), 29),
+    to: new Date(),
+  });
   const { toast } = useToast();
   
   React.useEffect(() => {
     setSelectedShipments([]);
-  }, [shipments, dateFilter]);
-
-  const handleDateFilterChange = (value: string) => {
-    setDateFilter(value);
-  };
+  }, [shipments, dateRange, userFilter]);
   
   const filteredShipments = React.useMemo(() => {
-    if (dateFilter === 'all') return shipments;
-    
-    const now = new Date();
-    let startDate: Date;
+    return shipments.filter(s => {
+      const shipmentDate = new Date(s.createdAt);
+      
+      const matchesUser = userFilter === 'all' || s.userId === userFilter;
+      
+      const matchesDate = dateRange?.from && dateRange?.to 
+        ? shipmentDate >= startOfDay(dateRange.from) && shipmentDate <= endOfDay(dateRange.to)
+        : true;
 
-    switch (dateFilter) {
-      case '1d': startDate = subDays(now, 1); break;
-      case '3d': startDate = subDays(now, 3); break;
-      case '7d': startDate = subDays(now, 7); break;
-      case '30d': startDate = subDays(now, 30); break;
-      default: startDate = new Date(0); 
-    }
-
-    return shipments.filter(s => new Date(s.createdAt) >= startDate);
-  }, [shipments, dateFilter]);
+      return matchesUser && matchesDate;
+    });
+  }, [shipments, userFilter, dateRange]);
 
 
   const formatRupiah = (number: number) => {
@@ -193,21 +191,25 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
 
   return (
     <div className='space-y-4'>
-      <div className="flex justify-between items-center gap-4">
-        <Select onValueChange={handleDateFilterChange} defaultValue="all">
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter tanggal" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Semua Waktu</SelectItem>
-            <SelectItem value="1d">1 Hari Terakhir</SelectItem>
-            <SelectItem value="3d">3 Hari Terakhir</SelectItem>
-            <SelectItem value="7d">1 Minggu Terakhir</SelectItem>
-            <SelectItem value="30d">1 Bulan Terakhir</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="flex w-full md:w-auto flex-col md:flex-row gap-2">
+            <Select onValueChange={setUserFilter} defaultValue="all">
+            <SelectTrigger className="w-full md:w-[180px]">
+                <SelectValue placeholder="Filter User" />
+            </SelectTrigger>
+            <SelectContent>
+                <SelectItem value="all">Semua User</SelectItem>
+                {allUsers.map(user => (
+                    <SelectItem key={user.id} value={user.id}>{user.username}</SelectItem>
+                ))}
+            </SelectContent>
+            </Select>
 
-        <div className="flex w-full md:w-auto gap-2">
+            <DateRangePicker date={dateRange} onDateChange={setDateRange} />
+        </div>
+
+
+        <div className="flex justify-end w-full md:w-auto gap-2">
             {tableType === 'packaging' && (
                  <>
                     <Button onClick={handlePrintLabels} disabled={selectedShipments.length === 0 || isPrinting} variant="outline">
