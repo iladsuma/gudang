@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { Shipment, Expedition, Packaging, CartItem, Customer, ShipmentProduct, Account } from '@/lib/types';
+import type { Shipment, Expedition, Packaging, CartItem, Customer, ShipmentProduct, Account, User } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
@@ -46,6 +46,7 @@ const shipmentFormSchema = z.object({
       dataUrl: z.string().min(1, 'Data resi harus ada').refine(val => val.startsWith('data:application/pdf;base64,'), { message: 'File harus berupa PDF.' }),
   }).optional(),
   products: z.array(shipmentProductSchema).min(1, 'Minimal harus ada satu produk'),
+  user: z.custom<User>() // To pass user object to API for notification
 });
 
 type ShipmentFormValues = z.infer<typeof shipmentFormSchema>;
@@ -150,6 +151,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
         packagingCost: shipmentToEdit.totalPackingCost || 0,
         receipt: shipmentToEdit.receipt,
         products: shipmentToEdit.products.map(p => ({...p})) || [],
+        user: user || undefined
     } : {
       userId: user?.id || '',
       transactionId: '',
@@ -168,6 +170,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
             costPrice: item.costPrice,
             imageUrl: item.imageUrl || null,
       })),
+      user: user || undefined
     },
   });
   
@@ -195,6 +198,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
     if (user && !isEditMode) {
       form.setValue('userId', user.id);
       form.setValue('transactionId', generateTransactionId());
+      form.setValue('user', user);
     }
     getExpeditions().then(setExpeditions);
     getPackagingOptions().then(setPackagingOptions);
@@ -235,9 +239,8 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
         const totalPackingCost = data.packagingCost || 0;
         const totalAmount = totalProductCost + totalPackingCost;
         const totalRevenue = totalAmount; 
-        const totalCOGS = productsWithImage.reduce((sum, p) => sum + (p.costPrice * p.quantity), 0);
 
-        const payload: Omit<Shipment, 'id' | 'createdAt' | 'status'> = { 
+        const payload = { 
             ...data, 
             userId: data.userId,
             customerName: data.customerName,
@@ -248,6 +251,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
             totalAmount,
             totalRevenue,
             paymentStatus: 'Lunas', // default for now
+            user, // Pass the user object for notification
         };
 
         if (isEditMode) {

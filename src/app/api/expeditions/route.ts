@@ -1,7 +1,7 @@
 
 import {NextRequest, NextResponse} from 'next/server';
-import {db} from '@/drizzle/db';
-import {expeditions as expeditionTable} from '@/drizzle/schema';
+import {db} from '@/lib/db';
+import {expeditions as expeditionTable} from '@/lib/schema';
 import {asc} from 'drizzle-orm';
 
 export async function GET() {

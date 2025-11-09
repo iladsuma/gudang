@@ -91,7 +91,12 @@ export function getNotificationContext() {
         return {
             notifications: [],
             markAsRead: () => {},
-            createNotification: () => {},
+            createNotification: (notification: Omit<Notification, 'id' | 'createdAt' | 'isRead'>) => {
+                // This is a server-side stub. In a real app, this would write to a DB or a message queue.
+                // For this project, we're relying on the client-side instance being available.
+                // The 'notificationContextInstance' will be set when NotificationProvider mounts.
+                console.log(`[Server Stub] Dropping notification for ${notification.recipientId}: "${notification.message}"`);
+            },
         };
     }
     return notificationContextInstance;
