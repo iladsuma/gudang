@@ -33,9 +33,10 @@ const shipmentProductSchema = z.object({
 });
 
 const shipmentFormSchema = z.object({
-  user: z.string().min(1, 'User harus diisi'),
+  userId: z.string().min(1, 'User harus diisi'),
   transactionId: z.string().min(1, 'No. Transaksi harus diisi.'),
   customerId: z.string().min(1, 'Pelanggan harus dipilih'),
+  customerName: z.string().min(1, 'Nama pelanggan harus ada'),
   accountId: z.string().min(1, 'Akun pembayaran harus dipilih'),
   expedition: z.string().min(1, 'Nama ekspedisi harus dipilih'),
   packagingId: z.string().min(1, "Pilih kemasan"),
@@ -139,9 +140,10 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
   const form = useForm<ShipmentFormValues>({
     resolver: zodResolver(shipmentFormSchema),
     defaultValues: isEditMode ? {
-        user: shipmentToEdit.userId, 
+        userId: shipmentToEdit.userId, 
         transactionId: shipmentToEdit.transactionId,
         customerId: shipmentToEdit.customerId,
+        customerName: shipmentToEdit.customerName,
         accountId: shipmentToEdit.accountId,
         expedition: shipmentToEdit.expedition,
         packagingId: shipmentToEdit.packagingId || '',
@@ -149,9 +151,10 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
         receipt: shipmentToEdit.receipt,
         products: shipmentToEdit.products.map(p => ({...p})) || [],
     } : {
-      user: user?.username || '',
+      userId: user?.id || '',
       transactionId: '',
       customerId: '',
+      customerName: '',
       accountId: '',
       expedition: '',
       packagingId: '',
@@ -190,7 +193,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
   
   React.useEffect(() => {
     if (user && !isEditMode) {
-      form.setValue('user', user.username);
+      form.setValue('userId', user.id);
       form.setValue('transactionId', generateTransactionId());
     }
     getExpeditions().then(setExpeditions);
@@ -227,23 +230,24 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
     try {
         const productsWithImage = data.products.map(p => ({...p, imageUrl: p.imageUrl || 'https://placehold.co/100x100.png' }));
         
-        // Recalculate totals on submission to ensure accuracy
         const totalItems = productsWithImage.reduce((sum, p) => sum + p.quantity, 0);
         const totalProductCost = productsWithImage.reduce((sum, p) => sum + (p.price * p.quantity), 0);
         const totalPackingCost = data.packagingCost || 0;
         const totalAmount = totalProductCost + totalPackingCost;
-        const totalRevenue = totalAmount; // Assuming revenue is the grand total
+        const totalRevenue = totalAmount; 
         const totalCOGS = productsWithImage.reduce((sum, p) => sum + (p.costPrice * p.quantity), 0);
 
-        const payload = { 
+        const payload: Omit<Shipment, 'id' | 'createdAt' | 'status'> = { 
             ...data, 
-            products: productsWithImage as any,
+            userId: data.userId,
+            customerName: data.customerName,
+            products: productsWithImage,
             totalItems,
-            totalProductCost,
+            totalProductCost: totalProductCost,
             totalPackingCost,
             totalAmount,
             totalRevenue,
-            totalProductCost: totalCOGS, // Correctly assigning COGS to totalProductCost
+            paymentStatus: 'Lunas', // default for now
         };
 
         if (isEditMode) {
@@ -295,6 +299,14 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
         form.setValue('packagingId', packaging.id, { shouldValidate: true });
     }
   }
+  
+  const handleCustomerChange = (customerId: string) => {
+    const customer = customers.find(c => c.id === customerId);
+    if (customer) {
+        form.setValue('customerId', customer.id, { shouldValidate: true });
+        form.setValue('customerName', customer.name, { shouldValidate: true });
+    }
+  }
 
   const receiptValue = form.watch('receipt');
   
@@ -312,12 +324,12 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-1">
                   <FormField
                   control={form.control}
-                  name="user"
+                  name="userId"
                   render={({ field }) => (
                       <FormItem>
                       <FormLabel>User</FormLabel>
                       <FormControl>
-                          <Input placeholder="cth. User A" {...field} readOnly />
+                          <Input placeholder="cth. User A" value={user?.username || ''} readOnly />
                       </FormControl>
                       <FormMessage />
                       </FormItem>
@@ -343,7 +355,10 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
                           <FormItem>
                           <FormLabel>Pelanggan</FormLabel>
                           <FormControl>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <Select onValueChange={(value) => {
+                                field.onChange(value);
+                                handleCustomerChange(value);
+                              }} defaultValue={field.value}>
                                   <SelectTrigger>
                                       <SelectValue placeholder="Pilih pelanggan" />
                                   </SelectTrigger>

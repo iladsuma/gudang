@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { User, Shipment, Checkout, Expedition, Product, Packaging, Customer, StockMovement, Supplier, Purchase, Return, SortableProductField, SortOrder, FinancialTransaction, ShipmentProduct, Account, Transfer, PaymentStatus, SalesProfitReportData } from './types';
@@ -129,6 +130,7 @@ export async function getShipments(): Promise<Shipment[]> {
 }
 
 export async function addShipment(shipmentData: Omit<Shipment, 'id' | 'createdAt' | 'status'>): Promise<Shipment> {
+    const user = data.users.find((u: User) => u.id === shipmentData.userId);
     const newShipment: Shipment = {
         ...shipmentData,
         id: `ship_${Date.now()}`,
@@ -140,7 +142,7 @@ export async function addShipment(shipmentData: Omit<Shipment, 'id' | 'createdAt
 
     createNotification({
         recipientId: 'admin',
-        message: `Pengiriman baru #${newShipment.transactionId} telah dibuat oleh ${shipmentData.user}.`,
+        message: `Pengiriman baru #${newShipment.transactionId} telah dibuat oleh ${user?.username || 'user'}.`,
         url: '/shipments'
     });
 
@@ -458,14 +460,13 @@ export async function processDirectSale(user: User, customerId: string, products
         customerName: customer.name,
         expedition: 'Penjualan Langsung',
         packagingId: '',
-        packagingCost: 0,
+        totalPackingCost: 0,
         accountId,
         status: 'Terkirim', // Direct sales are immediately 'Terkirim'
         paymentStatus,
         products,
         totalItems,
         totalProductCost: totalCOGS, // totalProductCost should be COGS
-        totalPackingCost: 0,
         totalAmount: totalAmount,
         totalRevenue: totalRevenue,
         createdAt: new Date().toISOString(),
