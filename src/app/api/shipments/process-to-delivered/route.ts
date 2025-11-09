@@ -3,7 +3,6 @@ import { db } from '@/drizzle/db';
 import { shipments } from '@/drizzle/schema';
 import { inArray } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
-import { getNotificationContext } from '@/context/notification-context';
 
 export async function POST(request: Request) {
   try {
@@ -29,14 +28,7 @@ export async function POST(request: Request) {
             .set({ status: 'Terkirim' })
             .where(inArray(shipments.id, shipmentIds));
 
-        // 2. Kirim notifikasi untuk setiap pengiriman yang diupdate
-        for (const shipment of shipmentsToUpdate) {
-            getNotificationContext().createNotification({
-                recipientId: shipment.userId,
-                message: `Pesanan Anda #${shipment.transactionId} telah dikirim.`,
-                url: '/my-shipments',
-            });
-        }
+        // NOTIFIKASI DIHAPUS DARI SINI
     });
 
 

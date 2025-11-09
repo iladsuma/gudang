@@ -4,7 +4,6 @@ import { shipments, packagingOptions, financialTransactions } from '@/drizzle/sc
 import { desc, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import type { ShipmentProduct, User } from '@/lib/types';
-import { getNotificationContext } from '@/context/notification-context';
 
 export async function GET() {
     try {
@@ -89,12 +88,7 @@ export async function POST(request: Request) {
             return [createdShipment];
         });
         
-        // Create notification for admins
-        getNotificationContext().createNotification({
-            recipientId: 'admin', // Target all admins
-            message: `Pesanan baru #${newShipment.transactionId} oleh ${user?.username || 'user'} perlu diproses.`,
-            url: '/shipments',
-        });
+        // NOTIFIKASI DIHAPUS DARI SINI
 
         return NextResponse.json(newShipment, { status: 201 });
 

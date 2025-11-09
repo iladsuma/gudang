@@ -9,15 +9,11 @@ import { useToast } from '@/hooks/use-toast';
 interface NotificationContextType {
   notifications: Notification[];
   markAsRead: (id: string) => void;
+  // This function is now just a placeholder for potential future use with a real-time backend
   createNotification: (notification: Omit<Notification, 'id' | 'createdAt' | 'isRead'>) => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | null>(null);
-
-// In a real app, you'd move this to a shared config
-const NOTIFICATION_SOUND_PATH = '/notification.mp3';
-
-let notificationContextInstance: NotificationContextType;
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -26,16 +22,15 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   const audio = useMemo(() => {
     if (typeof window !== 'undefined') {
-        const audioInstance = new Audio(NOTIFICATION_SOUND_PATH);
+        const audioInstance = new Audio('/notification.mp3');
         audioInstance.load();
         return audioInstance;
     }
     return null;
   }, []);
 
+  // This function can be called by client components to add a notification locally.
   const createNotification = useCallback((notification: Omit<Notification, 'id' | 'createdAt' | 'isRead'>) => {
-    // This check is important. Only create notifications for the intended recipient.
-    if (user && (notification.recipientId === user.id || notification.recipientId === user.role)) {
       const newNotification: Notification = {
         ...notification,
         id: `notif_${Date.now()}`,
@@ -53,8 +48,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       if (audio) {
         audio.play().catch(error => console.error("Gagal memutar suara notifikasi:", error));
       }
-    }
-  }, [user, toast, audio]);
+  }, [toast, audio]);
 
 
   const markAsRead = useCallback((id: string) => {
@@ -68,8 +62,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     markAsRead,
     createNotification,
   }), [notifications, markAsRead, createNotification]);
-
-  notificationContextInstance = value;
   
   return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>;
 }
@@ -80,24 +72,4 @@ export function useNotifications() {
     throw new Error('useNotifications must be used within an NotificationProvider');
   }
   return context;
-}
-
-// This allows us to access the context from outside React components
-export function getNotificationContext() {
-    if (!notificationContextInstance) {
-        // This is a fallback to prevent crashes if called before provider is mounted.
-        // In a real app, you might want a more robust solution.
-        console.warn("NotificationContext not yet initialized!");
-        return {
-            notifications: [],
-            markAsRead: () => {},
-            createNotification: (notification: Omit<Notification, 'id' | 'createdAt' | 'isRead'>) => {
-                // This is a server-side stub. In a real app, this would write to a DB or a message queue.
-                // For this project, we're relying on the client-side instance being available.
-                // The 'notificationContextInstance' will be set when NotificationProvider mounts.
-                console.log(`[Server Stub] Dropping notification for ${notification.recipientId}: "${notification.message}"`);
-            },
-        };
-    }
-    return notificationContextInstance;
 }

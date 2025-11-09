@@ -3,7 +3,6 @@ import { db } from '@/drizzle/db';
 import { shipments, products, stockMovements } from '@/drizzle/schema';
 import { inArray, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
-import { getNotificationContext } from '@/context/notification-context';
 
 export async function POST(request: Request) {
   try {
@@ -81,12 +80,7 @@ export async function POST(request: Request) {
             productStockMap.set(product.productId, { ...stockInfo, stock: newStock });
           }
         }
-         // 3. Create Notification
-        getNotificationContext().createNotification({
-            recipientId: shipment.userId, // Target the user who created the shipment
-            message: `Pesanan Anda #${shipment.transactionId} sedang dikemas.`,
-            url: '/my-shipments',
-        });
+         // NOTIFIKASI DIHAPUS DARI SINI
       }
     });
 
