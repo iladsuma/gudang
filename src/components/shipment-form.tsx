@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -58,7 +57,7 @@ interface ShipmentFormProps {
 }
 
 const formatRupiah = (number: number) => {
-    if (number === null || typeof number === 'undefined' || isNaN(number)) return 'Rp 0';
+    if (isNaN(number)) return 'Rp 0';
     return new Intl.NumberFormat('id-ID', {
         style: 'currency',
         currency: 'IDR',
@@ -227,7 +226,25 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel, initialProdu
     setIsSubmitting(true);
     try {
         const productsWithImage = data.products.map(p => ({...p, imageUrl: p.imageUrl || 'https://placehold.co/100x100.png' }));
-        const payload = { ...data, products: productsWithImage as any };
+        
+        // Recalculate totals on submission to ensure accuracy
+        const totalItems = productsWithImage.reduce((sum, p) => sum + p.quantity, 0);
+        const totalProductCost = productsWithImage.reduce((sum, p) => sum + (p.price * p.quantity), 0);
+        const totalPackingCost = data.packagingCost || 0;
+        const totalAmount = totalProductCost + totalPackingCost;
+        const totalRevenue = totalAmount; // Assuming revenue is the grand total
+        const totalCOGS = productsWithImage.reduce((sum, p) => sum + (p.costPrice * p.quantity), 0);
+
+        const payload = { 
+            ...data, 
+            products: productsWithImage as any,
+            totalItems,
+            totalProductCost,
+            totalPackingCost,
+            totalAmount,
+            totalRevenue,
+            totalProductCost: totalCOGS, // Correctly assigning COGS to totalProductCost
+        };
 
         if (isEditMode) {
             const updated = await updateShipment(shipmentToEdit.id, payload);
