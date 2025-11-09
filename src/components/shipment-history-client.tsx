@@ -17,6 +17,7 @@ import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { DateRangePicker } from './ui/date-range-picker';
 import type { DateRange } from "react-day-picker";
+import { cn } from '@/lib/utils';
 
 interface jsPDFWithAutoTable extends jsPDF {
   autoTable: (options: any) => jsPDF;
@@ -29,13 +30,16 @@ interface ShipmentHistoryClientProps {
   tableType: 'packaging' | 'archive';
 }
 
+type DatePreset = '1d' | '3d' | '7d' | '30d' | null;
+
 export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType }: ShipmentHistoryClientProps) {
   const [selectedShipments, setSelectedShipments] = React.useState<string[]>([]);
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [isPrinting, setIsPrinting] = React.useState(false);
   const [userFilter, setUserFilter] = React.useState('all');
+  const [activePreset, setActivePreset] = React.useState<DatePreset>('7d');
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>({
-    from: subDays(new Date(), 29),
+    from: subDays(new Date(), 6),
     to: new Date(),
   });
   const { toast } = useToast();
@@ -189,12 +193,33 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
 
   const getUserName = (userId: string) => allUsers.find(u => u.id === userId)?.username || 'N/A';
 
+  const handleDatePreset = (preset: DatePreset) => {
+    setActivePreset(preset);
+    const today = new Date();
+    switch (preset) {
+        case '1d':
+            setDateRange({ from: today, to: today });
+            break;
+        case '3d':
+            setDateRange({ from: subDays(today, 2), to: today });
+            break;
+        case '7d':
+            setDateRange({ from: subDays(today, 6), to: today });
+            break;
+        case '30d':
+            setDateRange({ from: subDays(today, 29), to: today });
+            break;
+        default:
+             setDateRange({ from: undefined, to: undefined });
+    }
+  }
+
   return (
     <div className='space-y-4'>
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-        <div className="flex w-full md:w-auto flex-col md:flex-row gap-2">
+        <div className="flex w-full md:w-auto flex-col sm:flex-row gap-2">
             <Select onValueChange={setUserFilter} defaultValue="all">
-            <SelectTrigger className="w-full md:w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Filter User" />
             </SelectTrigger>
             <SelectContent>
@@ -205,7 +230,20 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
             </SelectContent>
             </Select>
 
-            <DateRangePicker date={dateRange} onDateChange={setDateRange} />
+            <div className="flex items-center gap-2">
+                <Button variant={activePreset === '1d' ? 'default' : 'outline'} size="sm" onClick={() => handleDatePreset('1d')}>1H</Button>
+                <Button variant={activePreset === '3d' ? 'default' : 'outline'} size="sm" onClick={() => handleDatePreset('3d')}>3H</Button>
+                <Button variant={activePreset === '7d' ? 'default' : 'outline'} size="sm" onClick={() => handleDatePreset('7d')}>7H</Button>
+                <Button variant={activePreset === '30d' ? 'default' : 'outline'} size="sm" onClick={() => handleDatePreset('30d')}>30H</Button>
+            </div>
+            
+            <DateRangePicker 
+                date={dateRange} 
+                onDateChange={(range) => {
+                    setDateRange(range);
+                    setActivePreset(null);
+                }} 
+            />
         </div>
 
 
