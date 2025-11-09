@@ -13,6 +13,7 @@ import { Suspense, useEffect, useState } from 'react';
 import type { Shipment } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MyShipmentsClient } from '@/components/my-shipments-client';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 function MyShipmentsPageContent() {
   const { user, loading: authLoading } = useAuth();
@@ -61,19 +62,45 @@ function MyShipmentsPageContent() {
       );
   }
 
+  const packagingShipments = shipments.filter(s => s.status === 'Proses' || s.status === 'Pengemasan');
+  const deliveredShipments = shipments.filter(s => s.status === 'Terkirim');
+
   return (
     <div className="container mx-auto p-4 md:p-8">
-      <Card>
-        <CardHeader>
-          <CardTitle>Riwayat Kiriman Saya</CardTitle>
-          <CardDescription>
-            Lacak semua pengiriman yang telah Anda buat dan pantau statusnya di sini.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <MyShipmentsClient shipments={shipments} />
-        </CardContent>
-      </Card>
+        <Tabs defaultValue="packaging">
+            <div className="flex justify-between items-end mb-4">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Riwayat Kiriman Saya</h1>
+                    <p className="text-muted-foreground">Lacak semua pengiriman yang telah Anda buat dan pantau statusnya di sini.</p>
+                </div>
+                <TabsList>
+                    <TabsTrigger value="packaging">Di Kemas ({packagingShipments.length})</TabsTrigger>
+                    <TabsTrigger value="delivered">Di Kirim ({deliveredShipments.length})</TabsTrigger>
+                </TabsList>
+            </div>
+            <TabsContent value="packaging">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Dalam Proses & Pengemasan</CardTitle>
+                        <CardDescription>Daftar pengiriman yang sedang diproses atau sudah dalam tahap pengemasan oleh admin.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <MyShipmentsClient shipments={packagingShipments} />
+                    </CardContent>
+                </Card>
+            </TabsContent>
+            <TabsContent value="delivered">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Terkirim</CardTitle>
+                        <CardDescription>Arsip pengiriman yang telah selesai dan dikirim oleh admin.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <MyShipmentsClient shipments={deliveredShipments} />
+                    </CardContent>
+                </Card>
+            </TabsContent>
+        </Tabs>
     </div>
   );
 }
