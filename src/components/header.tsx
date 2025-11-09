@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, Settings, Truck, ShoppingBag, ShoppingBasket, Undo2, ArrowRightLeft, PackageCheck, BookUser, FileBarChart, History, Scale, Database, Landmark, HandCoins, Receipt } from 'lucide-react';
+import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, Settings, Truck, ShoppingBag, ShoppingBasket, Undo2, ArrowRightLeft, PackageCheck, BookUser, FileBarChart, History, Scale, Database, Landmark, HandCoins, Receipt, ListChecks } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { Button } from './ui/button';
 import { useRouter, usePathname } from 'next/navigation';
@@ -49,20 +49,29 @@ export function Header() {
             </Link>
             {user && (
               <nav className="hidden items-center gap-4 text-sm md:flex">
-                {user.role === 'admin' && (
+                {user.role === 'admin' ? (
+                  <>
                     <Link
                         href="/dashboard"
                         className={cn("flex items-center gap-2 transition-colors hover:text-foreground/80", pathname === '/dashboard' ? 'text-foreground' : 'text-foreground/60')}
                     >
                        <LayoutDashboard className="h-4 w-4" /> Dashboard
                     </Link>
+                     <Link
+                      href="/shipments"
+                      className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname.startsWith('/shipments') ? 'text-foreground' : 'text-foreground/60')}
+                    >
+                       <Truck className="h-4 w-4" /> Antrian Kemas
+                    </Link>
+                  </>
+                ) : (
+                    <Link
+                        href="/my-shipments"
+                        className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname.startsWith('/my-shipments') ? 'text-foreground' : 'text-foreground/60')}
+                    >
+                       <ListChecks className="h-4 w-4" /> Riwayat Kiriman Saya
+                    </Link>
                 )}
-                 <Link
-                  href="/shipments"
-                  className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname.startsWith('/shipments') ? 'text-foreground' : 'text-foreground/60')}
-                >
-                   <Truck className="h-4 w-4" /> Antrian Kemas
-                </Link>
                  <Link
                   href="/products"
                   className={cn("transition-colors hover:text-foreground/80", pathname === '/products' ? 'text-foreground' : 'text-foreground/60')}
