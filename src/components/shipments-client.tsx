@@ -40,7 +40,7 @@ import { deleteShipment, processShipmentsToPackaging, getUsers } from '@/lib/dat
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/context/auth-context';
-import { useCart } from '@/hooks/use-cart';
+import { useCart } from '@/hooks/use-cart.tsx';
 import { Checkbox } from './ui/checkbox';
 import { Input } from './ui/input';
 

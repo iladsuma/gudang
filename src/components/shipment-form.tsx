@@ -20,7 +20,7 @@ import { addShipment, getExpeditions, getPackagingOptions, updateShipment, getCu
 import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Label } from './ui/label';
-import { useCart } from '@/hooks/use-cart';
+import { useCart } from '@/hooks/use-cart.tsx';
 
 
 const shipmentProductSchema = z.object({

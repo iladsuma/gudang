@@ -5,7 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { Header } from '@/components/header';
 import { AuthProvider } from '@/context/auth-context';
 import { NotificationProvider } from '@/context/notification-context';
-import { CartProvider } from '@/hooks/use-cart';
+import { CartProvider } from '@/hooks/use-cart.tsx';
 
 export const metadata: Metadata = {
   title: 'GudangCheckout',

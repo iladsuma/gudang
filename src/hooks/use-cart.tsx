@@ -17,7 +17,7 @@ interface CartContextType {
     saveCartToLocalStorage: (cart: CartItem[]) => void;
 }
 
-const CartContext = createContext<CartContextType | null,>(null);
+const CartContext = createContext<CartContextType | null>(null);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
