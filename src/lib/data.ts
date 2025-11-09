@@ -157,11 +157,11 @@ export async function deleteShipment(shipmentId: string): Promise<void> {
 
 
 // --- History/Checkout Functions ---
-export async function processShipmentsToPackaging(shipmentIds: string[]): Promise<{message: string}> {
+export async function processShipmentsToPackaging(shipmentIds: string[], adminUser?: User | null): Promise<{message: string}> {
     const response = await fetch(`${API_BASE_URL}/shipments/process-to-packaging`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shipmentIds }),
+        body: JSON.stringify({ shipmentIds, adminUser }),
     });
     return handleResponse(response);
 }

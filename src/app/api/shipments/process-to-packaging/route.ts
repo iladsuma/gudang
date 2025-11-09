@@ -4,16 +4,31 @@ import { shipments, products, stockMovements } from '@/drizzle/schema';
 import { inArray, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
+async function sendNotification(body: any) {
+  try {
+    const url = process.env.NODE_ENV === 'production'
+      ? `https://gudang-checkout-nine.vercel.app/api/ws`
+      : 'http://localhost:9002/api/ws';
+      
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+  } catch (error) {
+    console.error("Failed to send notification:", error);
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { shipmentIds } = body;
+    const { shipmentIds, adminUser } = body;
 
     if (!shipmentIds || !Array.isArray(shipmentIds) || shipmentIds.length === 0) {
       return NextResponse.json({ message: 'Data ID pengiriman tidak valid' }, { status: 400 });
     }
 
-    // Ambil semua pengiriman dan produk yang relevan dalam satu panggilan
     const shipmentsToProcess = await db.query.shipments.findMany({
         where: inArray(shipments.id, shipmentIds),
     });
@@ -26,7 +41,6 @@ export async function POST(request: Request) {
     const uniqueProductIds = [...new Set(allProductIds)];
     
     if (uniqueProductIds.length === 0) {
-        // Handle case where there are no products in the selected shipments
         return NextResponse.json({ message: 'Tidak ada produk dalam pengiriman yang dipilih.' }, { status: 400 });
     }
     
@@ -37,7 +51,6 @@ export async function POST(request: Request) {
     
     const productStockMap = new Map(productStocks.map(p => [p.id, p]));
 
-    // Validasi stok
     for (const shipment of shipmentsToProcess) {
         if (shipment.status !== 'Proses') {
             return NextResponse.json({ message: `Pengiriman ${shipment.transactionId} sudah diproses sebelumnya.` }, { status: 400 });
@@ -50,14 +63,11 @@ export async function POST(request: Request) {
         }
     }
 
-    // Lakukan transaksi database
     await db.transaction(async (tx) => {
-      // 1. Update status pengiriman
       await tx.update(shipments)
         .set({ status: 'Pengemasan' })
         .where(inArray(shipments.id, shipmentIds));
 
-      // 2. Kurangi stok dan catat pergerakan stok
       for (const shipment of shipmentsToProcess) {
         for (const product of shipment.products) {
           const stockInfo = productStockMap.get(product.productId);
@@ -76,11 +86,14 @@ export async function POST(request: Request) {
               stockAfter: newStock,
               notes: `Penjualan dari transaksi ${shipment.transactionId}`,
             });
-             // Update map for subsequent checks within the same batch
             productStockMap.set(product.productId, { ...stockInfo, stock: newStock });
           }
         }
-         // NOTIFIKASI DIHAPUS DARI SINI
+        // Send notification to the user who created the shipment
+        await sendNotification({
+          recipient: shipment.userId,
+          message: `Pesanan Anda ${shipment.transactionId} sedang dikemas oleh ${adminUser?.username || 'admin'}.`
+        });
       }
     });
 

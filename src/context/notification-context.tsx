@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAuth } from './auth-context';
 import type { Notification } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -9,16 +9,20 @@ import { useToast } from '@/hooks/use-toast';
 interface NotificationContextType {
   notifications: Notification[];
   markAsRead: (id: string) => void;
-  // This function is now just a placeholder for potential future use with a real-time backend
-  createNotification: (notification: Omit<Notification, 'id' | 'createdAt' | 'isRead'>) => void;
+  isConnected: boolean;
 }
 
 const NotificationContext = createContext<NotificationContextType | null>(null);
 
+const WS_RECONNECT_INTERVAL = 5000; // 5 seconds
+
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isConnected, setIsConnected] = useState(false);
   const { toast } = useToast();
+  const ws = useRef<WebSocket | null>(null);
+  const reconnectTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const audio = useMemo(() => {
     if (typeof window !== 'undefined') {
@@ -29,26 +33,85 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     return null;
   }, []);
 
-  // This function can be called by client components to add a notification locally.
-  const createNotification = useCallback((notification: Omit<Notification, 'id' | 'createdAt' | 'isRead'>) => {
-      const newNotification: Notification = {
-        ...notification,
-        id: `notif_${Date.now()}`,
-        createdAt: Date.now(),
-        isRead: false,
-      };
+  const connectWebSocket = useCallback(async () => {
+    if (!user || ws.current?.readyState === WebSocket.OPEN) {
+      return;
+    }
 
-      setNotifications(prev => [newNotification, ...prev]);
+    try {
+        const res = await fetch('/api/ws');
+        const { url } = await res.json();
+        
+        ws.current = new WebSocket(url);
+        
+        ws.current.onopen = () => {
+          console.log('WebSocket Connected');
+          setIsConnected(true);
+          if (reconnectTimeout.current) {
+            clearTimeout(reconnectTimeout.current);
+            reconnectTimeout.current = null;
+          }
+          // Send user info to register the client on the server
+          ws.current?.send(JSON.stringify({ type: 'register', user }));
+        };
 
-      toast({
-        title: "Notifikasi Baru",
-        description: newNotification.message,
-      });
+        ws.current.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'notification') {
+                const newNotification: Notification = data.payload;
+                setNotifications(prev => [newNotification, ...prev]);
+                toast({
+                    title: "Notifikasi Baru",
+                    description: newNotification.message,
+                });
+                if (audio) {
+                    audio.play().catch(error => console.error("Gagal memutar suara notifikasi:", error));
+                }
+            }
+        };
 
-      if (audio) {
-        audio.play().catch(error => console.error("Gagal memutar suara notifikasi:", error));
-      }
-  }, [toast, audio]);
+        ws.current.onclose = () => {
+          console.log('WebSocket Disconnected');
+          setIsConnected(false);
+          if (!reconnectTimeout.current) {
+             reconnectTimeout.current = setTimeout(connectWebSocket, WS_RECONNECT_INTERVAL);
+          }
+        };
+
+        ws.current.onerror = (error) => {
+          console.error('WebSocket Error:', error);
+          ws.current?.close();
+        };
+
+    } catch (error) {
+        console.error("Gagal mendapatkan URL WebSocket:", error);
+         if (!reconnectTimeout.current) {
+            reconnectTimeout.current = setTimeout(connectWebSocket, WS_RECONNECT_INTERVAL);
+         }
+    }
+  }, [user, toast, audio]);
+
+  useEffect(() => {
+    if (user) {
+        connectWebSocket();
+    } else {
+        if (ws.current) {
+            ws.current.close();
+            ws.current = null;
+        }
+        setIsConnected(false);
+        setNotifications([]);
+    }
+
+    return () => {
+        if (ws.current) {
+            ws.current.close();
+        }
+        if (reconnectTimeout.current) {
+            clearTimeout(reconnectTimeout.current);
+        }
+    };
+  }, [user, connectWebSocket]);
 
 
   const markAsRead = useCallback((id: string) => {
@@ -60,8 +123,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const value = useMemo(() => ({
     notifications,
     markAsRead,
-    createNotification,
-  }), [notifications, markAsRead, createNotification]);
+    isConnected,
+  }), [notifications, markAsRead, isConnected]);
   
   return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>;
 }

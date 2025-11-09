@@ -4,6 +4,24 @@ import { shipments } from '@/drizzle/schema';
 import { inArray } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
+async function sendNotification(body: any) {
+  try {
+    // We call our own API route to broadcast the message via WebSocket
+    // This is a workaround to access the WebSocket server from a serverless function
+    const url = process.env.NODE_ENV === 'production'
+      ? `https://gudang-checkout-nine.vercel.app/api/ws` 
+      : 'http://localhost:9002/api/ws';
+
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+  } catch (error) {
+    console.error("Failed to send notification:", error);
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -21,16 +39,18 @@ export async function POST(request: Request) {
         return NextResponse.json({ message: 'Pengiriman tidak ditemukan' }, { status: 404 });
     }
 
-    // Lakukan transaksi database
     await db.transaction(async (tx) => {
-        // 1. Update status pengiriman
         await tx.update(shipments)
             .set({ status: 'Terkirim' })
             .where(inArray(shipments.id, shipmentIds));
 
-        // NOTIFIKASI DIHAPUS DARI SINI
+        for (const shipment of shipmentsToUpdate) {
+            await sendNotification({
+                recipient: shipment.userId,
+                message: `Pesanan Anda ${shipment.transactionId} telah dikirim.`
+            });
+        }
     });
-
 
     return NextResponse.json({ message: `${shipmentIds.length} pengiriman berhasil ditandai terkirim.` });
   } catch (error) {

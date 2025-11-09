@@ -177,7 +177,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
     }
     setIsProcessing(true);
     try {
-        await processShipmentsToPackaging(selectedShipments);
+        await processShipmentsToPackaging(selectedShipments, user);
         toast({ title: 'Sukses!', description: `${selectedShipments.length} pengiriman telah dipindahkan ke antrian pengemasan.` });
         onUpdate();
         setSelectedShipments([]);
