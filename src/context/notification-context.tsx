@@ -40,6 +40,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     try {
         const res = await fetch('/api/ws');
+        if (!res.ok) {
+          throw new Error(`Failed to get WebSocket URL: ${res.statusText}`);
+        }
         const { url } = await res.json();
         
         ws.current = new WebSocket(url);
