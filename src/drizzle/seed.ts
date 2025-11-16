@@ -45,7 +45,7 @@ async function seedTable<T extends PgTable>(
 async function main() {
     console.log("🌱 Starting to seed the database...");
 
-    await seedTable('users', schema.users, initialData.users);
+    // await seedTable('users', schema.users, initialData.users); // User login data comes from db.json directly
     await seedTable('products', schema.products, initialData.products);
     await seedTable('expeditions', schema.expeditions, initialData.expeditions);
     await seedTable('packagingOptions', schema.packagingOptions, initialData.packagingOptions);

@@ -1,8 +1,6 @@
 
-import { db } from '@/drizzle/db';
-import { users } from '@/drizzle/schema';
-import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
+import data from '../../../../../db.json';
 
 export async function POST(request: Request) {
   try {
@@ -11,12 +9,10 @@ export async function POST(request: Request) {
     if (!username || !password) {
       return NextResponse.json({ message: 'Username dan password harus diisi' }, { status: 400 });
     }
+    
+    const user = data.users.find(u => u.username === username && u.password === password);
 
-    const user = await db.query.users.findFirst({
-        where: eq(users.username, username),
-    });
-
-    if (!user || user.password !== password) {
+    if (!user) {
       return NextResponse.json({ message: 'Username atau password salah' }, { status: 401 });
     }
     
