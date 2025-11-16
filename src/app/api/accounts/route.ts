@@ -1,8 +1,8 @@
 
 import {NextRequest, NextResponse} from 'next/server';
 import {db} from '@/drizzle/db';
-import {accounts, financialTransactions, stockMovements} from '@/drizzle/schema';
-import {asc, sql} from 'drizzle-orm';
+import {accounts, financialTransactions} from '@/drizzle/schema';
+import {asc, sql, eq} from 'drizzle-orm';
 
 export async function GET() {
     try {
@@ -16,26 +16,13 @@ export async function GET() {
             .from(financialTransactions)
             .groupBy(financialTransactions.accountId);
 
-        const initialBalances = await db
-            .select({
-                accountId: stockMovements.referenceId,
-                total: sql<number>`SUM(CASE WHEN type = 'Stok Awal' THEN "cost_price" * quantity_change ELSE 0 END)`.as('total')
-            })
-            .from(stockMovements)
-            .innerJoin(db.raw('products'), sql`products.id = ${stockMovements.productId}`)
-            .where(sql`${stockMovements.type} = 'Stok Awal'`)
-            .groupBy(stockMovements.referenceId);
-
         const balanceMap = new Map<string, number>();
-        balances.forEach(b => balanceMap.set(b.accountId, Number(b.total)));
-
-        initialBalances.forEach(ib => {
-            if (ib.accountId) {
-                 balanceMap.set(ib.accountId, (balanceMap.get(ib.accountId) || 0) + Number(ib.total));
+        balances.forEach(b => {
+            if (b.accountId) {
+                balanceMap.set(b.accountId, Number(b.total));
             }
         });
-
-
+        
         const accountsWithCalculatedBalances = allAccounts.map(acc => ({
             ...acc,
             balance: balanceMap.get(acc.id) || 0,
