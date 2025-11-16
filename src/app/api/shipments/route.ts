@@ -5,24 +5,6 @@ import { desc, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import type { ShipmentProduct, User } from '@/lib/types';
 
-async function sendNotification(body: any) {
-  try {
-    // We call our own API route to broadcast the message via WebSocket
-    // This is a workaround to access the WebSocket server from a serverless function
-    const url = process.env.NODE_ENV === 'production'
-      ? `https://gudang-checkout-nine.vercel.app/api/ws` 
-      : 'http://localhost:9002/api/ws';
-
-    await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-  } catch (error) {
-    console.error("Failed to send notification:", error);
-  }
-}
-
 
 export async function GET() {
     try {
@@ -107,14 +89,6 @@ export async function POST(request: Request) {
             return [createdShipment];
         });
         
-        // Send notification to admins
-        if (user) {
-            await sendNotification({
-                recipient: 'admin',
-                message: `Kiriman baru #${transactionId} dibuat oleh ${user.username}.`
-            });
-        }
-
         return NextResponse.json(newShipment, { status: 201 });
 
     } catch (error) {

@@ -4,22 +4,6 @@ import { shipments, products, stockMovements } from '@/drizzle/schema';
 import { inArray, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
-async function sendNotification(body: any) {
-  try {
-    const url = process.env.NODE_ENV === 'production'
-      ? `https://gudang-checkout-nine.vercel.app/api/ws`
-      : 'http://localhost:9002/api/ws';
-      
-    await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-  } catch (error) {
-    console.error("Failed to send notification:", error);
-  }
-}
-
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -89,11 +73,6 @@ export async function POST(request: Request) {
             productStockMap.set(product.productId, { ...stockInfo, stock: newStock });
           }
         }
-        // Send notification to the user who created the shipment
-        await sendNotification({
-          recipient: shipment.userId,
-          message: `Pesanan Anda ${shipment.transactionId} sedang dikemas oleh ${adminUser?.username || 'admin'}.`
-        });
       }
     });
 

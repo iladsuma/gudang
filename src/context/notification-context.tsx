@@ -14,15 +14,10 @@ interface NotificationContextType {
 
 const NotificationContext = createContext<NotificationContextType | null>(null);
 
-const WS_RECONNECT_INTERVAL = 5000; // 5 seconds
-
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
   const { toast } = useToast();
-  const ws = useRef<WebSocket | null>(null);
-  const reconnectTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const audio = useMemo(() => {
     if (typeof window !== 'undefined') {
@@ -33,88 +28,16 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     return null;
   }, []);
 
-  const connectWebSocket = useCallback(async () => {
-    if (!user || ws.current?.readyState === WebSocket.OPEN) {
-      return;
+  const handleNewNotification = useCallback((newNotification: Notification) => {
+    setNotifications(prev => [newNotification, ...prev]);
+    toast({
+        title: "Notifikasi Baru",
+        description: newNotification.message,
+    });
+    if (audio) {
+        audio.play().catch(error => console.error("Gagal memutar suara notifikasi:", error));
     }
-
-    try {
-        const res = await fetch('/api/ws');
-        if (!res.ok) {
-          throw new Error(`Failed to get WebSocket URL: ${res.statusText}`);
-        }
-        const { url } = await res.json();
-        
-        ws.current = new WebSocket(url);
-        
-        ws.current.onopen = () => {
-          console.log('WebSocket Connected');
-          setIsConnected(true);
-          if (reconnectTimeout.current) {
-            clearTimeout(reconnectTimeout.current);
-            reconnectTimeout.current = null;
-          }
-          // Send user info to register the client on the server
-          ws.current?.send(JSON.stringify({ type: 'register', user }));
-        };
-
-        ws.current.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.type === 'notification') {
-                const newNotification: Notification = data.payload;
-                setNotifications(prev => [newNotification, ...prev]);
-                toast({
-                    title: "Notifikasi Baru",
-                    description: newNotification.message,
-                });
-                if (audio) {
-                    audio.play().catch(error => console.error("Gagal memutar suara notifikasi:", error));
-                }
-            }
-        };
-
-        ws.current.onclose = () => {
-          console.log('WebSocket Disconnected');
-          setIsConnected(false);
-          if (!reconnectTimeout.current) {
-             reconnectTimeout.current = setTimeout(connectWebSocket, WS_RECONNECT_INTERVAL);
-          }
-        };
-
-        ws.current.onerror = (error) => {
-          console.error('WebSocket Error:', error);
-          ws.current?.close();
-        };
-
-    } catch (error) {
-        console.error("Gagal mendapatkan URL WebSocket:", error);
-         if (!reconnectTimeout.current) {
-            reconnectTimeout.current = setTimeout(connectWebSocket, WS_RECONNECT_INTERVAL);
-         }
-    }
-  }, [user, toast, audio]);
-
-  useEffect(() => {
-    if (user) {
-        connectWebSocket();
-    } else {
-        if (ws.current) {
-            ws.current.close();
-            ws.current = null;
-        }
-        setIsConnected(false);
-        setNotifications([]);
-    }
-
-    return () => {
-        if (ws.current) {
-            ws.current.close();
-        }
-        if (reconnectTimeout.current) {
-            clearTimeout(reconnectTimeout.current);
-        }
-    };
-  }, [user, connectWebSocket]);
+  }, [toast, audio]);
 
 
   const markAsRead = useCallback((id: string) => {
@@ -126,8 +49,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const value = useMemo(() => ({
     notifications,
     markAsRead,
-    isConnected,
-  }), [notifications, markAsRead, isConnected]);
+    isConnected: false, // WebSocket is removed, so this is always false
+  }), [notifications, markAsRead]);
   
   return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>;
 }
