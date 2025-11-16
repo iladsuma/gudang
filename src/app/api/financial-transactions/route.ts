@@ -1,6 +1,6 @@
 
-import { db } from '@/lib/db';
-import { financialTransactions, accounts } from '@/lib/schema';
+import { db } from '@/drizzle/db';
+import { financialTransactions, accounts } from '@/drizzle/schema';
 import { and, asc, desc, eq, gte, lte } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
