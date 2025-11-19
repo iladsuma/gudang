@@ -6,7 +6,10 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { getProducts, addProduct, deleteMultipleProducts, updateProduct, updateProductStock, getStockMovements, bulkUpdateProductStock, getStockOpnameMovements } from '@/lib/data';
+import { 
+    getDocs, collection, query, where, writeBatch, doc, getDoc, addDoc, serverTimestamp, updateDoc, deleteDoc, orderBy, limit, startAfter 
+} from 'firebase/firestore';
+import { db } from '@/firebase';
 import type { Product, StockMovement, ProductSelection, SortableProductField, SortOrder } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -86,6 +89,140 @@ const stockOpnameSchema = z.object({
 
 type StockOpnameFormValues = z.infer<typeof stockOpnameSchema>;
 
+
+async function getProducts(sortBy: SortableProductField = 'code', sortOrder: SortOrder = 'asc'): Promise<Product[]> {
+    const productsCol = collection(db, 'products');
+    const q = query(productsCol, orderBy(sortBy, sortOrder));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+}
+
+async function addProduct(product: Omit<Product, 'id'>) {
+    const productsCol = collection(db, 'products');
+    const docRef = await addDoc(productsCol, {
+        ...product,
+        createdAt: serverTimestamp()
+    });
+
+    // Add initial stock movement
+    if (product.stock > 0) {
+        const stockMovementsCol = collection(db, 'stockMovements');
+        await addDoc(stockMovementsCol, {
+            productId: docRef.id,
+            type: 'Stok Awal',
+            quantityChange: product.stock,
+            stockBefore: 0,
+            stockAfter: product.stock,
+            notes: 'Stok awal saat pembuatan produk',
+            createdAt: serverTimestamp(),
+        });
+    }
+    return { id: docRef.id, ...product };
+}
+
+async function updateProduct(id: string, product: Partial<Product>) {
+    const docRef = doc(db, 'products', id);
+    await updateDoc(docRef, product);
+    return { id, ...product };
+}
+
+async function updateProductStock(productId: string, physicalStock: number, notes: string): Promise<Product> {
+    const productRef = doc(db, 'products', productId);
+    
+    const productSnap = await getDoc(productRef);
+    if (!productSnap.exists()) {
+        throw new Error("Produk tidak ditemukan.");
+    }
+    const productData = productSnap.data() as Product;
+    const stockBefore = productData.stock;
+    const quantityChange = physicalStock - stockBefore;
+
+    if (quantityChange === 0) {
+        return productData; // No change needed
+    }
+
+    const batch = writeBatch(db);
+
+    // Update product stock
+    batch.update(productRef, { stock: physicalStock });
+
+    // Create stock movement record
+    const stockMovementRef = doc(collection(db, 'stockMovements'));
+    batch.set(stockMovementRef, {
+        productId,
+        type: 'Stok Opname',
+        quantityChange,
+        stockBefore,
+        stockAfter: physicalStock,
+        notes,
+        createdAt: serverTimestamp(),
+    });
+
+    await batch.commit();
+
+    return { ...productData, stock: physicalStock };
+}
+
+async function deleteMultipleProducts(ids: string[]) {
+    const batch = writeBatch(db);
+    ids.forEach(id => {
+        const docRef = doc(db, 'products', id);
+        batch.delete(docRef);
+    });
+    await batch.commit();
+}
+
+async function getStockMovements(productId: string): Promise<StockMovement[]> {
+    const movementsCol = collection(db, 'stockMovements');
+    const q = query(movementsCol, where('productId', '==', productId), orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StockMovement));
+}
+
+
+async function bulkUpdateProductStock(updates: { code: string; physicalStock: number; notes: string }[]) {
+    const productsRef = collection(db, 'products');
+    const batch = writeBatch(db);
+    let successCount = 0;
+    let failureCount = 0;
+
+    for (const update of updates) {
+        const q = query(productsRef, where('code', '==', update.code), limit(1));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+            failureCount++;
+            continue;
+        }
+
+        const productDoc = snapshot.docs[0];
+        const product = { id: productDoc.id, ...productDoc.data() } as Product;
+
+        const stockBefore = product.stock;
+        const quantityChange = update.physicalStock - stockBefore;
+        
+        if(quantityChange === 0) continue; // Skip if no change
+
+        // Update product stock
+        batch.update(productDoc.ref, { stock: update.physicalStock });
+
+        // Create stock movement record
+        const stockMovementRef = doc(collection(db, 'stockMovements'));
+        batch.set(stockMovementRef, {
+            productId: product.id,
+            type: 'Stok Opname',
+            quantityChange,
+            stockBefore,
+            stockAfter: update.physicalStock,
+            notes: update.notes,
+            createdAt: serverTimestamp(),
+        });
+        successCount++;
+    }
+
+    await batch.commit();
+    return { success: successCount, failure: failureCount };
+}
 
 function ProductsClient() {
     const [products, setProducts] = React.useState<Product[]>([]);
@@ -502,9 +639,15 @@ function ProductsClient() {
 
         setIsPrintingReport(true);
         try {
-            const movements = await getStockOpnameMovements(reportDateRange.from, reportDateRange.to);
-
-            if (movements.length === 0) {
+            const movementsQuery = query(
+                collection(db, "stockMovements"),
+                where("type", "==", "Stok Opname"),
+                where("createdAt", ">=", reportDateRange.from),
+                where("createdAt", "<=", reportDateRange.to)
+            );
+            const movementsSnapshot = await getDocs(movementsQuery);
+            
+            if (movementsSnapshot.empty) {
                 toast({
                     variant: 'destructive',
                     title: 'Tidak Ada Data',
@@ -512,6 +655,23 @@ function ProductsClient() {
                 });
                 return;
             }
+
+            const movementsData = await Promise.all(movementsSnapshot.docs.map(async (docSnap) => {
+                const movement = docSnap.data() as StockMovement;
+                const productRef = doc(db, 'products', movement.productId);
+                const productSnap = await getDoc(productRef);
+                const productData = productSnap.exists() ? productSnap.data() as Product : { code: 'N/A', name: 'N/A' };
+                
+                const createdAtDate = (movement.createdAt as any)?.toDate ? (movement.createdAt as any).toDate() : new Date();
+
+                return {
+                    ...movement,
+                    productCode: productData.code,
+                    productName: productData.name,
+                    createdAt: createdAtDate,
+                };
+            }));
+
 
             const doc = new jsPDF() as jsPDFWithAutoTable;
 
@@ -527,7 +687,7 @@ function ProductsClient() {
             const tableColumn = ["Tanggal", "Kode Item", "Nama Item", "Stok Buku", "Stok Fisik", "Selisih", "Keterangan"];
             const tableRows: any[] = [];
 
-            movements.forEach(m => {
+            movementsData.forEach(m => {
                 const row = [
                     format(new Date(m.createdAt), 'dd/MM/yy HH:mm'),
                     m.productCode,
@@ -553,6 +713,7 @@ function ProductsClient() {
 
             toast({ title: 'Sukses!', description: 'Laporan berhasil dibuat.' });
         } catch (error) {
+            console.error("Failed to print opname report:", error);
             toast({ variant: 'destructive', title: 'Gagal', description: 'Tidak dapat membuat laporan PDF.' });
         } finally {
             setIsPrintingReport(false);
@@ -804,7 +965,7 @@ function ProductsClient() {
                                                                 <TableBody>
                                                                     {stockMovements.map(m => (
                                                                         <TableRow key={m.id}>
-                                                                            <TableCell className="text-xs">{format(new Date(m.createdAt), 'dd MMM yy, HH:mm', { locale: id })}</TableCell>
+                                                                            <TableCell className="text-xs">{format(new Date(m.createdAt as any), 'dd MMM yy, HH:mm', { locale: id })}</TableCell>
                                                                             <TableCell>{m.type}</TableCell>
                                                                             <TableCell className={m.quantityChange > 0 ? 'text-green-600' : 'text-red-600'}>
                                                                                 {m.quantityChange > 0 ? `+${m.quantityChange}` : m.quantityChange}
@@ -995,8 +1156,3 @@ export default function ProductsSettingsPage() {
         </div>
     );
 }
-
-    
-
-    
-

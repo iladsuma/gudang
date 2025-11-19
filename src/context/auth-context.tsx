@@ -4,7 +4,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import type { User } from '@/lib/types';
-import { login as apiLogin } from '@/lib/data';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { db } from '@/firebase';
+
+// Helper to create a compliant email from a username
+const toEmail = (username: string) => `${username.toLowerCase().replace(/\s+/g, '')}@gudang.local`;
 
 interface AuthContextType {
   user: User | null;
@@ -20,20 +25,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
+  const auth = getAuth();
 
   useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem('gudangcheckout_user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        try {
+          // Fetch user profile from Firestore
+          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          if (userDoc.exists()) {
+            setUser({ id: firebaseUser.uid, ...userDoc.data() } as User);
+          } else {
+            // This case might happen if Firestore doc is deleted but auth record remains
+            setUser(null);
+            await signOut(auth);
+          }
+        } catch (error) {
+          console.error("Failed to fetch user profile:", error);
+          setUser(null);
+          await signOut(auth);
+        }
+      } else {
+        setUser(null);
       }
-    } catch (error) {
-      console.error("Failed to parse user from localStorage", error);
-      localStorage.removeItem('gudangcheckout_user');
-    } finally {
       setLoading(false);
-    }
-  }, []);
+    });
+
+    return () => unsubscribe();
+  }, [auth]);
 
   useEffect(() => {
     if (loading) return; 
@@ -47,31 +66,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   }, [user, loading, pathname, router]);
 
-
   const login = async (username: string, password: string) => {
-    const loggedInUser = await apiLogin(username, password);
-    setUser(loggedInUser);
-    localStorage.setItem('gudangcheckout_user', JSON.stringify(loggedInUser));
-    
-    // Clear cart from previous user session if any
-    const allKeys = Object.keys(localStorage);
-    for (const key of allKeys) {
-        if (key.startsWith('shipping_cart_')) {
-            localStorage.removeItem(key);
+    const email = toEmail(username);
+    try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        // The onAuthStateChanged listener will handle setting the user state
+    } catch (error: any) {
+        if (error.code === 'auth/user-not-found') {
+            // If user not found, try to create it (for demo purposes)
+            if ((username === 'admin' && password === 'admin') || (username === 'user' && password === 'user')) {
+                try {
+                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                    const newUser: Omit<User, 'id'> = {
+                        username,
+                        role: username as 'admin' | 'user'
+                    };
+                    await setDoc(doc(db, 'users', userCredential.user.uid), newUser);
+                    // onAuthStateChanged will set the user state
+                } catch (creationError) {
+                    console.error("Failed to create demo user:", creationError);
+                    throw new Error('Gagal membuat akun demo.');
+                }
+            } else {
+                 throw new Error('Username atau password salah.');
+            }
+        } else {
+            console.error("Login error:", error);
+            throw new Error('Username atau password salah.');
         }
-    }
-    
-    if (loggedInUser.role === 'admin') {
-        router.push('/dashboard');
-    } else {
-        router.push('/shipments');
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('gudangcheckout_user');
-    // We don't clear the cart on logout, it's tied to the user ID
+  const logout = async () => {
+    await signOut(auth);
+    // The onAuthStateChanged listener will set user to null
     router.push('/login');
   };
 
