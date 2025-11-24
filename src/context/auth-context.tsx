@@ -4,6 +4,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import type { User } from '@/lib/types';
+import { getUsers } from '@/lib/data'; // We'll still use this to get user roles after "login"
 
 interface AuthContextType {
   user: User | null;
@@ -48,20 +49,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 
   const login = useCallback(async (username: string, password: string) => {
-    const response = await fetch('/api/users/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    });
+    // This is an insecure, client-side only login for local testing.
+    // It avoids the need for API routes or Firebase.
+    const allUsers = await getUsers();
+    const foundUser = allUsers.find(
+      u => u.username === username && u.password === password
+    );
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Login failed');
+    if (foundUser) {
+      const { password, ...userToStore } = foundUser;
+      setUser(userToStore as User);
+      localStorage.setItem('user', JSON.stringify(userToStore));
+    } else {
+      throw new Error('Kredensial tidak valid.');
     }
-
-    const loggedInUser: User = await response.json();
-    setUser(loggedInUser);
-    localStorage.setItem('user', JSON.stringify(loggedInUser));
   }, []);
 
   const logout = useCallback(() => {
