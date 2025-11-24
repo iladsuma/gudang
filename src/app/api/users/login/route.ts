@@ -1,18 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs/promises';
-import path from 'path';
+import { db } from '@/lib/db';
+import { users } from '@/app/drizzle/schema';
+import { eq } from 'drizzle-orm';
 
-const dbPath = path.join(process.cwd(), 'db.json');
-
-async function readDb() {
-    try {
-        const fileContent = await fs.readFile(dbPath, 'utf-8');
-        return JSON.parse(fileContent);
-    } catch (error) {
-        console.error("Error reading db.json:", error);
-        throw new Error("Could not read database.");
-    }
-}
 
 export async function POST(req: NextRequest) {
     try {
@@ -21,14 +11,12 @@ export async function POST(req: NextRequest) {
         if (!username || !password) {
             return NextResponse.json({ message: 'Username and password are required' }, { status: 400 });
         }
-
-        const db = await readDb();
-        const user = db.users.find(
-            (u: any) => u.username === username && u.password === password
-        );
+        
+        const user = await db.query.users.findFirst({
+            where: and(eq(users.username, username), eq(users.password, password))
+        });
 
         if (user) {
-            // Do not send password back to the client
             const { password, ...userWithoutPassword } = user;
             return NextResponse.json(userWithoutPassword, { status: 200 });
         } else {
@@ -36,6 +24,7 @@ export async function POST(req: NextRequest) {
         }
     } catch (error) {
         const message = error instanceof Error ? error.message : 'An unexpected error occurred';
+        console.error("Login API Error:", error);
         return NextResponse.json({ message }, { status: 500 });
     }
 }
