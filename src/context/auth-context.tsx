@@ -1,15 +1,9 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import type { User } from '@/lib/types';
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db, auth } from '@/firebase';
-
-// Helper to create a compliant email from a username
-const toEmail = (username: string) => `${username.toLowerCase().replace(/\s+/g, '')}@gudang.local`;
 
 interface AuthContextType {
   user: User | null;
@@ -25,30 +19,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
-
+  
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-          if (userDoc.exists()) {
-            setUser({ id: firebaseUser.uid, ...userDoc.data() } as User);
-          } else {
-            setUser(null);
-            await signOut(auth);
-          }
-        } catch (error) {
-          console.error("Failed to fetch user profile:", error);
-          setUser(null);
-          await signOut(auth);
-        }
-      } else {
-        setUser(null);
+    // Try to load user from localStorage on initial load
+    try {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
       }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    } catch (error) {
+      console.error("Failed to parse user from localStorage", error);
+      localStorage.removeItem('user');
+    }
+    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -63,38 +46,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   }, [user, loading, pathname, router]);
 
-  const login = async (username: string, password: string) => {
-    const email = toEmail(username);
-    try {
-        await signInWithEmailAndPassword(auth, email, password);
-    } catch (error: any) {
-        if (error.code === 'auth/user-not-found') {
-            if ((username === 'admin' && password === 'admin') || (username === 'user' && password === 'user')) {
-                try {
-                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                    const newUser: Omit<User, 'id' | 'password'> = {
-                        username,
-                        role: username as 'admin' | 'user'
-                    };
-                    await setDoc(doc(db, 'users', userCredential.user.uid), newUser);
-                } catch (creationError) {
-                    console.error("Failed to create demo user:", creationError);
-                    throw new Error('Gagal membuat akun demo.');
-                }
-            } else {
-                 throw new Error('Username atau password salah.');
-            }
-        } else {
-            console.error("Login error:", error);
-            throw new Error('Username atau password salah.');
-        }
-    }
-  };
 
-  const logout = async () => {
-    await signOut(auth);
+  const login = useCallback(async (username: string, password: string) => {
+    const response = await fetch('/api/users/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Login failed');
+    }
+
+    const loggedInUser: User = await response.json();
+    setUser(loggedInUser);
+    localStorage.setItem('user', JSON.stringify(loggedInUser));
+  }, []);
+
+  const logout = useCallback(() => {
+    setUser(null);
+    localStorage.removeItem('user');
     router.push('/login');
-  };
+  }, [router]);
 
   const value = { user, login, logout, loading };
   
