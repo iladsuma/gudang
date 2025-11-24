@@ -1,8 +1,8 @@
 import { defineConfig } from "drizzle-kit";
-import "dotenv/config";
+import { DATABASE_URL } from "./src/lib/secrets";
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL is missing");
+if (!DATABASE_URL) {
+  throw new Error("DATABASE_URL is missing in src/lib/secrets.ts");
 }
 
 export default defineConfig({
@@ -10,7 +10,7 @@ export default defineConfig({
   out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL,
+    url: DATABASE_URL,
   },
   migrations: {
     table: "migrations",
