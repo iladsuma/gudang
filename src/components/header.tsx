@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useCart } from '@/hooks/use-cart';
+import { useCart } from '@/hooks/use-cart.tsx';
 import { Badge } from './ui/badge';
 import { useNotifications } from '@/context/notification-context';
 import { formatDistanceToNow } from 'date-fns';
@@ -38,7 +38,6 @@ export function Header() {
 
   const isSettingsPage = pathname.startsWith('/settings');
   const isTransactionPage = ['/cashier', '/purchases', '/returns', '/stock-opname'].includes(pathname);
-  const isAccountingPage = ['/accounting', '/receivables', '/payables'].includes(pathname);
   const isReportPage = pathname.startsWith('/reports');
 
 
@@ -57,35 +56,12 @@ export function Header() {
               <nav className="hidden items-center gap-4 text-sm md:flex">
                 {user.role === 'admin' ? (
                   <>
-                    <Link
-                        href="/dashboard"
-                        className={cn("flex items-center gap-2 transition-colors hover:text-foreground/80", pathname === '/dashboard' ? 'text-foreground' : 'text-foreground/60')}
-                    >
-                       <LayoutDashboard className="h-4 w-4" /> Dashboard
-                    </Link>
                      <Link
                       href="/shipments"
                       className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname.startsWith('/shipments') ? 'text-foreground' : 'text-foreground/60')}
                     >
                        <ShoppingBasket className="h-4 w-4" /> Pemesanan Produk
                     </Link>
-                  </>
-                ) : (
-                    <Link
-                        href="/my-shipments"
-                        className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname.startsWith('/my-shipments') ? 'text-foreground' : 'text-foreground/60')}
-                    >
-                       <ListChecks className="h-4 w-4" /> Riwayat Kiriman Saya
-                    </Link>
-                )}
-                 <Link
-                  href="/products"
-                  className={cn("transition-colors hover:text-foreground/80", pathname === '/products' ? 'text-foreground' : 'text-foreground/60')}
-                >
-                  Etalase Produk
-                </Link>
-                {user.role === 'admin' && (
-                  <>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className={cn("gap-1 px-2 h-auto text-sm transition-colors hover:text-foreground/80", isTransactionPage ? 'text-foreground' : 'text-foreground/60')}>
@@ -101,20 +77,6 @@ export function Header() {
                       </DropdownMenuContent>
                     </DropdownMenu>
 
-                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                         <Button variant="ghost" className={cn("gap-1 px-2 h-auto text-sm transition-colors hover:text-foreground/80", isAccountingPage ? 'text-foreground' : 'text-foreground/60')}>
-                            <BookUser className="h-4 w-4" /> Akuntansi
-                            <ChevronDown className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem onSelect={() => router.push('/accounting')}><Landmark className="mr-2"/> Buku Kas</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => router.push('/receivables')}><Receipt className="mr-2"/> Piutang Usaha</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => router.push('/payables')}><HandCoins className="mr-2"/> Utang Usaha</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className={cn("gap-1 px-2 h-auto text-sm transition-colors hover:text-foreground/80", isReportPage ? 'text-foreground' : 'text-foreground/60')}>
@@ -131,7 +93,7 @@ export function Header() {
                       href="/invoices"
                       className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname === '/invoices' ? 'text-foreground' : 'text-foreground/60')}
                     >
-                      <Archive className="h-4 w-4" /> Arsip & Pengiriman
+                      <Archive className="h-4 w-4" /> Arsip
                     </Link>
                     
                     <DropdownMenu>
@@ -154,6 +116,21 @@ export function Header() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </>
+                ) : (
+                    <>
+                    <Link
+                        href="/my-shipments"
+                        className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname.startsWith('/my-shipments') ? 'text-foreground' : 'text-foreground/60')}
+                    >
+                       <ListChecks className="h-4 w-4" /> Riwayat Kiriman Saya
+                    </Link>
+                    <Link
+                      href="/products"
+                      className={cn("transition-colors hover:text-foreground/80", pathname === '/products' ? 'text-foreground' : 'text-foreground/60')}
+                    >
+                      Etalase Produk
+                    </Link>
+                    </>
                 )}
               </nav>
             )}
