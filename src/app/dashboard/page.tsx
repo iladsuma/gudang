@@ -44,8 +44,6 @@ export default function DashboardPage() {
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
     const [stats, setStats] = React.useState({
-        totalValueInProcess: 0,
-        shipmentsInProcess: 0,
         shipmentsDeliveredInRange: 0,
         lowStockCount: 0,
         totalAssetValue: 0,
@@ -91,9 +89,6 @@ export default function DashboardPage() {
                     return true;
                 });
                 
-                const inProcess = shipments.filter(s => s.status === 'Proses');
-                const totalValueInProcess = inProcess.reduce((sum, s) => sum + s.totalAmount, 0);
-
                 const deliveredInRange = shipmentsInRange.filter(s => s.status === 'Terkirim');
                 
                 const lowStockItems = products.filter(p => p.stock <= p.minStock);
@@ -106,8 +101,6 @@ export default function DashboardPage() {
                 }, 0);
 
                 setStats({
-                    totalValueInProcess,
-                    shipmentsInProcess: inProcess.length,
                     shipmentsDeliveredInRange: deliveredInRange.length,
                     lowStockCount: lowStockItems.length,
                     totalAssetValue,
@@ -163,10 +156,11 @@ export default function DashboardPage() {
                 setCategoryAnalysis(categoryAnalysisData);
 
 
-                const recentActivityShipments = [...shipments]
+                const recentDelivered = [...shipments]
+                    .filter(s => s.status === 'Terkirim')
                     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                     .slice(0, 5);
-                setRecentActivity(recentActivityShipments);
+                setRecentActivity(recentDelivered);
                 
                 setLoadingData(false);
             };
@@ -265,7 +259,7 @@ export default function DashboardPage() {
         <div className="container mx-auto p-4 md:p-8 space-y-6">
              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Dashboard Admin</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">Dashboard Butik</h1>
                     <p className="text-muted-foreground">Menampilkan analitik untuk: <span className='font-semibold text-primary'>{rangeDisplay}</span></p>
                 </div>
                 <div>
@@ -336,7 +330,7 @@ export default function DashboardPage() {
                 </Card>
                  <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Nilai Aset Gudang</CardTitle>
+                        <CardTitle className="text-sm font-medium">Total Nilai Aset</CardTitle>
                         <Warehouse className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
@@ -346,22 +340,52 @@ export default function DashboardPage() {
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Antrian Kemas</CardTitle>
-                        <Send className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.shipmentsInProcess}</div>
-                        <p className="text-xs text-muted-foreground">Jumlah pengiriman dalam antrian proses.</p>
-                    </CardContent>
-                </Card>
-                 <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Terkirim (Rentang Terpilih)</CardTitle>
+                        <CardTitle className="text-sm font-medium">Total Transaksi Selesai</CardTitle>
                         <CheckCircle className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{stats.shipmentsDeliveredInRange}</div>
                         <p className="text-xs text-muted-foreground">Total pengiriman selesai dalam rentang tanggal terpilih.</p>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Produk Stok Menipis</CardTitle>
+                        <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.lowStockCount}</div>
+                        <p className="text-xs text-muted-foreground">Jumlah produk di bawah stok minimal.</p>
+                    </CardContent>
+                </Card>
+            </div>
+
+             <div className="grid grid-cols-1 gap-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Notifikasi Pesanan Selesai Dijahit</CardTitle>
+                        <CardDescription>5 pesanan terbaru yang telah selesai diproses dan dikirim.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>No. Transaksi</TableHead>
+                                    <TableHead>Pelanggan</TableHead>
+                                    <TableHead className="text-right">Tanggal Selesai</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {loadingData ? <TableRow><TableCell colSpan={3}><Skeleton className='h-24'/></TableCell></TableRow> :
+                                recentActivity.length > 0 ? recentActivity.map(s => (
+                                    <TableRow key={s.id}>
+                                        <TableCell className='font-mono'>{s.transactionId}</TableCell>
+                                        <TableCell className='font-medium'>{s.customerName}</TableCell>
+                                        <TableCell className='text-right'>{format(new Date(s.createdAt), 'dd MMM yyyy, HH:mm', { locale: id })}</TableCell>
+                                    </TableRow>
+                                )) : <TableRow><TableCell colSpan={3} className='text-center h-24'>Belum ada pesanan yang selesai.</TableCell></TableRow>}
+                            </TableBody>
+                        </Table>
                     </CardContent>
                 </Card>
             </div>
