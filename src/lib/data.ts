@@ -1,5 +1,4 @@
 
-
 import type { 
     Shipment, 
     Expedition, 
@@ -60,19 +59,17 @@ export async function deleteUser(id: string): Promise<{ id: string }> {
 // Shipment Functions
 // =================================
 export async function getShipments(): Promise<Shipment[]> {
-    return Promise.resolve(initialData.shipments || []);
+    const response = await fetch('/api/shipments', { cache: 'no-store' });
+    return handleResponse<Shipment[]>(response);
 }
 
 export async function addShipment(shipment: Omit<Shipment, 'id' | 'createdAt' | 'status'>): Promise<Shipment> {
-    // This is a mock function and will not persist data.
-     const newShipment = { 
-        ...shipment, 
-        id: `ship_${Date.now()}`, 
-        status: 'Proses' as const,
-        createdAt: new Date().toISOString()
-    };
-    console.log('Adding shipment:', newShipment);
-    return Promise.resolve(newShipment);
+    const response = await fetch('/api/shipments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(shipment),
+    });
+    return handleResponse<Shipment>(response);
 }
 
 export async function updateShipment(id: string, shipment: Partial<Shipment>): Promise<Shipment> {
@@ -142,39 +139,57 @@ export async function deletePackagingOption(id: string): Promise<{ id: string }>
 }
 
 export async function getCustomers(): Promise<Customer[]> {
-    return Promise.resolve(initialData.customers || []);
+    const response = await fetch('/api/customers', { cache: 'no-store' });
+    return handleResponse<Customer[]>(response);
 }
 export async function addCustomer(customer: Omit<Customer, 'id'>): Promise<Customer> {
-    const newCustomer = { ...customer, id: `cust_${Date.now()}` };
-    console.log('Adding customer', newCustomer);
-    return Promise.resolve(newCustomer);
+    const response = await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(customer),
+    });
+    return handleResponse<Customer>(response);
 }
 export async function updateCustomer(id: string, customer: Omit<Customer, 'id'>): Promise<Customer> {
-    const updatedCustomer = { ...customer, id };
-    console.log('Updating customer', updatedCustomer);
-    return Promise.resolve(updatedCustomer);
+     const response = await fetch(`/api/customers/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(customer),
+    });
+    return handleResponse<Customer>(response);
 }
 export async function deleteCustomer(id: string): Promise<{ id: string }> {
-    console.log('Deleting customer', id);
-    return Promise.resolve({ id });
+     const response = await fetch(`/api/customers/${id}`, {
+        method: 'DELETE',
+    });
+    return handleResponse<{ id: string }>(response);
 }
 
 export async function getSuppliers(): Promise<Supplier[]> {
-    return Promise.resolve(initialData.suppliers || []);
+    const response = await fetch('/api/suppliers', { cache: 'no-store' });
+    return handleResponse<Supplier[]>(response);
 }
 export async function addSupplier(supplier: Omit<Supplier, 'id'>): Promise<Supplier> {
-    const newSupplier = { ...supplier, id: `sup_${Date.now()}` };
-    console.log('Adding supplier', newSupplier);
-    return Promise.resolve(newSupplier);
+     const response = await fetch('/api/suppliers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(supplier),
+    });
+    return handleResponse<Supplier>(response);
 }
 export async function updateSupplier(id: string, supplier: Omit<Supplier, 'id'>): Promise<Supplier> {
-    const updatedSupplier = { ...supplier, id };
-    console.log('Updating supplier', updatedSupplier);
-    return Promise.resolve(updatedSupplier);
+     const response = await fetch(`/api/suppliers/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(supplier),
+    });
+    return handleResponse<Supplier>(response);
 }
 export async function deleteSupplier(id: string): Promise<{ id: string }> {
-    console.log('Deleting supplier', id);
-    return Promise.resolve({ id });
+     const response = await fetch(`/api/suppliers/${id}`, {
+        method: 'DELETE',
+    });
+    return handleResponse<{ id: string }>(response);
 }
 
 
@@ -183,25 +198,36 @@ export async function deleteSupplier(id: string): Promise<{ id: string }> {
 // =================================
 
 export async function getProducts(): Promise<Product[]> {
-    return Promise.resolve(initialData.products || []);
+    const response = await fetch('/api/products', { cache: 'no-store' });
+    return handleResponse<Product[]>(response);
 }
 
 export async function addProduct(productData: Omit<Product, 'id'>): Promise<Product> {
-    const newProduct = { ...productData, id: `prod_${Date.now()}` };
-    console.log('Adding product', newProduct);
-    return Promise.resolve(newProduct);
+    const response = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(productData),
+    });
+    return handleResponse<Product>(response);
 }
 
 export async function updateProduct(id: string, productData: Partial<Product>): Promise<Product> {
-    const updatedProduct = { ...productData, id } as Product;
-    console.log('Updating product', updatedProduct);
-    return Promise.resolve(updatedProduct);
+    const response = await fetch(`/api/products/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(productData),
+    });
+    return handleResponse<Product>(response);
 }
 
 
 export async function deleteMultipleProducts(ids: string[]): Promise<{ ids: string[] }> {
-    console.log('Deleting products', ids);
-    return Promise.resolve({ ids });
+    const response = await fetch('/api/products', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+    });
+    return handleResponse<{ ids: string[] }>(response);
 }
 
 // =================================
@@ -209,30 +235,26 @@ export async function deleteMultipleProducts(ids: string[]): Promise<{ ids: stri
 // =================================
 
 export async function getStockMovements(productId: string): Promise<StockMovement[]> {
-    console.log('Getting stock movements for', productId);
-    return Promise.resolve([]); // Mock response
+    const response = await fetch(`/api/stock-movements?productId=${productId}`, { cache: 'no-store' });
+    return handleResponse<StockMovement[]>(response);
 }
 
 export async function updateProductStock(productId: string, physicalStock: number, notes: string): Promise<Product> {
-    console.log('Updating stock for', productId, physicalStock, notes);
-    const mockProduct: Product = {
-        id: productId,
-        stock: physicalStock,
-        code: 'PROD-001',
-        name: 'Mock Product',
-        price: 100,
-        costPrice: 50,
-        minStock: 10,
-        unit: 'PCS',
-        category: 'Mock',
-        imageUrl: '',
-    };
-    return Promise.resolve(mockProduct);
+    const response = await fetch(`/api/products/${productId}/stock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ physicalStock, notes }),
+    });
+    return handleResponse<Product>(response);
 }
 
 export async function bulkUpdateProductStock(updates: { code: string; physicalStock: number; notes: string }[]): Promise<{ success: number; failure: number }> {
-    console.log('Bulk updating stock', updates);
-    return Promise.resolve({ success: updates.length, failure: 0 });
+    const response = await fetch('/api/products/bulk-stock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updates }),
+    });
+    return handleResponse<{ success: number; failure: number }>(response);
 }
 
 // =================================
@@ -240,53 +262,75 @@ export async function bulkUpdateProductStock(updates: { code: string; physicalSt
 // =================================
 
 export async function getAccounts(): Promise<Account[]> {
-    return Promise.resolve(initialData.accounts || []);
+    const response = await fetch('/api/accounts', { cache: 'no-store' });
+    return handleResponse<Account[]>(response);
 }
 export async function addAccount(account: Omit<Account, 'id' | 'createdAt' | 'balance'> & { balance?: number }): Promise<Account> {
-    const newAccount = { ...account, id: `acc_${Date.now()}`, createdAt: new Date().toISOString(), balance: account.balance || 0 };
-    console.log('Adding account', newAccount);
-    return Promise.resolve(newAccount);
+    const response = await fetch('/api/accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(account),
+    });
+    return handleResponse<Account>(response);
 }
 export async function updateAccount(id: string, account: Partial<Omit<Account, 'id' | 'balance'>>): Promise<Account> {
-    const updatedAccount = { ...account, id, type: account.type!, name: account.name!, balance: 1000 } as Account;
-    console.log('Updating account', updatedAccount);
-    return Promise.resolve(updatedAccount);
+     const response = await fetch(`/api/accounts/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(account),
+    });
+    return handleResponse<Account>(response);
 }
 export async function deleteAccount(id: string): Promise<{ id: string }> {
-    console.log('Deleting account', id);
-    return Promise.resolve({ id });
+    const response = await fetch(`/api/accounts/${id}`, {
+        method: 'DELETE',
+    });
+    return handleResponse<{ id: string }>(response);
 }
 
 
 export async function getFinancialTransactions(accountId?: string, startDate?: string, endDate?: string): Promise<FinancialTransaction[]> {
-    const transactions = initialData.financialTransactions.map(t => ({
-        ...t,
-        account: { name: initialData.accounts.find(a => a.id === t.accountId)?.name || 'N/A' }
-    })) as unknown as FinancialTransaction[];
-
-    return Promise.resolve(transactions || []);
+    const params = new URLSearchParams();
+    if(accountId) params.append('accountId', accountId);
+    if(startDate) params.append('startDate', startDate);
+    if(endDate) params.append('endDate', endDate);
+    
+    const response = await fetch(`/api/financial-transactions?${params.toString()}`, { cache: 'no-store' });
+    return handleResponse<FinancialTransaction[]>(response);
 }
 
 export async function addFinancialTransaction(transaction: Omit<FinancialTransaction, 'id' | 'createdAt' | 'account'>): Promise<FinancialTransaction> {
-    const newTx = { ...transaction, id: `ft_${Date.now()}`, createdAt: new Date().toISOString(), account: { name: 'Mock' } };
-     console.log('Adding financial transaction', newTx);
-    return Promise.resolve(newTx);
+    const response = await fetch('/api/financial-transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(transaction),
+    });
+    return handleResponse<FinancialTransaction>(response);
 }
 
 export async function updateFinancialTransaction(id: string, transaction: Partial<Omit<FinancialTransaction, 'id' | 'createdAt' | 'account'>>): Promise<FinancialTransaction> {
-     const updatedTx = { ...transaction, id, account: { name: 'Mock' } } as FinancialTransaction;
-     console.log('Updating financial transaction', updatedTx);
-    return Promise.resolve(updatedTx);
+     const response = await fetch(`/api/financial-transactions/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(transaction),
+    });
+    return handleResponse<FinancialTransaction>(response);
 }
 
 export async function deleteFinancialTransaction(id: string): Promise<{ id: string }> {
-     console.log('Deleting financial transaction', id);
-    return Promise.resolve({ id });
+     const response = await fetch(`/api/financial-transactions/${id}`, {
+        method: 'DELETE',
+    });
+    return handleResponse<{ id: string }>(response);
 }
 
 export async function addInternalTransfer(transfer: Transfer): Promise<any> {
-    console.log('Adding internal transfer', transfer);
-    return Promise.resolve({ message: "Transfer successful" });
+     const response = await fetch('/api/transfers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(transfer),
+    });
+    return handleResponse<any>(response);
 }
 
 // =================================
@@ -294,29 +338,40 @@ export async function addInternalTransfer(transfer: Transfer): Promise<any> {
 // =================================
 
 export async function processDirectSale(user: User, customerId: string, cart: any[], accountId: string, paymentStatus: 'Lunas' | 'Belum Lunas'): Promise<Shipment> {
-    const newShipment = { id: `ship_${Date.now()}`, userId: user.id, customerId, products: cart, accountId, paymentStatus } as Shipment;
-    console.log('Processing direct sale', newShipment);
-    return Promise.resolve(newShipment);
+    const response = await fetch('/api/sales/direct', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, customerId, cart, accountId, paymentStatus }),
+    });
+    return handleResponse<Shipment>(response);
 }
 
 export async function getPurchases(): Promise<Purchase[]> {
-    return Promise.resolve(initialData.purchases || []);
+    const response = await fetch('/api/purchases', { cache: 'no-store' });
+    return handleResponse<Purchase[]>(response);
 }
 
 export async function addPurchase(purchase: any): Promise<Purchase> {
-    const newPurchase = { ...purchase, id: `purch_${Date.now()}`};
-    console.log('Adding purchase', newPurchase);
-    return Promise.resolve(newPurchase);
+    const response = await fetch('/api/purchases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(purchase),
+    });
+    return handleResponse<Purchase>(response);
 }
 
 export async function getReturns(): Promise<Return[]> {
-    return Promise.resolve(initialData.returns || []);
+    const response = await fetch('/api/returns', { cache: 'no-store' });
+    return handleResponse<Return[]>(response);
 }
 
 export async function addReturn(retur: any): Promise<Return> {
-    const newReturn = { ...retur, id: `ret_${Date.now()}`};
-    console.log('Adding return', newReturn);
-    return Promise.resolve(newReturn);
+    const response = await fetch('/api/returns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(retur),
+    });
+    return handleResponse<Return>(response);
 }
 
 // =================================
@@ -324,15 +379,21 @@ export async function addReturn(retur: any): Promise<Return> {
 // =================================
 
 export async function payPayable(purchaseId: string, accountId: string, paidAt: Date): Promise<Purchase> {
-     const mockPurchase = { id: purchaseId, paymentStatus: 'Lunas', accountId } as Purchase;
-     console.log('Paying payable', mockPurchase);
-    return Promise.resolve(mockPurchase);
+     const response = await fetch(`/api/payables/${purchaseId}/pay`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accountId, paidAt }),
+    });
+    return handleResponse<Purchase>(response);
 }
 
 export async function payReceivable(shipmentId: string, accountId: string, paidAt: Date): Promise<Shipment> {
-    const mockShipment = { id: shipmentId, paymentStatus: 'Lunas', accountId } as Shipment;
-    console.log('Paying receivable', mockShipment);
-    return Promise.resolve(mockShipment);
+    const response = await fetch(`/api/receivables/${shipmentId}/pay`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accountId, paidAt }),
+    });
+    return handleResponse<Shipment>(response);
 }
 
 // =================================
@@ -340,16 +401,13 @@ export async function payReceivable(shipmentId: string, accountId: string, paidA
 // =================================
 
 export async function getSalesProfitReport(startDate: Date, endDate: Date, userId: string): Promise<SalesProfitReportData> {
-    console.log('Getting sales profit report', startDate, endDate, userId);
-    const mockReport: SalesProfitReportData = {
-        totalRevenue: 0,
-        totalCOGS: 0,
-        grossProfit: 0,
-        operationalExpenses: 0,
-        netProfit: 0,
-        transactionDetails: [],
-    };
-    return Promise.resolve(mockReport);
+    const params = new URLSearchParams({
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        userId,
+    });
+    const response = await fetch(`/api/reports/sales-profit?${params.toString()}`, { cache: 'no-store' });
+    return handleResponse<SalesProfitReportData>(response);
 }
 
 

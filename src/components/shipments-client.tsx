@@ -36,10 +36,7 @@ import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { deleteShipment, processShipmentsToPackaging, getUsers } from '@/lib/data';
-import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import { useAuth } from '@/context/auth-context';
-import { useCart } from '@/hooks/use-cart.tsx';
 import { Checkbox } from './ui/checkbox';
 import { Input } from './ui/input';
 
@@ -52,8 +49,6 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
   const [editingShipment, setEditingShipment] = useState<Shipment | undefined>(undefined);
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
-  const router = useRouter();
-  const { cart } = useCart();
   const [selectedShipments, setSelectedShipments] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -107,7 +102,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
         onUpdate();
         toast({
             title: 'Sukses!',
-            description: 'Data pengiriman berhasil dihapus.',
+            description: 'Data pesanan berhasil dihapus.',
         });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Terjadi kesalahan.';
@@ -121,23 +116,9 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
     }
   };
 
-  const openPdf = (dataUrl: string) => {
-    const pdfWindow = window.open("");
-    pdfWindow?.document.write(`<iframe width='100%' height='100%' src='${dataUrl}' title='pratinjau-pdf'></iframe>`);
-  };
-
   const handleOpenForm = () => {
-    if (user?.role !== 'admin' && cart.length === 0) {
-        toast({
-            variant: 'destructive',
-            title: 'Keranjang Kosong',
-            description: 'Silakan tambahkan produk dari etalase terlebih dahulu.',
-        });
-        router.push('/products');
-    } else {
-        setEditingShipment(undefined);
-        setIsFormOpen(true);
-    }
+    setEditingShipment(undefined);
+    setIsFormOpen(true);
   };
 
   const handleEdit = (shipment: Shipment) => {
@@ -172,13 +153,13 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
 
   const handleProcessToPackaging = async () => {
     if (selectedShipments.length === 0) {
-        toast({ variant: 'destructive', title: 'Tidak Ada Terpilih', description: 'Pilih setidaknya satu pengiriman untuk diproses.' });
+        toast({ variant: 'destructive', title: 'Tidak Ada Terpilih', description: 'Pilih setidaknya satu pesanan untuk diproses.' });
         return;
     }
     setIsProcessing(true);
     try {
         await processShipmentsToPackaging(selectedShipments, user);
-        toast({ title: 'Sukses!', description: `${selectedShipments.length} pengiriman telah dipindahkan ke antrian pengemasan.` });
+        toast({ title: 'Sukses!', description: `${selectedShipments.length} pesanan telah dipindahkan ke antrian pengemasan.` });
         onUpdate();
         setSelectedShipments([]);
     } catch (error) {
@@ -191,10 +172,6 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
 
   const shipmentsInProcess = filteredShipments.filter(s => s.status === 'Proses');
   const isAdminView = user?.role === 'admin';
-
-  const getUserName = (userId: string) => {
-    return allUsers.find(u => u.id === userId)?.username || '...';
-  }
 
   return (
     <div className="space-y-4">
@@ -210,16 +187,15 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
             )}
         </div>
         <div className="flex justify-end gap-2 w-full md:w-auto">
-         {isAdminView && (
+         {isAdminView ? (
             <Button onClick={handleProcessToPackaging} disabled={selectedShipments.length === 0 || isProcessing} className="w-full md:w-auto">
                 {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Package className="mr-2 h-4 w-4" />}
                 Proses ke Pengemasan ({selectedShipments.length})
             </Button>
-         )}
-         {!isAdminView && (
+         ) : (
             <Button onClick={handleOpenForm} className="w-full md:w-auto">
               <PlusCircle className="mr-2 h-4 w-4" />
-              Tambah Pengiriman
+              Tambah Pesanan
             </Button>
          )}
         </div>
@@ -259,7 +235,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
                         <Checkbox
                             checked={selectedShipments.includes(shipment.id)}
                             onCheckedChange={(checked) => handleSelectSingle(shipment.id, !!checked)}
-                            aria-label={`Pilih pengiriman ${shipment.transactionId}`}
+                            aria-label={`Pilih pesanan ${shipment.transactionId}`}
                         />
                     )}
                   </TableCell>
@@ -276,7 +252,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
                   </TableCell>
                   <TableCell>
                     {shipment.bodyMeasurements ? (
-                      <Badge variant="outline" className="font-normal whitespace-pre-wrap">{JSON.stringify(shipment.bodyMeasurements, null, 2)}</Badge>
+                      <Badge variant="outline" className="font-normal whitespace-pre-wrap max-w-xs">{JSON.stringify(shipment.bodyMeasurements, null, 2)}</Badge>
                     ) : (
                       <span className='text-xs text-muted-foreground'>-</span>
                     )}
@@ -311,7 +287,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
                         <AlertDialogHeader>
                           <AlertDialogTitle>Apakah Anda yakin?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Tindakan ini tidak dapat dibatalkan. Ini akan menghapus data pengiriman secara permanen.
+                            Tindakan ini tidak dapat dibatalkan. Ini akan menghapus data pesanan secara permanen.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -331,7 +307,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
             ) : (
               <TableRow>
                 <TableCell colSpan={10} className="h-24 text-center">
-                  Tidak ada data pengiriman yang cocok dengan filter.
+                  Tidak ada data pesanan yang cocok dengan filter.
                 </TableCell>
               </TableRow>
             )}
@@ -350,7 +326,6 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
               shipmentToEdit={editingShipment}
               onSuccess={handleFormSuccess}
               onCancel={handleFormCancel}
-              initialProductsFromCart={cart}
             />
           </DialogContent>
         </Dialog>

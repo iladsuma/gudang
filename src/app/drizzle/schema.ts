@@ -71,7 +71,7 @@ export const shipments = pgTable('shipments', {
   transactionId: varchar('transaction_id', { length: 255 }).notNull(),
   customerId: text('customer_id').notNull().references(() => customers.id),
   customerName: varchar('customer_name', { length: 255 }).notNull(),
-  expedition: varchar('expedition', { length: 255 }).notNull(),
+  expedition: varchar('expedition', { length: 255 }),
   packagingId: text('packaging_id'),
   accountId: text('account_id'),
   status: shipmentStatusEnum('status').notNull(),
@@ -80,7 +80,7 @@ export const shipments = pgTable('shipments', {
   products: jsonb('products').notNull(), // ShipmentProduct[]
   totalItems: integer('total_items').notNull(),
   totalProductCost: real('total_product_cost').notNull(),
-  totalPackingCost: real('total_packing_cost').notNull(),
+  totalPackingCost: real('total_packing_cost'),
   totalAmount: real('total_amount').notNull(),
   totalRevenue: real('total_revenue').notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow(),

@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Boxes, LogOut, ShoppingCart, LayoutDashboard, Archive, Settings, Truck, ShoppingBag, ShoppingBasket, Undo2, ArrowRightLeft, PackageCheck, BookUser, FileBarChart, History, Scale, Database, Landmark, HandCoins, Receipt, ListChecks, Bell } from 'lucide-react';
+import { Boxes, LogOut, LayoutDashboard, Archive, Settings, ArrowRightLeft, PackageCheck, FileBarChart, History, Scale, ShoppingBasket } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { Button } from './ui/button';
 import { useRouter, usePathname } from 'next/navigation';
@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useCart } from '@/hooks/use-cart.tsx';
 import { Badge } from './ui/badge';
 import { useNotifications } from '@/context/notification-context';
 import { formatDistanceToNow } from 'date-fns';
@@ -24,7 +23,6 @@ import { id } from 'date-fns/locale';
 
 export function Header() {
   const { user, logout } = useAuth();
-  const { totalItems } = useCart();
   const { notifications, markAsRead } = useNotifications();
   const router = useRouter();
   const pathname = usePathname();
@@ -70,10 +68,10 @@ export function Header() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
-                        <DropdownMenuItem onSelect={() => router.push('/cashier')}><ShoppingBasket className="mr-2"/> Kasir</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => router.push('/purchases')}><ShoppingBag className="mr-2"/> Pembelian</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => router.push('/returns')}><Undo2 className="mr-2"/> Retur Penjualan</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => router.push('/stock-opname')}><History className="mr-2"/> Stok Opname</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => router.push('/cashier')}>Penjualan Langsung</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => router.push('/purchases')}>Pembelian Stok</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => router.push('/returns')}>Retur Penjualan</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => router.push('/stock-opname')}>Stok Opname</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
 
@@ -105,30 +103,22 @@ export function Header() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
                         <DropdownMenuItem onSelect={() => router.push('/settings')}>Pengaturan Umum</DropdownMenuItem>
-                        <DropdownMenuSeparator/>
-                        <DropdownMenuItem onSelect={() => router.push('/settings/accounts')}><Landmark className="mr-2"/> Akun Bank</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => router.push('/settings/products')}>Produk</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => router.push('/settings/customers')}>Pelanggan</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => router.push('/settings/suppliers')}>Supplier</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => router.push('/settings/expeditions')}>Ekspedisi</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => router.push('/settings/packaging')}>Kemasan</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => router.push('/settings/users')}>Pengguna</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </>
                 ) : (
                     <>
                     <Link
+                      href="/shipments"
+                      className={cn("transition-colors hover:text-foreground/80", pathname === '/shipments' ? 'text-foreground' : 'text-foreground/60')}
+                    >
+                      Buat Pesanan
+                    </Link>
+                    <Link
                         href="/my-shipments"
                         className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname.startsWith('/my-shipments') ? 'text-foreground' : 'text-foreground/60')}
                     >
-                       <ListChecks className="h-4 w-4" /> Riwayat Kiriman Saya
-                    </Link>
-                    <Link
-                      href="/products"
-                      className={cn("transition-colors hover:text-foreground/80", pathname === '/products' ? 'text-foreground' : 'text-foreground/60')}
-                    >
-                      Etalase Produk
+                       Riwayat Pesanan Saya
                     </Link>
                     </>
                 )}
@@ -136,53 +126,6 @@ export function Header() {
             )}
           </div>
           <div className="flex items-center gap-2">
-             {user && (
-              <>
-                 <Button asChild variant="ghost" size="icon" className='relative'>
-                    <Link href="/cart">
-                        <ShoppingCart className="h-5 w-5" />
-                         {totalItems > 0 && (
-                            <Badge
-                                variant="destructive"
-                                className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center rounded-full p-0 text-xs"
-                            >
-                                {totalItems}
-                            </Badge>
-                        )}
-                        <span className="sr-only">Keranjang</span>
-                    </Link>
-                 </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="relative">
-                            <Bell className="h-5 w-5" />
-                             {unreadCount > 0 && (
-                                <Badge
-                                    variant="destructive"
-                                    className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center rounded-full p-0 text-xs"
-                                >
-                                    {unreadCount}
-                                </Badge>
-                            )}
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-80">
-                        <DropdownMenuLabel>Notifikasi</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        {notifications.length > 0 ? (
-                            notifications.map(notif => (
-                                <DropdownMenuItem key={notif.id} onSelect={() => markAsRead(notif.id)} className={cn("flex flex-col items-start gap-1 whitespace-normal", !notif.isRead && "bg-blue-50 dark:bg-blue-900/20")}>
-                                   <p className="text-sm font-medium">{notif.message}</p>
-                                   <p className="text-xs text-muted-foreground">{formatDistanceToNow(notif.createdAt, { addSuffix: true, locale: id })}</p>
-                                </DropdownMenuItem>
-                            ))
-                        ) : (
-                           <p className="p-4 text-center text-sm text-muted-foreground">Tidak ada notifikasi baru.</p>
-                        )}
-                    </DropdownMenuContent>
-                </DropdownMenu>
-              </>
-             )}
             {user ? (
               <>
                 <span className="text-sm text-muted-foreground hidden sm:inline">

@@ -67,8 +67,8 @@ export interface Shipment {
     transactionId: string;
     customerId: string;
     customerName: string;
-    expedition: string;
-    packagingId: string; // The selected packaging for the whole shipment
+    expedition?: string;
+    packagingId?: string; // The selected packaging for the whole shipment
     accountId: string; // Akun yang menerima pembayaran
     status: 'Proses' | 'Pengemasan' | 'Terkirim';
     paymentStatus: PaymentStatus;
@@ -79,7 +79,7 @@ export interface Shipment {
     products: ShipmentProduct[];
     totalItems: number;
     totalProductCost: number; // Total price of products
-    totalPackingCost: number; // Total of all packing fees
+    totalPackingCost?: number; // Total of all packing fees
     totalAmount: number; // Grand total (totalProductCost + totalPackingCost)
     totalRevenue: number; // Explicitly store revenue
     createdAt: string; // ISO String for when it was added
