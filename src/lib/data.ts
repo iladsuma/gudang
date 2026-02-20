@@ -1,4 +1,5 @@
 
+
 import type { 
     Shipment, 
     Expedition, 
@@ -15,6 +16,7 @@ import type {
     Transfer,
     StockMovement
 } from './types';
+import initialData from '../../db.json';
 
 
 // Helper function to handle API responses
@@ -30,9 +32,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 // User Functions
 // =================================
 export async function getUsers(): Promise<User[]> {
-    const response = await fetch('/db.json');
-    const data = await response.json();
-    return data.users || [];
+    return Promise.resolve(initialData.users || []);
 }
 
 export async function addUser(user: Omit<User, 'id'>): Promise<User> {
@@ -60,9 +60,7 @@ export async function deleteUser(id: string): Promise<{ id: string }> {
 // Shipment Functions
 // =================================
 export async function getShipments(): Promise<Shipment[]> {
-    const response = await fetch('/db.json');
-    const data = await response.json();
-    return data.shipments || [];
+    return Promise.resolve(initialData.shipments || []);
 }
 
 export async function addShipment(shipment: Omit<Shipment, 'id' | 'createdAt' | 'status'>): Promise<Shipment> {
@@ -108,9 +106,7 @@ export async function processShipmentsToDelivered(shipmentIds: string[]): Promis
 // Settings Functions (Expedition, Packaging, Customer, Supplier, Products)
 // =================================
 export async function getExpeditions(): Promise<Expedition[]> {
-    const response = await fetch('/db.json');
-    const data = await response.json();
-    return data.expeditions || [];
+    return Promise.resolve(initialData.expeditions || []);
 }
 export async function addExpedition(name: string): Promise<Expedition> {
     const newExpedition = { id: `exp_${Date.now()}`, name };
@@ -128,9 +124,7 @@ export async function deleteExpedition(id: string): Promise<{ id: string }> {
 }
 
 export async function getPackagingOptions(): Promise<Packaging[]> {
-    const response = await fetch('/db.json');
-    const data = await response.json();
-    return data.packagingOptions || [];
+    return Promise.resolve(initialData.packagingOptions || []);
 }
 export async function addPackagingOption(option: Omit<Packaging, 'id'>): Promise<Packaging> {
     const newOption = { ...option, id: `pkg_${Date.now()}` };
@@ -148,9 +142,7 @@ export async function deletePackagingOption(id: string): Promise<{ id: string }>
 }
 
 export async function getCustomers(): Promise<Customer[]> {
-    const response = await fetch('/db.json');
-    const data = await response.json();
-    return data.customers || [];
+    return Promise.resolve(initialData.customers || []);
 }
 export async function addCustomer(customer: Omit<Customer, 'id'>): Promise<Customer> {
     const newCustomer = { ...customer, id: `cust_${Date.now()}` };
@@ -168,9 +160,7 @@ export async function deleteCustomer(id: string): Promise<{ id: string }> {
 }
 
 export async function getSuppliers(): Promise<Supplier[]> {
-    const response = await fetch('/db.json');
-    const data = await response.json();
-    return data.suppliers || [];
+    return Promise.resolve(initialData.suppliers || []);
 }
 export async function addSupplier(supplier: Omit<Supplier, 'id'>): Promise<Supplier> {
     const newSupplier = { ...supplier, id: `sup_${Date.now()}` };
@@ -193,9 +183,7 @@ export async function deleteSupplier(id: string): Promise<{ id: string }> {
 // =================================
 
 export async function getProducts(): Promise<Product[]> {
-    const response = await fetch('/db.json');
-    const data = await response.json();
-    return data.products || [];
+    return Promise.resolve(initialData.products || []);
 }
 
 export async function addProduct(productData: Omit<Product, 'id'>): Promise<Product> {
@@ -252,9 +240,7 @@ export async function bulkUpdateProductStock(updates: { code: string; physicalSt
 // =================================
 
 export async function getAccounts(): Promise<Account[]> {
-    const response = await fetch('/db.json');
-    const data = await response.json();
-    return data.accounts || [];
+    return Promise.resolve(initialData.accounts || []);
 }
 export async function addAccount(account: Omit<Account, 'id' | 'createdAt' | 'balance'> & { balance?: number }): Promise<Account> {
     const newAccount = { ...account, id: `acc_${Date.now()}`, createdAt: new Date().toISOString(), balance: account.balance || 0 };
@@ -273,9 +259,12 @@ export async function deleteAccount(id: string): Promise<{ id: string }> {
 
 
 export async function getFinancialTransactions(accountId?: string, startDate?: string, endDate?: string): Promise<FinancialTransaction[]> {
-    const response = await fetch('/db.json');
-    const data = await response.json();
-    return (data.financialTransactions || []).map((t: any) => ({...t, transactionDate: t.transactionDate.toString()}));
+    const transactions = initialData.financialTransactions.map(t => ({
+        ...t,
+        account: { name: initialData.accounts.find(a => a.id === t.accountId)?.name || 'N/A' }
+    })) as unknown as FinancialTransaction[];
+
+    return Promise.resolve(transactions || []);
 }
 
 export async function addFinancialTransaction(transaction: Omit<FinancialTransaction, 'id' | 'createdAt' | 'account'>): Promise<FinancialTransaction> {
@@ -311,9 +300,7 @@ export async function processDirectSale(user: User, customerId: string, cart: an
 }
 
 export async function getPurchases(): Promise<Purchase[]> {
-    const response = await fetch('/db.json');
-    const data = await response.json();
-    return data.purchases || [];
+    return Promise.resolve(initialData.purchases || []);
 }
 
 export async function addPurchase(purchase: any): Promise<Purchase> {
@@ -323,9 +310,7 @@ export async function addPurchase(purchase: any): Promise<Purchase> {
 }
 
 export async function getReturns(): Promise<Return[]> {
-    const response = await fetch('/db.json');
-    const data = await response.json();
-    return data.returns || [];
+    return Promise.resolve(initialData.returns || []);
 }
 
 export async function addReturn(retur: any): Promise<Return> {
@@ -373,4 +358,3 @@ export async function getStockOpnameMovements(startDate?: Date, endDate?: Date):
     console.log('Getting stock opname movements', startDate, endDate);
     return Promise.resolve([]);
 }
-
