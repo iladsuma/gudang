@@ -67,7 +67,7 @@ export function Header() {
                       href="/shipments"
                       className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname.startsWith('/shipments') ? 'text-foreground' : 'text-foreground/60')}
                     >
-                       <Truck className="h-4 w-4" /> Antrian Kemas
+                       <ShoppingBasket className="h-4 w-4" /> Pemesanan Produk
                     </Link>
                   </>
                 ) : (

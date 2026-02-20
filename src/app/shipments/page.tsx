@@ -18,8 +18,8 @@ function ShipmentsPageContent() {
   const { user, loading: authLoading } = useAuth();
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [pageTitle, setPageTitle] = useState('Rekapitulasi Pengiriman');
-  const [pageDescription, setPageDescription] = useState("Kelola semua data pengiriman barang masuk Anda.");
+  const [pageTitle, setPageTitle] = useState('Riwayat Pengiriman Saya');
+  const [pageDescription, setPageDescription] = useState("Lacak semua pengiriman yang telah Anda buat dan statusnya saat ini.");
 
   const fetchAndSetData = useCallback(async () => {
     if (!user) return;
@@ -29,8 +29,8 @@ function ShipmentsPageContent() {
         
         if(user?.role === 'admin') {
             setShipments(shipmentData.filter(s => s.status === 'Proses'));
-            setPageTitle('Antrian Kemas');
-            setPageDescription("Pilih pengiriman yang akan diproses. Stok akan dikurangi dan status akan diubah menjadi 'Pengemasan'.");
+            setPageTitle('Pemesanan Produk');
+            setPageDescription("Halaman ini digunakan oleh pemilik/admin untuk memilih produk yang akan dipesan. Pemesanan produk dirancang agar proses pencarian dan pencatatan pesanan dapat dilakukan dengan cepat dan efisien.");
         } else {
             const currentUser = allUsersData.find(u => u.id === user.id);
             if (currentUser) {

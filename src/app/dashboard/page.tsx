@@ -9,7 +9,7 @@ import type { Product, Shipment, FinancialTransaction } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Boxes, Package, DollarSign, Truck, CheckCircle, Expand, Send, AlertTriangle, Settings, PiggyBank, Warehouse, TrendingUp, TrendingDown } from 'lucide-react';
+import { Boxes, Package, DollarSign, Truck, CheckCircle, Expand, Send, Settings, PiggyBank, Warehouse, TrendingUp, TrendingDown } from 'lucide-react';
 import Link from 'next/link';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Brush, Legend, PieChart, Pie, Cell } from 'recharts';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -22,7 +22,6 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface ProductMetric {
     productId: string;
@@ -45,7 +44,6 @@ export default function DashboardPage() {
     const router = useRouter();
     const [stats, setStats] = React.useState({
         shipmentsDeliveredInRange: 0,
-        lowStockCount: 0,
         totalAssetValue: 0,
         cashBalance: 0,
     });
@@ -53,7 +51,6 @@ export default function DashboardPage() {
     const [slowMovingProducts, setSlowMovingProducts] = React.useState<ProductMetric[]>([]);
     const [categoryAnalysis, setCategoryAnalysis] = React.useState<CategoryMetric[]>([]);
     const [recentActivity, setRecentActivity] = React.useState<Shipment[]>([]);
-    const [lowStockProducts, setLowStockProducts] = React.useState<Product[]>([]);
     const [loadingData, setLoadingData] = React.useState(true);
     const [dateRange, setDateRange] = React.useState<DateRange | undefined>({
         from: subDays(new Date(), 29),
@@ -91,9 +88,6 @@ export default function DashboardPage() {
                 
                 const deliveredInRange = shipmentsInRange.filter(s => s.status === 'Terkirim');
                 
-                const lowStockItems = products.filter(p => p.stock <= p.minStock);
-                setLowStockProducts(lowStockItems);
-
                 const totalAssetValue = products.reduce((sum, p) => sum + (p.costPrice * p.stock), 0);
 
                 const cashBalance = financialTransactions.reduce((balance, tx) => {
@@ -102,7 +96,6 @@ export default function DashboardPage() {
 
                 setStats({
                     shipmentsDeliveredInRange: deliveredInRange.length,
-                    lowStockCount: lowStockItems.length,
                     totalAssetValue,
                     cashBalance
                 });
@@ -267,57 +260,7 @@ export default function DashboardPage() {
                 </div>
             </div>
 
-             {lowStockProducts.length > 0 && (
-                <Alert variant="destructive">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertTitle>Peringatan Stok Menipis!</AlertTitle>
-                    <AlertDescription>
-                       Ada {lowStockProducts.length} produk yang stoknya di bawah batas minimal. Segera lakukan restok.
-                       <div className='mt-2'>
-                           <Dialog>
-                               <DialogTrigger asChild>
-                                   <Button variant="link" className="p-0 h-auto">Lihat Detail Produk</Button>
-                               </DialogTrigger>
-                               <DialogContent>
-                                   <DialogHeader>
-                                       <DialogTitle>Produk Stok Menipis</DialogTitle>
-                                       <DialogDescription>Daftar produk yang perlu segera direstok.</DialogDescription>
-                                   </DialogHeader>
-                                   <div className='max-h-96 overflow-y-auto -mx-6 px-6'>
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Produk</TableHead>
-                                                <TableHead>Sisa Stok</TableHead>
-                                                <TableHead>Stok Min.</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {lowStockProducts.map(p => (
-                                                <TableRow key={p.id}>
-                                                    <TableCell className='font-medium'>{p.name}</TableCell>
-                                                    <TableCell className='text-destructive font-bold'>{p.stock}</TableCell>
-                                                    <TableCell>{p.minStock}</TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                   </div>
-                                    <DialogFooter>
-                                        <Button asChild>
-                                            <Link href="/settings/products">
-                                                <Settings className='mr-2'/> Kelola Stok Produk
-                                            </Link>
-                                        </Button>
-                                    </DialogFooter>
-                               </DialogContent>
-                           </Dialog>
-                       </div>
-                    </AlertDescription>
-                </Alert>
-            )}
-
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                  <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Saldo Kas</CardTitle>
@@ -346,16 +289,6 @@ export default function DashboardPage() {
                     <CardContent>
                         <div className="text-2xl font-bold">{stats.shipmentsDeliveredInRange}</div>
                         <p className="text-xs text-muted-foreground">Total pengiriman selesai dalam rentang tanggal terpilih.</p>
-                    </CardContent>
-                </Card>
-                 <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Produk Stok Menipis</CardTitle>
-                        <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.lowStockCount}</div>
-                        <p className="text-xs text-muted-foreground">Jumlah produk di bawah stok minimal.</p>
                     </CardContent>
                 </Card>
             </div>

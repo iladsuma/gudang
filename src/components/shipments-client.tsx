@@ -81,7 +81,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
   }, [shipments, searchTerm]);
   
   const formatRupiah = (number: number) => {
-    if (number === null || typeof number === 'undefined' || isNaN(number)) return 'Rp 0';
+    if (number === null || typeof number === 'undefined' || isNaN(number)) return '-';
     return new Intl.NumberFormat('id-ID', {
         style: 'currency',
         currency: 'IDR',
@@ -240,17 +240,13 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
                 )}
               </TableHead>
               <TableHead>No. Transaksi</TableHead>
-              <TableHead>User</TableHead>
               <TableHead>Pelanggan</TableHead>
-              <TableHead>Ekspedisi</TableHead>
-               <TableHead>Status</TableHead>
-              <TableHead>Resi</TableHead>
               <TableHead>Produk</TableHead>
-              <TableHead className="text-right">Total Item</TableHead>
-              <TableHead className="text-right">Total Pengemasan</TableHead>
-              <TableHead className="text-right">Total Produk</TableHead>
-              <TableHead className="text-right">Total Keseluruhan</TableHead>
-              <TableHead>Tanggal Dibuat</TableHead>
+              <TableHead>Ukuran Badan</TableHead>
+              <TableHead>DP</TableHead>
+              <TableHead className="text-right">Total</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Tanggal</TableHead>
               <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
@@ -267,50 +263,34 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
                         />
                     )}
                   </TableCell>
-                  <TableCell>{shipment.transactionId}</TableCell>
-                  <TableCell>{getUserName(shipment.userId)}</TableCell>
+                  <TableCell className="font-mono">{shipment.transactionId}</TableCell>
                   <TableCell>{shipment.customerName}</TableCell>
-                  <TableCell>{shipment.expedition}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-col gap-1">
+                      {shipment.products.map((p, index) => (
+                        <Badge key={index} variant="secondary" className="font-normal">
+                          {p.name} (x{p.quantity})
+                        </Badge>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {shipment.bodyMeasurements ? (
+                      <Badge variant="outline" className="font-normal whitespace-pre-wrap">{JSON.stringify(shipment.bodyMeasurements, null, 2)}</Badge>
+                    ) : (
+                      <span className='text-xs text-muted-foreground'>-</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="font-medium">{formatRupiah(shipment.downPayment || 0)}</TableCell>
+                  <TableCell className="text-right font-medium">{formatRupiah(shipment.totalAmount)}</TableCell>
                   <TableCell>
                     <Badge variant={getStatusVariant(shipment.status)}>
                         {shipment.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>
-                    {shipment.receipt ? (
-                      <Button variant="link" className="p-0 h-auto" onClick={(e) => { e.stopPropagation(); openPdf(shipment.receipt!.dataUrl);}}>
-                          <FileText className="mr-2 h-4 w-4" />
-                          {shipment.receipt.fileName}
-                      </Button>
-                    ) : (
-                      <span className='text-xs text-muted-foreground'>-</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col gap-2">
-                      {shipment.products.map((p, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                           <Image
-                            src={p.imageUrl || 'https://placehold.co/100x100.png'}
-                            alt={p.name}
-                            width={32}
-                            height={32}
-                            className="rounded-md object-cover h-8 w-8"
-                           />
-                          <Badge variant="secondary">
-                            {p.name} (x{p.quantity})
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">{shipment.totalItems}</TableCell>
-                  <TableCell className="text-right">{formatRupiah(shipment.totalPackingCost)}</TableCell>
-                  <TableCell className="text-right">{formatRupiah(shipment.totalProductCost)}</TableCell>
-                  <TableCell className="text-right font-medium">{formatRupiah(shipment.totalAmount)}</TableCell>
                    <TableCell>
                     {isClient ? (
-                        format(new Date(shipment.createdAt), 'PPpp', { locale: id })
+                        format(new Date(shipment.createdAt), 'dd MMM yyyy', { locale: id })
                     ) : (
                         <Skeleton className="h-4 w-3/4" />
                     )}
@@ -350,13 +330,13 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={14} className="h-24 text-center">
+                <TableCell colSpan={10} className="h-24 text-center">
                   Tidak ada data pengiriman yang cocok dengan filter.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
-          {shipments.length > 0 && <TableCaption>Daftar semua pengiriman barang masuk yang Anda buat.</TableCaption>}
+          {shipments.length > 0 && <TableCaption>Daftar semua pesanan yang masuk.</TableCaption>}
         </Table>
       </div>
 

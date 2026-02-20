@@ -84,6 +84,8 @@ export interface Shipment {
     totalRevenue: number; // Explicitly store revenue
     createdAt: string; // ISO String for when it was added
     paidAt?: string;
+    downPayment?: number;
+    bodyMeasurements?: any;
 }
 
 export interface ReturnedProduct {
