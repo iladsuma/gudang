@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect } from 'react';
@@ -62,9 +61,9 @@ export default function UsersSettingsPage() {
             </Button>
             <Card>
                 <CardHeader>
-                    <CardTitle>Manajemen Pengguna</CardTitle>
+                    <CardTitle>Manajemen Tim Butik</CardTitle>
                     <CardDescription>
-                        Tambah, hapus, atau edit akun pengguna yang dapat mengakses aplikasi ini.
+                        Kelola akun Pemilik (Admin) dan akun Tim Penjahit (User) yang bertugas memproses pesanan.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>

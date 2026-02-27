@@ -1,8 +1,7 @@
-
 'use client';
 
 import Link from 'next/link';
-import { Boxes, LogOut, LayoutDashboard, Archive, Settings, ArrowRightLeft, PackageCheck, FileBarChart, History, Scale, ShoppingBasket, ClipboardList, Briefcase } from 'lucide-react';
+import { Boxes, LogOut, Archive, Settings, ArrowRightLeft, FileBarChart, ShoppingBasket, ClipboardList, Briefcase, Scissors } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { Button } from './ui/button';
 import { useRouter, usePathname } from 'next/navigation';
@@ -11,19 +10,12 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
-    DropdownMenuSeparator,
-    DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Badge } from './ui/badge';
-import { useNotifications } from '@/context/notification-context';
-import { formatDistanceToNow } from 'date-fns';
-import { id } from 'date-fns/locale';
 
 export function Header() {
   const { user, logout } = useAuth();
-  const { notifications, markAsRead } = useNotifications();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -32,12 +24,9 @@ export function Header() {
     router.push('/login');
   };
   
-  const unreadCount = notifications.filter(n => !n.isRead).length;
-
   const isSettingsPage = pathname.startsWith('/settings');
-  const isTransactionPage = ['/cashier', '/purchases', '/returns', '/stock-opname'].includes(pathname);
+  const isTransactionPage = ['/cashier', '/purchases', '/returns'].includes(pathname);
   const isReportPage = pathname.startsWith('/reports');
-
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -45,8 +34,8 @@ export function Header() {
         <div className="mr-4 flex flex-1 items-center justify-between">
           <div className='flex items-center'>
             <Link href="/" className="mr-6 flex items-center space-x-2">
-              <Boxes className="h-6 w-6 text-primary" />
-              <span className="font-bold sm:inline-block">
+              <Scissors className="h-6 w-6 text-primary" />
+              <span className="font-bold sm:inline-block text-primary">
                 ButikPOS
               </span>
             </Link>
@@ -56,67 +45,61 @@ export function Header() {
                   <>
                      <Link
                       href="/shipments"
-                      className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname.startsWith('/shipments') ? 'text-foreground' : 'text-foreground/60')}
+                      className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname.startsWith('/shipments') ? 'text-foreground font-medium' : 'text-foreground/60')}
                     >
                        <ShoppingBasket className="h-4 w-4" /> Pemesanan Produk
                     </Link>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className={cn("gap-1 px-2 h-auto text-sm transition-colors hover:text-foreground/80", isTransactionPage ? 'text-foreground' : 'text-foreground/60')}>
+                        <Button variant="ghost" className={cn("gap-1 px-2 h-auto text-sm transition-colors hover:text-foreground/80", isTransactionPage ? 'text-foreground font-medium' : 'text-foreground/60')}>
                             <ArrowRightLeft className="h-4 w-4" /> Transaksi
                             <ChevronDown className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
-                        <DropdownMenuItem onSelect={() => router.push('/cashier')}>Penjualan Langsung</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => router.push('/purchases')}>Pembelian Stok</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => router.push('/cashier')}>Penjualan Langsung (Kasir)</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => router.push('/purchases')}>Pembelian Bahan (Kain/Alat)</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => router.push('/returns')}>Retur Penjualan</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => router.push('/stock-opname')}>Stok Opname</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
 
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className={cn("gap-1 px-2 h-auto text-sm transition-colors hover:text-foreground/80", isReportPage ? 'text-foreground' : 'text-foreground/60')}>
+                        <Button variant="ghost" className={cn("gap-1 px-2 h-auto text-sm transition-colors hover:text-foreground/80", isReportPage ? 'text-foreground font-medium' : 'text-foreground/60')}>
                             <FileBarChart className="h-4 w-4" /> Laporan
                             <ChevronDown className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
-                        <DropdownMenuItem onSelect={() => router.push('/reports/sales-profit')}>Laba Rugi</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => router.push('/reports/sales-profit')}>Laporan Laba Rugi</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
 
                     <Link
                       href="/invoices"
-                      className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname === '/invoices' ? 'text-foreground' : 'text-foreground/60')}
+                      className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname === '/invoices' ? 'text-foreground font-medium' : 'text-foreground/60')}
                     >
                       <Archive className="h-4 w-4" /> Arsip
                     </Link>
                     
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className={cn("gap-1 px-2 h-auto text-sm transition-colors hover:text-foreground/80", isSettingsPage ? 'text-foreground' : 'text-foreground/60')}>
-                            <Settings className="h-4 w-4" /> Pengaturan
-                            <ChevronDown className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem onSelect={() => router.push('/settings')}>Pengaturan Umum</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <Link
+                      href="/settings"
+                      className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", isSettingsPage ? 'text-foreground font-medium' : 'text-foreground/60')}
+                    >
+                      <Settings className="h-4 w-4" /> Pengaturan
+                    </Link>
                   </>
                 ) : (
                     <>
                     <Link
                       href="/shipments"
-                      className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname === '/shipments' ? 'text-foreground' : 'text-foreground/60')}
+                      className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname === '/shipments' ? 'text-foreground font-medium' : 'text-foreground/60')}
                     >
                       <ClipboardList className="h-4 w-4" /> Ambil Pesanan
                     </Link>
                     <Link
                         href="/my-shipments"
-                        className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname.startsWith('/my-shipments') ? 'text-foreground' : 'text-foreground/60')}
+                        className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname.startsWith('/my-shipments') ? 'text-foreground font-medium' : 'text-foreground/60')}
                     >
                        <Briefcase className="h-4 w-4" /> Pekerjaan Saya
                     </Link>
@@ -128,11 +111,16 @@ export function Header() {
           <div className="flex items-center gap-2">
             {user ? (
               <>
-                <span className="text-sm text-muted-foreground hidden sm:inline">
-                  Halo, {user.username} ({user.role})
-                </span>
-                <Button variant="ghost" size="icon" onClick={handleLogout}>
-                  <LogOut className="h-4 w-4" />
+                <div className="flex flex-col items-end mr-2">
+                    <span className="text-xs font-semibold text-primary uppercase">
+                        {user.role === 'admin' ? 'Pemilik' : 'Penjahit'}
+                    </span>
+                    <span className="text-sm text-muted-foreground hidden sm:inline">
+                        {user.username}
+                    </span>
+                </div>
+                <Button variant="ghost" size="icon" onClick={handleLogout} title="Keluar">
+                  <LogOut className="h-4 w-4 text-destructive" />
                 </Button>
               </>
             ) : (
