@@ -109,7 +109,7 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
     setIsProcessing(true);
     try {
       await processShipmentsToDelivered(selectedShipments);
-      toast({ title: 'Sukses!', description: `${selectedShipments.length} pengiriman berhasil ditandai terkirim.` });
+      toast({ title: 'Sukses!', description: `${selectedShipments.length} pesanan berhasil ditandai selesai.` });
       onUpdate();
     } catch (error) {
       toast({ variant: 'destructive', title: 'Gagal Memproses', description: error instanceof Error ? error.message : 'Terjadi kesalahan.' });
@@ -121,7 +121,7 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
   const handlePrintLabels = async () => {
     const shipmentsToPrint = shipments.filter(s => selectedShipments.includes(s.id) && s.receipt?.dataUrl);
     if (shipmentsToPrint.length === 0) {
-      toast({ variant: "destructive", title: "Tidak ada resi yang bisa dicetak." });
+      toast({ variant: "destructive", title: "Tidak ada data yang bisa dicetak." });
       return;
     }
 
@@ -138,7 +138,7 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
           const copiedPages = await mergedPdf.copyPages(pdfToMerge, pdfToMerge.getPageIndices());
           if (copiedPages.length > 0) {
             const firstPage = copiedPages[0];
-            firstPage.drawText(`Resi-${counter++}`, { x: 20, y: firstPage.getHeight() - 20, size: 10, font: await mergedPdf.embedFont(StandardFonts.Helvetica) });
+            firstPage.drawText(`Pesanan-${counter++}`, { x: 20, y: firstPage.getHeight() - 20, size: 10, font: await mergedPdf.embedFont(StandardFonts.Helvetica) });
           }
           copiedPages.forEach(page => mergedPdf.addPage(page));
         } catch (e) { console.error(`Failed to process PDF for ${shipment.transactionId}:`, e); }
@@ -181,7 +181,7 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
         
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
-        doc.text("Fam's Warehouse", 20, 45);
+        doc.text("ButikPOS Warehouse", 20, 45);
 
         const rightX = doc.internal.pageSize.getWidth() - 20;
         doc.text(`No Transaksi : ${shipment.transactionId}`, rightX, 45, { align: 'right' });
@@ -284,11 +284,11 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
                  <>
                     <Button onClick={handlePrintLabels} disabled={selectedShipments.length === 0 || isPrinting} variant="outline">
                         {isPrinting ? <Loader2 className='mr-2' /> : <Printer className='mr-2' />}
-                        Cetak Resi ({selectedShipments.length})
+                        Cetak Label ({selectedShipments.length})
                     </Button>
                     <Button onClick={handleProcessToDelivered} disabled={selectedShipments.length === 0 || isProcessing}>
                         {isProcessing ? <Loader2 className='mr-2' /> : <Send className='mr-2' />}
-                        Tandai Terkirim ({selectedShipments.length})
+                        Tandai Selesai ({selectedShipments.length})
                     </Button>
                  </>
             )}
@@ -341,7 +341,7 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
                       </div>
                   </TableCell>
                   <TableCell>
-                      <Badge variant={getStatusVariant(shipment.status)}>{shipment.status}</Badge>
+                      <Badge variant={getStatusVariant(shipment.status)}>{shipment.status === 'Pengemasan' ? 'Sedang Dijahit' : shipment.status}</Badge>
                   </TableCell>
                   <TableCell>{format(new Date(shipment.createdAt), 'dd MMM yyyy, HH:mm', { locale: id })}</TableCell>
                   <TableCell className="text-right">{shipment.totalItems}</TableCell>
@@ -356,7 +356,7 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
               </TableRow>
             )}
           </TableBody>
-          {filteredShipments.length > 0 && <TableCaption>Menampilkan {filteredShipments.length} dari {shipments.length} total pengiriman.</TableCaption>}
+          {filteredShipments.length > 0 && <TableCaption>Menampilkan {filteredShipments.length} dari {shipments.length} total pesanan.</TableCaption>}
         </Table>
       </div>
     </div>

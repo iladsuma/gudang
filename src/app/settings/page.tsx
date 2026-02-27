@@ -14,7 +14,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, Users, Scissors, Landmark, Truck, Package, UserCog, ShoppingBag } from 'lucide-react';
+import { ChevronRight, Users, Scissors, Landmark, UserCog, ShoppingBag } from 'lucide-react';
 
 export default function SettingsPage() {
     const { user, loading } = useAuth();
@@ -141,50 +141,6 @@ export default function SettingsPage() {
                        <Button asChild variant="outline" className="w-full">
                            <Link href="/settings/suppliers">
                                 Kelola Supplier <ChevronRight className="ml-2 h-4 w-4" />
-                           </Link>
-                       </Button>
-                    </CardFooter>
-                </Card>
-
-                <Card className="flex flex-col">
-                    <CardHeader>
-                        <div className="flex items-center gap-2 text-primary mb-2">
-                            <Truck className="h-5 w-5" />
-                            <CardTitle>Ekspedisi Pengiriman</CardTitle>
-                        </div>
-                        <CardDescription>
-                            Daftar jasa pengiriman yang tersedia untuk mengirim pesanan yang sudah jadi.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex-grow">
-                       <p className="text-sm text-muted-foreground">Tambah atau edit kurir seperti JNE, J&T, atau kurir lokal.</p>
-                    </CardContent>
-                    <CardFooter>
-                       <Button asChild variant="outline" className="w-full">
-                           <Link href="/settings/expeditions">
-                                Kelola Ekspedisi <ChevronRight className="ml-2 h-4 w-4" />
-                           </Link>
-                       </Button>
-                    </CardFooter>
-                </Card>
-
-                 <Card className="flex flex-col">
-                    <CardHeader>
-                        <div className="flex items-center gap-2 text-primary mb-2">
-                            <Package className="h-5 w-5" />
-                            <CardTitle>Kemasan & Packaging</CardTitle>
-                        </div>
-                        <CardDescription>
-                            Atur tipe kemasan (Paperbag, Box Exclusive) dan biaya tambahannya.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex-grow">
-                       <p className="text-sm text-muted-foreground">Tentukan biaya kemasan yang akan muncul di rincian tagihan.</p>
-                    </CardContent>
-                    <CardFooter>
-                       <Button asChild variant="outline" className="w-full">
-                           <Link href="/settings/packaging">
-                                Kelola Kemasan <ChevronRight className="ml-2 h-4 w-4" />
                            </Link>
                        </Button>
                     </CardFooter>

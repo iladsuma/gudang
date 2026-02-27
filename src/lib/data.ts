@@ -1,8 +1,6 @@
 
 import type { 
     Shipment, 
-    Expedition, 
-    Packaging, 
     User, 
     Customer, 
     Supplier,
@@ -172,56 +170,6 @@ export async function processShipmentsToDelivered(shipmentIds: string[]): Promis
     return { count };
 }
 
-export async function getExpeditions(): Promise<Expedition[]> {
-    const db = getDB();
-    return db.expeditions || [];
-}
-export async function addExpedition(name: string): Promise<Expedition> {
-    const db = getDB();
-    const newExp = { id: `exp_${Date.now()}`, name };
-    db.expeditions.push(newExp);
-    saveDB(db);
-    return newExp;
-}
-export async function updateExpedition(id: string, name: string): Promise<Expedition> {
-    const db = getDB();
-    const item = db.expeditions.find((e: any) => e.id === id);
-    if (item) item.name = name;
-    saveDB(db);
-    return item;
-}
-export async function deleteExpedition(id: string): Promise<{ id: string }> {
-    const db = getDB();
-    db.expeditions = db.expeditions.filter((e: any) => e.id !== id);
-    saveDB(db);
-    return { id };
-}
-
-export async function getPackagingOptions(): Promise<Packaging[]> {
-    const db = getDB();
-    return db.packagingOptions || [];
-}
-export async function addPackagingOption(option: Omit<Packaging, 'id'>): Promise<Packaging> {
-    const db = getDB();
-    const newOpt = { ...option, id: `pkg_${Date.now()}` };
-    db.packagingOptions.push(newOpt);
-    saveDB(db);
-    return newOpt;
-}
-export async function updatePackagingOption(id: string, option: Omit<Packaging, 'id'>): Promise<Packaging> {
-    const db = getDB();
-    const idx = db.packagingOptions.findIndex((o: any) => o.id === id);
-    if (idx !== -1) db.packagingOptions[idx] = { ...option, id };
-    saveDB(db);
-    return db.packagingOptions[idx];
-}
-export async function deletePackagingOption(id: string): Promise<{ id: string }> {
-    const db = getDB();
-    db.packagingOptions = db.packagingOptions.filter((o: any) => o.id !== id);
-    saveDB(db);
-    return { id };
-}
-
 export async function getCustomers(): Promise<Customer[]> {
     const db = getDB();
     return db.customers || [];
@@ -343,37 +291,6 @@ export async function updateProductStock(productId: string, physicalStock: numbe
     
     saveDB(db);
     return product;
-}
-
-export async function bulkUpdateProductStock(updates: { code: string; physicalStock: number; notes: string }[]): Promise<{ success: number; failure: number }> {
-    const db = getDB();
-    let success = 0;
-    let failure = 0;
-    
-    for (const update of updates) {
-        const product = db.products.find((p: any) => p.code === update.code);
-        if (product) {
-            const stockBefore = product.stock;
-            const diff = update.physicalStock - stockBefore;
-            product.stock = update.physicalStock;
-            db.stockMovements.push({
-                id: `sm_${Date.now()}_${product.id}`,
-                productId: product.id,
-                type: 'Stok Opname',
-                quantityChange: diff,
-                stockBefore,
-                stockAfter: update.physicalStock,
-                notes: update.notes,
-                createdAt: new Date().toISOString(),
-            });
-            success++;
-        } else {
-            failure++;
-        }
-    }
-    
-    saveDB(db);
-    return { success, failure };
 }
 
 export async function getAccounts(): Promise<Account[]> {
@@ -751,21 +668,4 @@ export async function getSalesProfitReport(startDate: Date, endDate: Date, userI
         netProfit: grossProfit - opExpenses,
         transactionDetails: details,
     };
-}
-
-export async function getStockOpnameMovements(startDate?: Date, endDate?: Date): Promise<(StockMovement & { productCode: string, productName: string })[]> {
-    const db = getDB();
-    let movements = db.stockMovements.filter((m: any) => m.type === 'Stok Opname');
-    
-    if (startDate) movements = movements.filter((m: any) => new Date(m.createdAt) >= startDate);
-    if (endDate) movements = movements.filter((m: any) => new Date(m.createdAt) <= endDate);
-    
-    return movements.map((m: any) => {
-        const product = db.products.find((p: any) => p.id === m.productId);
-        return {
-            ...m,
-            productCode: product?.code || 'N/A',
-            productName: product?.name || 'N/A',
-        };
-    });
 }

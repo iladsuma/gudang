@@ -76,20 +76,17 @@ export interface Shipment {
     transactionId: string;
     customerId: string;
     customerName: string;
-    expedition?: string;
-    packagingId?: string; // The selected packaging for the whole shipment
     accountId: string; // Akun yang menerima pembayaran
     status: 'Proses' | 'Pengemasan' | 'Terkirim';
     paymentStatus: PaymentStatus;
-    receipt?: { // Receipt is now optional
+    receipt?: { 
         fileName: string;
         dataUrl: string; // Base64 encoded PDF
     };
     products: ShipmentProduct[];
     totalItems: number;
     totalProductCost: number; // Total price of products
-    totalPackingCost?: number; // Total of all packing fees
-    totalAmount: number; // Grand total (totalProductCost + totalPackingCost)
+    totalAmount: number; // Grand total
     totalRevenue: number; // Explicitly store revenue
     createdAt: string; // ISO String for when it was added
     paidAt?: string;
@@ -162,17 +159,6 @@ export interface Checkout {
     totalBatchItems: number; // Sum of all items from all shipments in the batch
     totalBatchAmount: number; // Sum of all amounts from all shipments in the batch
     createdAt: string; // ISO String for when it was processed
-}
-
-export interface Expedition {
-    id: string;
-    name:string;
-}
-
-export interface Packaging {
-    id: string;
-    name: string;
-    cost: number;
 }
 
 export interface CartItem extends Product {
