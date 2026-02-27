@@ -19,11 +19,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, Receipt, Loader2 } from 'lucide-react';
+import { CalendarIcon, Receipt, Loader2, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { cn } from '@/lib/utils';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const formatRupiah = (number: number) => {
     if (isNaN(number)) return 'Rp 0';
@@ -69,22 +70,53 @@ function PaymentForm({ shipment, accounts, onFormSuccess }: { shipment: Shipment
         }
     };
 
+    const isFinished = shipment.status === 'Terkirim';
+
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-                <Button size="sm"><Receipt className="mr-2 h-4 w-4" /> Terima Bayaran</Button>
+                <Button size="sm" variant={isFinished ? "default" : "outline"}>
+                    <Receipt className="mr-2 h-4 w-4" /> Terima Bayaran
+                </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Terima Pembayaran Piutang</DialogTitle>
                 </DialogHeader>
-                <div className="text-sm space-y-2">
-                    <p className="flex justify-between"><span>No. Transaksi:</span> <span className="font-medium">{shipment.transactionId}</span></p>
-                    <p className="flex justify-between"><span>Pelanggan:</span> <span className="font-medium">{shipment.customerName}</span></p>
-                    <p className="flex justify-between text-lg"><span>Total Tagihan:</span> <span className="font-bold">{formatRupiah(shipment.totalAmount)}</span></p>
+                
+                {!isFinished && (
+                    <Alert variant="destructive" className="bg-amber-50 border-amber-200 text-amber-900">
+                        <AlertTriangle className="h-4 w-4 text-amber-600" />
+                        <AlertTitle className="text-amber-800 font-semibold">Peringatan: Pesanan Belum Selesai</AlertTitle>
+                        <AlertDescription className="text-amber-700">
+                            Jahitan untuk pesanan ini masih berstatus <strong>{shipment.status === 'Proses' ? 'Baru' : 'Sedang Dijahit'}</strong>. Pastikan pelanggan memang ingin melunasi sekarang sebelum pesanan selesai.
+                        </AlertDescription>
+                    </Alert>
+                )}
+
+                <div className="text-sm space-y-2 py-2">
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">No. Transaksi:</span>
+                        <span className="font-mono font-medium">{shipment.transactionId}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Pelanggan:</span>
+                        <span className="font-medium">{shipment.customerName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Status Jahitan:</span>
+                        <Badge variant={isFinished ? "default" : "secondary"}>
+                            {shipment.status === 'Proses' ? 'Baru' : shipment.status === 'Pengemasan' ? 'Sedang Dijahit' : 'Selesai'}
+                        </Badge>
+                    </div>
+                    <div className="flex justify-between text-lg pt-2 border-t">
+                        <span>Sisa Tagihan:</span>
+                        <span className="font-bold text-primary">{formatRupiah(shipment.totalAmount - (shipment.downPayment || 0))}</span>
+                    </div>
                 </div>
+
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 border-t pt-4">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-2">
                         <FormField control={form.control} name="accountId" render={({ field }) => (
                             <FormItem><FormLabel>Pembayaran Masuk ke Akun</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -118,11 +150,11 @@ function PaymentForm({ shipment, accounts, onFormSuccess }: { shipment: Shipment
                                 </FormItem>
                             )}
                         />
-                        <DialogFooter>
+                        <DialogFooter className="gap-2 sm:gap-0">
                             <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Batal</Button>
                             <Button type="submit" disabled={isSubmitting}>
                                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Konfirmasi Pembayaran
+                                Konfirmasi Pelunasan
                             </Button>
                         </DialogFooter>
                     </form>
@@ -144,6 +176,7 @@ export default function ReceivablesPage() {
         setDataLoading(true);
         try {
             const [shipmentsData, accountsData] = await Promise.all([getShipments(), getAccounts()]);
+            // Hanya tampilkan yang belum lunas
             setReceivables(shipmentsData.filter(s => s.paymentStatus === 'Belum Lunas'));
             setAccounts(accountsData);
         } catch (error) {
@@ -162,7 +195,7 @@ export default function ReceivablesPage() {
         }
     }, [user, authLoading, router, fetchData]);
 
-    const totalReceivables = receivables.reduce((sum, item) => sum + item.totalAmount, 0);
+    const totalReceivables = receivables.reduce((sum, item) => sum + (item.totalAmount - (item.downPayment || 0)), 0);
 
     if (authLoading || (dataLoading && user?.role === 'admin')) {
         return <div className="container mx-auto p-4 md:p-8"><Card><CardHeader><Skeleton className="h-8 w-1/4" /><Skeleton className="h-4 w-1/2" /></CardHeader><CardContent><Skeleton className="h-96 w-full" /></CardContent></Card></div>;
@@ -176,14 +209,14 @@ export default function ReceivablesPage() {
         <div className="container mx-auto p-4 md:p-8">
             <Card>
                 <CardHeader>
-                    <div className="flex justify-between items-start">
+                    <div className="flex flex-col md:flex-row justify-between items-start gap-4">
                         <div>
-                            <CardTitle>Piutang Usaha</CardTitle>
-                            <CardDescription>Daftar semua faktur penjualan kepada pelanggan yang belum lunas.</CardDescription>
+                            <CardTitle>Piutang Usaha (Pelunasan Pesanan)</CardTitle>
+                            <CardDescription>Daftar semua faktur penjualan kepada pelanggan yang masih memiliki sisa tagihan.</CardDescription>
                         </div>
-                        <div className="text-right">
-                             <p className="text-sm text-muted-foreground">Total Piutang</p>
-                             <p className="text-2xl font-bold">{formatRupiah(totalReceivables)}</p>
+                        <div className="text-right p-4 bg-primary/5 rounded-lg border border-primary/10">
+                             <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider">Total Piutang Belum Tertagih</p>
+                             <p className="text-3xl font-bold text-primary">{formatRupiah(totalReceivables)}</p>
                         </div>
                     </div>
                 </CardHeader>
@@ -192,30 +225,47 @@ export default function ReceivablesPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Tanggal Transaksi</TableHead>
                                     <TableHead>No. Transaksi</TableHead>
                                     <TableHead>Pelanggan</TableHead>
-                                    <TableHead className="text-right">Jumlah Tagihan</TableHead>
+                                    <TableHead>Status Jahitan</TableHead>
+                                    <TableHead className="text-right">Total Nilai</TableHead>
+                                    <TableHead className="text-right">Sudah DP</TableHead>
+                                    <TableHead className="text-right">Sisa Tagihan</TableHead>
                                     <TableHead className="w-[150px] text-center">Aksi</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {receivables.length > 0 ? (
-                                    receivables.map(item => (
-                                        <TableRow key={item.id}>
-                                            <TableCell>{format(new Date(item.createdAt), 'dd MMM yyyy', {locale: id})}</TableCell>
-                                            <TableCell className="font-mono">{item.transactionId}</TableCell>
-                                            <TableCell className="font-medium">{item.customerName}</TableCell>
-                                            <TableCell className="text-right font-semibold">{formatRupiah(item.totalAmount)}</TableCell>
-                                            <TableCell className="text-center">
-                                                <PaymentForm shipment={item} accounts={accounts} onFormSuccess={fetchData} />
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
+                                    receivables.map(item => {
+                                        const remaining = item.totalAmount - (item.downPayment || 0);
+                                        const isFinished = item.status === 'Terkirim';
+                                        
+                                        return (
+                                            <TableRow key={item.id} className={cn(!isFinished && "bg-slate-50/50")}>
+                                                <TableCell className="font-mono text-xs font-medium">{item.transactionId}</TableCell>
+                                                <TableCell className="font-medium">{item.customerName}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant={isFinished ? "default" : "outline"} className={cn("flex w-fit items-center gap-1", isFinished ? "bg-green-600" : "")}>
+                                                        {isFinished ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                                                        {item.status === 'Proses' ? 'Baru' : item.status === 'Pengemasan' ? 'Sedang Dijahit' : 'Selesai'}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="text-right text-muted-foreground">{formatRupiah(item.totalAmount)}</TableCell>
+                                                <TableCell className="text-right text-red-600">-{formatRupiah(item.downPayment || 0)}</TableCell>
+                                                <TableCell className="text-right font-bold text-primary">{formatRupiah(remaining)}</TableCell>
+                                                <TableCell className="text-center">
+                                                    <PaymentForm shipment={item} accounts={accounts} onFormSuccess={fetchData} />
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })
                                 ) : (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="h-24 text-center">
-                                            Tidak ada piutang usaha yang belum dibayar.
+                                        <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                                            <div className="flex flex-col items-center gap-2">
+                                                <CheckCircle2 className="h-8 w-8 text-green-500" />
+                                                <p>Semua piutang telah lunas atau belum ada transaksi baru.</p>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 )}
