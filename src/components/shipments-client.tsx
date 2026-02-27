@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Shipment, BodyMeasurements } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2, Loader2, Pencil, CheckCircle, Printer, DollarSign } from 'lucide-react';
+import { PlusCircle, Trash2, Loader2, Pencil, CheckCircle, Printer } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -288,7 +288,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
               <TableHead>Pelanggan</TableHead>
               <TableHead>Item Pesanan</TableHead>
               <TableHead>Ukuran (cm)</TableHead>
-              <TableHead>Pembayaran</TableHead>
+              {isAdminView && <TableHead>Pembayaran</TableHead>}
               <TableHead className="text-right">Total Tagihan</TableHead>
               <TableHead>Status Jahit</TableHead>
               <TableHead>Tanggal</TableHead>
@@ -339,16 +339,18 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
                         </Tooltip>
                     </TooltipProvider>
                   </TableCell>
-                  <TableCell>
-                      <div className="flex flex-col gap-1">
-                        <Badge variant={shipment.paymentStatus === 'Lunas' ? 'default' : 'destructive'} className="w-fit text-[10px]">
-                            {shipment.paymentStatus === 'Lunas' ? 'LUNAS' : 'BELUM LUNAS'}
-                        </Badge>
-                        {(shipment.downPayment || 0) > 0 && shipment.paymentStatus !== 'Lunas' && (
-                            <span className="text-[10px] text-muted-foreground">DP: {formatRupiah(shipment.downPayment || 0)}</span>
-                        )}
-                      </div>
-                  </TableCell>
+                  {isAdminView && (
+                    <TableCell>
+                        <div className="flex flex-col gap-1">
+                          <Badge variant={shipment.paymentStatus === 'Lunas' ? 'default' : 'destructive'} className="w-fit text-[10px]">
+                              {shipment.paymentStatus === 'Lunas' ? 'LUNAS' : 'BELUM LUNAS'}
+                          </Badge>
+                          {(shipment.downPayment || 0) > 0 && shipment.paymentStatus !== 'Lunas' && (
+                              <span className="text-[10px] text-muted-foreground">DP: {formatRupiah(shipment.downPayment || 0)}</span>
+                          )}
+                        </div>
+                    </TableCell>
+                  )}
                   <TableCell className="text-right font-bold">{formatRupiah(shipment.totalAmount)}</TableCell>
                   <TableCell>
                     <Badge variant={getStatusVariant(shipment.status)}>
@@ -405,7 +407,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={isAdminView ? 10 : 9} className="h-24 text-center text-muted-foreground">
                   Belum ada pesanan masuk yang tersedia.
                 </TableCell>
               </TableRow>

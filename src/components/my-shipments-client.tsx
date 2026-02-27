@@ -89,7 +89,6 @@ export function MyShipmentsClient({ shipments: initialShipments, onUpdate }: { s
               <TableHead>Pelanggan</TableHead>
               <TableHead>Produk</TableHead>
               <TableHead>Ukuran</TableHead>
-              <TableHead>Pembayaran</TableHead>
               <TableHead>Status Jahit</TableHead>
               <TableHead className="text-right">Total Tagihan</TableHead>
               <TableHead className="text-right">Aksi</TableHead>
@@ -123,11 +122,6 @@ export function MyShipmentsClient({ shipments: initialShipments, onUpdate }: { s
                   <TableCell>
                       <span className='text-[10px] whitespace-pre-wrap'>{typeof shipment.bodyMeasurements === 'string' ? shipment.bodyMeasurements : `LD:${shipment.bodyMeasurements?.ld || '-'} | LP:${shipment.bodyMeasurements?.lp || '-'}`}</span>
                   </TableCell>
-                  <TableCell>
-                      <Badge variant={shipment.paymentStatus === 'Lunas' ? 'default' : 'destructive'} className="text-[10px]">
-                          {shipment.paymentStatus === 'Lunas' ? 'LUNAS' : 'BELUM LUNAS'}
-                      </Badge>
-                  </TableCell>
                    <TableCell>
                       <Badge variant={getStatusVariant(shipment.status)}>
                           {shipment.status === 'Pengemasan' ? 'Sedang Dijahit' : shipment.status === 'Terkirim' ? 'Selesai' : shipment.status}
@@ -146,7 +140,7 @@ export function MyShipmentsClient({ shipments: initialShipments, onUpdate }: { s
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center">
+                <TableCell colSpan={7} className="h-24 text-center">
                   Tidak ada pesanan yang sedang Anda kerjakan.
                 </TableCell>
               </TableRow>
