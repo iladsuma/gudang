@@ -19,14 +19,18 @@ import {
 } from "@/components/ui/accordion"
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { ArrowRight, FileText } from 'lucide-react';
+import { ArrowRight, FileText, CheckCircle, Loader2 } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { processShipmentsToDelivered } from '@/lib/data';
+import { useToast } from '@/hooks/use-toast';
 
-export function MyShipmentsClient({ shipments: initialShipments }: { shipments: Shipment[] }) {
+export function MyShipmentsClient({ shipments: initialShipments, onUpdate }: { shipments: Shipment[], onUpdate?: () => void }) {
   const [shipments, setShipments] = React.useState(initialShipments);
   const [searchTerm, setSearchTerm] = React.useState('');
+  const [isProcessing, setIsProcessing] = React.useState<string | null>(null);
+  const { toast } = useToast();
 
   React.useEffect(() => {
     setShipments(initialShipments);
@@ -38,13 +42,12 @@ export function MyShipmentsClient({ shipments: initialShipments }: { shipments: 
     return shipments.filter(shipment =>
         shipment.transactionId.toLowerCase().includes(lowercasedFilter) ||
         shipment.customerName.toLowerCase().includes(lowercasedFilter) ||
-        shipment.expedition.toLowerCase().includes(lowercasedFilter) ||
         shipment.products.some(p => p.name.toLowerCase().includes(lowercasedFilter))
     );
   }, [shipments, searchTerm]);
   
   const formatRupiah = (number: number) => {
-    return new Intl.NumberFormat('id-ID', {}).format(number);
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
   };
   
   const getStatusVariant = (status: Shipment['status']) => {
@@ -56,16 +59,24 @@ export function MyShipmentsClient({ shipments: initialShipments }: { shipments: 
     }
   };
 
-  const openPdf = (dataUrl: string) => {
-    const pdfWindow = window.open("");
-    pdfWindow?.document.write(`<iframe width='100%' height='100%' src='${dataUrl}' title='pratinjau-pdf'></iframe>`);
-  };
+  const handleMarkAsDone = async (shipmentId: string) => {
+    setIsProcessing(shipmentId);
+    try {
+        await processShipmentsToDelivered([shipmentId]);
+        toast({ title: 'Sukses', description: 'Pesanan telah ditandai sebagai selesai.' });
+        if (onUpdate) onUpdate();
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Gagal', description: 'Terjadi kesalahan.' });
+    } finally {
+        setIsProcessing(null);
+    }
+  }
 
   return (
     <div className='space-y-4'>
         <div className="flex justify-end">
             <Input 
-                placeholder="Cari transaksi..."
+                placeholder="Cari pesanan..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 className="w-full md:w-80"
@@ -76,12 +87,12 @@ export function MyShipmentsClient({ shipments: initialShipments }: { shipments: 
           <TableHeader>
             <TableRow>
               <TableHead>No. Transaksi</TableHead>
-              <TableHead>Tanggal Dibuat</TableHead>
               <TableHead>Pelanggan</TableHead>
+              <TableHead>Produk</TableHead>
+              <TableHead>Ukuran</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Detail Produk</TableHead>
-              <TableHead>Resi</TableHead>
-              <TableHead className="text-right">Total</TableHead>
+              <TableHead className="text-right">Total Tagihan</TableHead>
+              <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -89,13 +100,7 @@ export function MyShipmentsClient({ shipments: initialShipments }: { shipments: 
               filteredShipments.map((shipment) => (
                 <TableRow key={shipment.id}>
                   <TableCell className='font-medium font-mono'>{shipment.transactionId}</TableCell>
-                  <TableCell>{format(new Date(shipment.createdAt), 'dd MMM yyyy, HH:mm', { locale: id })}</TableCell>
                   <TableCell>{shipment.customerName}</TableCell>
-                   <TableCell>
-                      <Badge variant={getStatusVariant(shipment.status)}>
-                          {shipment.status}
-                      </Badge>
-                  </TableCell>
                   <TableCell>
                     <Accordion type="single" collapsible className="w-full">
                         <AccordionItem value="item-1" className='border-b-0'>
@@ -116,22 +121,28 @@ export function MyShipmentsClient({ shipments: initialShipments }: { shipments: 
                     </Accordion>
                   </TableCell>
                   <TableCell>
-                    {shipment.receipt ? (
-                      <Button variant="link" className="p-0 h-auto" onClick={() => openPdf(shipment.receipt!.dataUrl)}>
-                          <FileText className="mr-2 h-4 w-4" />
-                          Lihat
-                      </Button>
-                    ) : (
-                      <span className='text-xs text-muted-foreground'>-</span>
-                    )}
+                      <span className='text-xs whitespace-pre-wrap'>{typeof shipment.bodyMeasurements === 'string' ? shipment.bodyMeasurements : JSON.stringify(shipment.bodyMeasurements)}</span>
+                  </TableCell>
+                   <TableCell>
+                      <Badge variant={getStatusVariant(shipment.status)}>
+                          {shipment.status === 'Pengemasan' ? 'Sedang Dijahit' : shipment.status === 'Terkirim' ? 'Selesai' : shipment.status}
+                      </Badge>
                   </TableCell>
                   <TableCell className="text-right font-medium">{formatRupiah(shipment.totalAmount)}</TableCell>
+                  <TableCell className="text-right">
+                      {shipment.status === 'Pengemasan' && (
+                          <Button size="sm" onClick={() => handleMarkAsDone(shipment.id)} disabled={!!isProcessing}>
+                              {isProcessing === shipment.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
+                              Selesaikan
+                          </Button>
+                      )}
+                  </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
                 <TableCell colSpan={7} className="h-24 text-center">
-                  Anda belum membuat pengiriman apapun.
+                  Tidak ada pesanan yang sedang Anda kerjakan.
                 </TableCell>
               </TableRow>
             )}

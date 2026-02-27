@@ -18,10 +18,8 @@ import type {
 } from './types';
 import initialData from '../../db.json';
 
-// Kunci penyimpanan di localStorage
 const DB_KEY = 'boutique_local_db_v1';
 
-// Fungsi Helper untuk berinteraksi dengan LocalStorage
 function getDB() {
     if (typeof window === 'undefined') return initialData;
     const stored = localStorage.getItem(DB_KEY);
@@ -43,9 +41,6 @@ function saveDB(data: any) {
     }
 }
 
-// =================================
-// User Functions
-// =================================
 export async function getUsers(): Promise<User[]> {
     const db = getDB();
     return db.users || [];
@@ -75,9 +70,6 @@ export async function deleteUser(id: string): Promise<{ id: string }> {
     return { id };
 }
 
-// =================================
-// Shipment / Pesanan Functions
-// =================================
 export async function getShipments(): Promise<Shipment[]> {
     const db = getDB();
     return db.shipments || [];
@@ -94,7 +86,6 @@ export async function addShipment(shipment: Omit<Shipment, 'id' | 'createdAt' | 
     
     db.shipments.unshift(newShipment);
 
-    // Kurangi stok jika ada produk
     if (shipment.products) {
         for (const p of shipment.products) {
             const product = db.products.find((prod: any) => prod.id === p.productId);
@@ -116,7 +107,6 @@ export async function addShipment(shipment: Omit<Shipment, 'id' | 'createdAt' | 
         }
     }
 
-    // Catat DP jika ada
     if (shipment.downPayment && shipment.downPayment > 0 && shipment.accountId) {
         const account = db.accounts.find((a: any) => a.id === shipment.accountId);
         if (account) {
@@ -161,6 +151,7 @@ export async function processShipmentsToPackaging(shipmentIds: string[], user: U
     db.shipments.forEach((s: any) => {
         if (shipmentIds.includes(s.id)) {
             s.status = 'Pengemasan';
+            if (user) s.userId = user.id; // Assign to the user who accepted it
             count++;
         }
     });
@@ -181,9 +172,6 @@ export async function processShipmentsToDelivered(shipmentIds: string[]): Promis
     return { count };
 }
 
-// =================================
-// Settings & Master Data
-// =================================
 export async function getExpeditions(): Promise<Expedition[]> {
     const db = getDB();
     return db.expeditions || [];
@@ -284,9 +272,6 @@ export async function deleteSupplier(id: string): Promise<{ id: string }> {
     return { id };
 }
 
-// =================================
-// Product Functions
-// =================================
 export async function getProducts(): Promise<Product[]> {
     const db = getDB();
     return db.products || [];
@@ -329,9 +314,6 @@ export async function deleteMultipleProducts(ids: string[]): Promise<{ ids: stri
     return { ids };
 }
 
-// =================================
-// Stock Functions
-// =================================
 export async function getStockMovements(productId: string): Promise<StockMovement[]> {
     const db = getDB();
     return (db.stockMovements || []).filter((m: any) => m.productId === productId).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -394,9 +376,6 @@ export async function bulkUpdateProductStock(updates: { code: string; physicalSt
     return { success, failure };
 }
 
-// =================================
-// Financial Functions
-// =================================
 export async function getAccounts(): Promise<Account[]> {
     const db = getDB();
     return db.accounts || [];
@@ -453,7 +432,6 @@ export async function getFinancialTransactions(accountId?: string, startDate?: s
     if (startDate) txs = txs.filter((t: any) => t.transactionDate >= startDate);
     if (endDate) txs = txs.filter((t: any) => t.transactionDate <= endDate);
     
-    // Attach account names
     const result = txs.map((t: any) => ({
         ...t,
         account: { name: db.accounts.find((a: any) => a.id === t.accountId)?.name || 'N/A' }
@@ -486,12 +464,10 @@ export async function updateFinancialTransaction(id: string, transaction: Partia
     const db = getDB();
     const idx = db.financialTransactions.findIndex((t: any) => t.id === id);
     if (idx !== -1) {
-        // Reverse previous effect
         const oldTx = db.financialTransactions[idx];
         const oldAccount = db.accounts.find((a: any) => a.id === oldTx.accountId);
         if (oldAccount) oldAccount.balance -= (oldTx.type === 'in' ? oldTx.amount : -oldTx.amount);
         
-        // Apply new effect
         db.financialTransactions[idx] = { ...oldTx, ...transaction };
         const newTx = db.financialTransactions[idx];
         const newAccount = db.accounts.find((a: any) => a.id === newTx.accountId);
@@ -551,9 +527,6 @@ export async function addInternalTransfer(transfer: Transfer): Promise<any> {
     return { success: true };
 }
 
-// =================================
-// Sales & Purchase Functions
-// =================================
 export async function processDirectSale(user: User, customerId: string, cart: any[], accountId: string, paymentStatus: 'Lunas' | 'Belum Lunas'): Promise<Shipment> {
     const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const customer = (await getCustomers()).find(c => c.id === customerId);
@@ -590,7 +563,6 @@ export async function addPurchase(purchase: any): Promise<Purchase> {
     
     db.purchases.unshift(newPurchase);
     
-    // Tambah stok
     for (const p of newPurchase.products) {
         const product = db.products.find((prod: any) => prod.id === p.productId);
         if (product) {
@@ -609,7 +581,6 @@ export async function addPurchase(purchase: any): Promise<Purchase> {
         }
     }
     
-    // Bayar jika lunas
     if (newPurchase.paymentStatus === 'Lunas' && newPurchase.accountId) {
         const account = db.accounts.find((a: any) => a.id === newPurchase.accountId);
         if (account) {
@@ -652,7 +623,6 @@ export async function addReturn(retur: any): Promise<Return> {
     
     db.returns.unshift(newReturn);
     
-    // Kembalikan stok
     for (const p of newReturn.products) {
         const product = db.products.find((prod: any) => prod.id === p.productId);
         if (product) {
@@ -675,9 +645,6 @@ export async function addReturn(retur: any): Promise<Return> {
     return newReturn;
 }
 
-// =================================
-// Payables & Receivables
-// =================================
 export async function payPayable(purchaseId: string, accountId: string, paidAt: Date): Promise<Purchase> {
     const db = getDB();
     const purchase = db.purchases.find((p: any) => p.id === purchaseId);
@@ -734,9 +701,6 @@ export async function payReceivable(shipmentId: string, accountId: string, paidA
     return shipment;
 }
 
-// =================================
-// Report Functions
-// =================================
 export async function getSalesProfitReport(startDate: Date, endDate: Date, userId: string): Promise<SalesProfitReportData> {
     const db = getDB();
     const startStr = startDate.toISOString().split('T')[0];
@@ -772,7 +736,6 @@ export async function getSalesProfitReport(startDate: Date, endDate: Date, userI
     const totalCOGS = details.reduce((sum, d) => sum + d.totalCOGS, 0);
     const grossProfit = totalRevenue - totalCOGS;
     
-    // Biaya operasional dari buku kas
     const opExpenses = db.financialTransactions.filter((t: any) => 
         t.type === 'out' && 
         t.transactionDate >= startStr && 

@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Boxes, LogOut, LayoutDashboard, Archive, Settings, ArrowRightLeft, PackageCheck, FileBarChart, History, Scale, ShoppingBasket } from 'lucide-react';
+import { Boxes, LogOut, LayoutDashboard, Archive, Settings, ArrowRightLeft, PackageCheck, FileBarChart, History, Scale, ShoppingBasket, ClipboardList, Briefcase } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { Button } from './ui/button';
 import { useRouter, usePathname } from 'next/navigation';
@@ -47,7 +47,7 @@ export function Header() {
             <Link href="/" className="mr-6 flex items-center space-x-2">
               <Boxes className="h-6 w-6 text-primary" />
               <span className="font-bold sm:inline-block">
-                GudangCheckout
+                ButikPOS
               </span>
             </Link>
             {user && (
@@ -110,15 +110,15 @@ export function Header() {
                     <>
                     <Link
                       href="/shipments"
-                      className={cn("transition-colors hover:text-foreground/80", pathname === '/shipments' ? 'text-foreground' : 'text-foreground/60')}
+                      className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname === '/shipments' ? 'text-foreground' : 'text-foreground/60')}
                     >
-                      Buat Pesanan
+                      <ClipboardList className="h-4 w-4" /> Ambil Pesanan
                     </Link>
                     <Link
                         href="/my-shipments"
                         className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname.startsWith('/my-shipments') ? 'text-foreground' : 'text-foreground/60')}
                     >
-                       Riwayat Pesanan Saya
+                       <Briefcase className="h-4 w-4" /> Pekerjaan Saya
                     </Link>
                     </>
                 )}
