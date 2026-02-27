@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Shipment, User, BodyMeasurements } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2, Loader2, Pencil, CheckCircle } from 'lucide-react';
+import { PlusCircle, Trash2, Loader2, Pencil, CheckCircle, Printer } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -45,6 +45,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+
+interface jsPDFWithAutoTable extends jsPDF {
+  autoTable: (options: any) => jsPDF;
+}
 
 export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shipments: Shipment[], onUpdate: () => void; }) {
   const { user } = useAuth();
@@ -118,7 +124,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
   const handleEdit = (shipment: Shipment) => {
     setEditingShipment(shipment);
     setIsFormOpen(true);
-  }
+  };
   
   const getStatusVariant = (status: Shipment['status']) => {
     switch (status) {
@@ -135,7 +141,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
       } else {
           setSelectedShipments([]);
       }
-  }
+  };
 
   const handleSelectSingle = (shipmentId: string, checked: boolean) => {
       if(checked) {
@@ -143,7 +149,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
       } else {
           setSelectedShipments(prev => prev.filter(id => id !== shipmentId));
       }
-  }
+  };
 
   const handleProcessToPackaging = async () => {
     if (selectedShipments.length === 0) {
@@ -173,7 +179,71 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
       if (m.pLengan) parts.push(`Ln:${m.pLengan}`);
       if (m.pBaju) parts.push(`Bj:${m.pBaju}`);
       return parts.join(' | ') || '-';
-  }
+  };
+
+  const handlePrintReceipt = (shipment: Shipment) => {
+    try {
+        const doc = new jsPDF({
+            unit: 'mm',
+            format: [80, 200]
+        }) as jsPDFWithAutoTable;
+
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('BUTIK ANITA', 40, 10, { align: 'center' });
+        
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Jl. Raya Butik No. 123', 40, 15, { align: 'center' });
+        doc.text('------------------------------------------', 40, 18, { align: 'center' });
+
+        doc.text(`Tgl: ${format(new Date(shipment.createdAt), 'dd/MM/yy HH:mm')}`, 5, 23);
+        doc.text(`No: ${shipment.transactionId}`, 5, 27);
+        doc.text(`Cust: ${shipment.customerName}`, 5, 31);
+        doc.text('------------------------------------------', 40, 34, { align: 'center' });
+
+        doc.setFont('helvetica', 'bold');
+        doc.text('UKURAN BADAN (cm):', 5, 39);
+        doc.setFont('helvetica', 'normal');
+        const m = shipment.bodyMeasurements;
+        doc.text(`LD: ${m?.ld || '-'} | LP: ${m?.lp || '-'} | Bahu: ${m?.lBahu || '-'}`, 5, 43);
+        doc.text(`Panggul: ${m?.lPanggul || '-'} | Lengan: ${m?.pLengan || '-'} | Baju: ${m?.pBaju || '-'}`, 5, 47);
+        if (m?.notes) doc.text(`Catatan: ${m.notes}`, 5, 51, { maxWidth: 70 });
+
+        doc.text('------------------------------------------', 40, 55, { align: 'center' });
+        
+        let yPos = 60;
+        shipment.products.forEach(p => {
+            doc.text(`${p.name} (x${p.quantity})`, 5, yPos);
+            doc.text(formatRupiah(p.price * p.quantity), 75, yPos, { align: 'right' });
+            yPos += 4;
+        });
+
+        doc.text('------------------------------------------', 40, yPos, { align: 'center' });
+        yPos += 5;
+        doc.setFont('helvetica', 'bold');
+        doc.text('TOTAL:', 5, yPos);
+        doc.text(formatRupiah(shipment.totalAmount), 75, yPos, { align: 'right' });
+        yPos += 4;
+        doc.text('DP:', 5, yPos);
+        doc.text(`-${formatRupiah(shipment.downPayment || 0)}`, 75, yPos, { align: 'right' });
+        yPos += 5;
+        doc.setFontSize(10);
+        doc.text('SISA BAYAR:', 5, yPos);
+        doc.text(formatRupiah(shipment.totalAmount - (shipment.downPayment || 0)), 75, yPos, { align: 'right' });
+
+        yPos += 10;
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'italic');
+        doc.text('Simpan struk ini untuk pengambilan.', 40, yPos, { align: 'center' });
+        yPos += 4;
+        doc.text('Terima Kasih', 40, yPos, { align: 'center' });
+
+        window.open(doc.output('bloburl'), '_blank');
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Gagal mencetak struk' });
+    }
+  };
 
   const isAdminView = user?.role === 'admin';
 
@@ -202,7 +272,6 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
             )}
         </div>
       </div>
-
 
       <div className="rounded-md border">
         <Table>
@@ -285,38 +354,43 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
                     )}
                   </TableCell>
                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                     {isAdminView && shipment.status === 'Proses' && (
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(shipment)}>
-                            <Pencil className="h-4 w-4" />
+                     <div className='flex gap-1 justify-end'>
+                        <Button variant="ghost" size="icon" onClick={() => handlePrintReceipt(shipment)} title="Cetak Struk">
+                            <Printer className="h-4 w-4" />
                         </Button>
-                     )}
-                    {isAdminView && (
-                        <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" disabled={!!isDeleting}>
-                                {isDeleting === shipment.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                        {isAdminView && shipment.status === 'Proses' && (
+                            <Button variant="ghost" size="icon" onClick={() => handleEdit(shipment)}>
+                                <Pencil className="h-4 w-4" />
                             </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                            <AlertDialogTitle>Hapus Data Pesanan?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                Tindakan ini tidak dapat dibatalkan. Seluruh informasi pesanan dan ukuran pelanggan akan terhapus.
-                            </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                            <AlertDialogCancel>Batal</AlertDialogCancel>
-                            <AlertDialogAction
-                                onClick={() => onDelete(shipment.id)}
-                                disabled={!!isDeleting}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                                Hapus Permanen
-                            </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                        </AlertDialog>
-                    )}
+                        )}
+                        {isAdminView && (
+                            <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" disabled={!!isDeleting}>
+                                    {isDeleting === shipment.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                <AlertDialogTitle>Hapus Data Pesanan?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Tindakan ini tidak dapat dibatalkan. Seluruh informasi pesanan dan ukuran pelanggan akan terhapus.
+                                </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                <AlertDialogCancel>Batal</AlertDialogCancel>
+                                <AlertDialogAction
+                                    onClick={() => onDelete(shipment.id)}
+                                    disabled={!!isDeleting}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                    Hapus Permanen
+                                </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialog>
+                            </AlertDialog>
+                        )}
+                     </div>
                   </TableCell>
                 </TableRow>
               ))

@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -31,7 +32,7 @@ export function Header() {
   };
   
   const isSettingsPage = pathname.startsWith('/settings');
-  const isTransactionPage = ['/cashier', '/purchases', '/returns'].includes(pathname);
+  const isTransactionPage = ['/cashier', '/purchases', '/returns', '/receivables', '/payables'].includes(pathname);
   const isReportPage = pathname.startsWith('/reports');
 
   return (
@@ -62,7 +63,9 @@ export function Header() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
                         <DropdownMenuItem onSelect={() => router.push('/cashier')}>Penjualan Langsung (Kasir)</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => router.push('/receivables')}>Piutang Usaha (Pelunasan Pesanan)</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => router.push('/purchases')}>Pembelian Bahan (Kain/Alat)</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => router.push('/payables')}>Utang Usaha (Bayar Supplier)</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => router.push('/returns')}>Retur Penjualan</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -75,7 +78,9 @@ export function Header() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
+                        <DropdownMenuItem onSelect={() => router.push('/dashboard')}>Ringkasan Analitik</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => router.push('/reports/sales-profit')}>Laporan Laba Rugi</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => router.push('/accounting')}>Buku Kas & Saldo</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
 
