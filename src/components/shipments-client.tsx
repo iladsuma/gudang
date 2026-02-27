@@ -1,8 +1,7 @@
-
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import type { Shipment, User, BodyMeasurements } from '@/lib/types';
+import type { Shipment, BodyMeasurements } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Trash2, Loader2, Pencil, CheckCircle, Printer } from 'lucide-react';
 import {
@@ -35,7 +34,7 @@ import { Badge } from './ui/badge';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { deleteShipment, processShipmentsToPackaging, getUsers } from '@/lib/data';
+import { deleteShipment, processShipmentsToPackaging } from '@/lib/data';
 import { useAuth } from '@/context/auth-context';
 import { Checkbox } from './ui/checkbox';
 import { Input } from './ui/input';
@@ -241,6 +240,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
 
         window.open(doc.output('bloburl'), '_blank');
     } catch (error) {
+        console.error(error);
         toast({ variant: 'destructive', title: 'Gagal mencetak struk' });
     }
   };
@@ -378,16 +378,16 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
                                 </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                <AlertDialogCancel>Batal</AlertDialogCancel>
-                                <AlertDialogAction
-                                    onClick={() => onDelete(shipment.id)}
-                                    disabled={!!isDeleting}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                    Hapus Permanen
-                                </AlertDialogAction>
+                                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                                    <AlertDialogAction
+                                        onClick={() => onDelete(shipment.id)}
+                                        disabled={!!isDeleting}
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                        Hapus Permanen
+                                    </AlertDialogAction>
                                 </AlertDialogFooter>
-                            </AlertDialog>
+                            </AlertDialogContent>
                             </AlertDialog>
                         )}
                      </div>
