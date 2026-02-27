@@ -1,10 +1,9 @@
-
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Shipment, User } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2, Loader2, FileText, Package, Pencil, Send } from 'lucide-react';
+import { PlusCircle, Trash2, Loader2, Package, Pencil } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -187,17 +186,16 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
             )}
         </div>
         <div className="flex justify-end gap-2 w-full md:w-auto">
-         {isAdminView ? (
-            <Button onClick={handleProcessToPackaging} disabled={selectedShipments.length === 0 || isProcessing} className="w-full md:w-auto">
-                {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Package className="mr-2 h-4 w-4" />}
-                Proses ke Pengemasan ({selectedShipments.length})
-            </Button>
-         ) : (
-            <Button onClick={handleOpenForm} className="w-full md:w-auto">
+            <Button onClick={handleOpenForm} variant={isAdminView ? "outline" : "default"} className="w-full md:w-auto">
               <PlusCircle className="mr-2 h-4 w-4" />
               Tambah Pesanan
             </Button>
-         )}
+            {isAdminView && (
+                <Button onClick={handleProcessToPackaging} disabled={selectedShipments.length === 0 || isProcessing} className="w-full md:w-auto">
+                    {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Package className="mr-2 h-4 w-4" />}
+                    Proses ke Pengemasan ({selectedShipments.length})
+                </Button>
+            )}
         </div>
       </div>
 
@@ -252,7 +250,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
                   </TableCell>
                   <TableCell>
                     {shipment.bodyMeasurements ? (
-                      <Badge variant="outline" className="font-normal whitespace-pre-wrap max-w-xs">{JSON.stringify(shipment.bodyMeasurements, null, 2)}</Badge>
+                      <Badge variant="outline" className="font-normal whitespace-pre-wrap max-w-xs">{typeof shipment.bodyMeasurements === 'string' ? shipment.bodyMeasurements : JSON.stringify(shipment.bodyMeasurements, null, 2)}</Badge>
                     ) : (
                       <span className='text-xs text-muted-foreground'>-</span>
                     )}
