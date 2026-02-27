@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Shipment, BodyMeasurements } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2, Loader2, Pencil, CheckCircle, Printer } from 'lucide-react';
+import { PlusCircle, Trash2, Loader2, Pencil, CheckCircle, Printer, DollarSign } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -31,13 +31,13 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Badge } from './ui/badge';
-import { Skeleton } from './ui/skeleton';
+import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { deleteShipment, processShipmentsToPackaging } from '@/lib/data';
 import { useAuth } from '@/context/auth-context';
-import { Checkbox } from './ui/checkbox';
-import { Input } from './ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import {
   Tooltip,
   TooltipContent,
@@ -288,9 +288,9 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
               <TableHead>Pelanggan</TableHead>
               <TableHead>Item Pesanan</TableHead>
               <TableHead>Ukuran (cm)</TableHead>
-              <TableHead>DP</TableHead>
+              <TableHead>Pembayaran</TableHead>
               <TableHead className="text-right">Total Tagihan</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>Status Jahit</TableHead>
               <TableHead>Tanggal</TableHead>
               <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
@@ -339,7 +339,16 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
                         </Tooltip>
                     </TooltipProvider>
                   </TableCell>
-                  <TableCell className="text-red-600 font-medium">{formatRupiah(shipment.downPayment || 0)}</TableCell>
+                  <TableCell>
+                      <div className="flex flex-col gap-1">
+                        <Badge variant={shipment.paymentStatus === 'Lunas' ? 'default' : 'destructive'} className="w-fit text-[10px]">
+                            {shipment.paymentStatus === 'Lunas' ? 'LUNAS' : 'BELUM LUNAS'}
+                        </Badge>
+                        {(shipment.downPayment || 0) > 0 && shipment.paymentStatus !== 'Lunas' && (
+                            <span className="text-[10px] text-muted-foreground">DP: {formatRupiah(shipment.downPayment || 0)}</span>
+                        )}
+                      </div>
+                  </TableCell>
                   <TableCell className="text-right font-bold">{formatRupiah(shipment.totalAmount)}</TableCell>
                   <TableCell>
                     <Badge variant={getStatusVariant(shipment.status)}>

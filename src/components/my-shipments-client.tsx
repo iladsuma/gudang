@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -90,7 +89,8 @@ export function MyShipmentsClient({ shipments: initialShipments, onUpdate }: { s
               <TableHead>Pelanggan</TableHead>
               <TableHead>Produk</TableHead>
               <TableHead>Ukuran</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>Pembayaran</TableHead>
+              <TableHead>Status Jahit</TableHead>
               <TableHead className="text-right">Total Tagihan</TableHead>
               <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
@@ -99,7 +99,7 @@ export function MyShipmentsClient({ shipments: initialShipments, onUpdate }: { s
             {filteredShipments.length > 0 ? (
               filteredShipments.map((shipment) => (
                 <TableRow key={shipment.id}>
-                  <TableCell className='font-medium font-mono'>{shipment.transactionId}</TableCell>
+                  <TableCell className='font-medium font-mono text-xs'>{shipment.transactionId}</TableCell>
                   <TableCell>{shipment.customerName}</TableCell>
                   <TableCell>
                     <Accordion type="single" collapsible className="w-full">
@@ -121,7 +121,12 @@ export function MyShipmentsClient({ shipments: initialShipments, onUpdate }: { s
                     </Accordion>
                   </TableCell>
                   <TableCell>
-                      <span className='text-xs whitespace-pre-wrap'>{typeof shipment.bodyMeasurements === 'string' ? shipment.bodyMeasurements : JSON.stringify(shipment.bodyMeasurements)}</span>
+                      <span className='text-[10px] whitespace-pre-wrap'>{typeof shipment.bodyMeasurements === 'string' ? shipment.bodyMeasurements : `LD:${shipment.bodyMeasurements?.ld || '-'} | LP:${shipment.bodyMeasurements?.lp || '-'}`}</span>
+                  </TableCell>
+                  <TableCell>
+                      <Badge variant={shipment.paymentStatus === 'Lunas' ? 'default' : 'destructive'} className="text-[10px]">
+                          {shipment.paymentStatus === 'Lunas' ? 'LUNAS' : 'BELUM LUNAS'}
+                      </Badge>
                   </TableCell>
                    <TableCell>
                       <Badge variant={getStatusVariant(shipment.status)}>
@@ -141,7 +146,7 @@ export function MyShipmentsClient({ shipments: initialShipments, onUpdate }: { s
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
+                <TableCell colSpan={8} className="h-24 text-center">
                   Tidak ada pesanan yang sedang Anda kerjakan.
                 </TableCell>
               </TableRow>
