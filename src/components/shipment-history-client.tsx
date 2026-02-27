@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -14,11 +13,10 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
 import { processShipmentsToDelivered } from '@/lib/data';
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { DateRangePicker } from './ui/date-range-picker';
 import type { DateRange } from "react-day-picker";
-import { cn } from '@/lib/utils';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 
 interface jsPDFWithAutoTable extends jsPDF {
@@ -68,7 +66,6 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
           matchesDate = shipmentDate <= toDate;
       }
 
-      // 'all' preset logic
       if (activePreset === 'all') {
          return matchesUser;
       }
@@ -181,7 +178,7 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
         
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
-        doc.text("ButikPOS Warehouse", 20, 45);
+        doc.text("Butik Anita", 20, 45);
 
         const rightX = doc.internal.pageSize.getWidth() - 20;
         doc.text(`No Transaksi : ${shipment.transactionId}`, rightX, 45, { align: 'right' });

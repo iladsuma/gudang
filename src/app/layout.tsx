@@ -7,8 +7,8 @@ import { AuthProvider } from '@/context/auth-context';
 import { NotificationProvider } from '@/context/notification-context';
 
 export const metadata: Metadata = {
-  title: 'GudangCheckout',
-  description: 'Sistem checkout gudang yang efisien',
+  title: 'Butik Anita',
+  description: 'Sistem manajemen pesanan jahitan Butik Anita',
 };
 
 export default function RootLayout({

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Boxes, LogOut, Archive, Settings, ArrowRightLeft, FileBarChart, ShoppingBasket, ClipboardList, Briefcase, Scissors } from 'lucide-react';
+import { LogOut, Archive, Settings, ArrowRightLeft, FileBarChart, ShoppingBasket, ClipboardList, Briefcase, Scissors } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { Button } from './ui/button';
 import { useRouter, usePathname } from 'next/navigation';
@@ -36,7 +36,7 @@ export function Header() {
             <Link href="/" className="mr-6 flex items-center space-x-2">
               <Scissors className="h-6 w-6 text-primary" />
               <span className="font-bold sm:inline-block text-primary">
-                ButikPOS
+                Butik Anita
               </span>
             </Link>
             {user && (
