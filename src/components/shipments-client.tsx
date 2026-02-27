@@ -2,9 +2,9 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import type { Shipment, User } from '@/lib/types';
+import type { Shipment, User, BodyMeasurements } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2, Loader2, Package, Pencil, CheckCircle } from 'lucide-react';
+import { PlusCircle, Trash2, Loader2, Pencil, CheckCircle } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -39,11 +39,16 @@ import { deleteShipment, processShipmentsToPackaging, getUsers } from '@/lib/dat
 import { useAuth } from '@/context/auth-context';
 import { Checkbox } from './ui/checkbox';
 import { Input } from './ui/input';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shipments: Shipment[], onUpdate: () => void; }) {
   const { user } = useAuth();
   const [shipments, setShipments] = useState(initialShipments);
-  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [editingShipment, setEditingShipment] = useState<Shipment | undefined>(undefined);
@@ -60,7 +65,6 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
 
   useEffect(() => {
     setIsClient(true);
-    getUsers().then(setAllUsers);
   }, []);
   
   const filteredShipments = useMemo(() => {
@@ -98,17 +102,9 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
     try {
         await deleteShipment(shipmentId);
         onUpdate();
-        toast({
-            title: 'Sukses!',
-            description: 'Data pesanan berhasil dihapus.',
-        });
+        toast({ title: 'Sukses!', description: 'Data pesanan berhasil dihapus.' });
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Terjadi kesalahan.';
-        toast({
-            variant: 'destructive',
-            title: 'Kesalahan',
-            description: message,
-        });
+        toast({ variant: 'destructive', title: 'Kesalahan', description: error instanceof Error ? error.message : 'Terjadi kesalahan.' });
     } finally {
         setIsDeleting(null);
     }
@@ -161,12 +157,23 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
         onUpdate();
         setSelectedShipments([]);
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Gagal memproses.';
-        toast({ variant: 'destructive', title: 'Gagal Memproses', description: message });
+        toast({ variant: 'destructive', title: 'Gagal Memproses', description: error instanceof Error ? error.message : 'Terjadi kesalahan.' });
     } finally {
         setIsProcessing(false);
     }
   };
+
+  const formatMeasurements = (m?: BodyMeasurements) => {
+      if (!m) return '-';
+      const parts = [];
+      if (m.ld) parts.push(`LD:${m.ld}`);
+      if (m.lp) parts.push(`LP:${m.lp}`);
+      if (m.lPanggul) parts.push(`Pg:${m.lPanggul}`);
+      if (m.lBahu) parts.push(`Bh:${m.lBahu}`);
+      if (m.pLengan) parts.push(`Ln:${m.pLengan}`);
+      if (m.pBaju) parts.push(`Bj:${m.pBaju}`);
+      return parts.join(' | ') || '-';
+  }
 
   const isAdminView = user?.role === 'admin';
 
@@ -175,7 +182,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
         <div className='w-full md:w-auto'>
             <Input 
-                placeholder="Cari No. Transaksi, Pelanggan, atau Produk..."
+                placeholder="Cari No. Pesanan, Pelanggan, atau Jenis Jahitan..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 className="w-full md:w-80"
@@ -185,12 +192,12 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
             {isAdminView ? (
                 <Button onClick={handleOpenForm} variant="default" className="w-full md:w-auto">
                     <PlusCircle className="mr-2 h-4 w-4" />
-                    Tambah Pesanan
+                    Tambah Pesanan Baru
                 </Button>
             ) : (
                 <Button onClick={handleProcessToPackaging} disabled={selectedShipments.length === 0 || isProcessing} className="w-full md:w-auto">
                     {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
-                    Terima Pesanan ({selectedShipments.length})
+                    Terima Pekerjaan ({selectedShipments.length})
                 </Button>
             )}
         </div>
@@ -208,12 +215,12 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
                     aria-label="Pilih semua"
                 />
               </TableHead>
-              <TableHead>No. Transaksi</TableHead>
+              <TableHead>No. Pesanan</TableHead>
               <TableHead>Pelanggan</TableHead>
-              <TableHead>Produk</TableHead>
-              <TableHead>Ukuran Badan</TableHead>
+              <TableHead>Item Pesanan</TableHead>
+              <TableHead>Ukuran (cm)</TableHead>
               <TableHead>DP</TableHead>
-              <TableHead className="text-right">Total</TableHead>
+              <TableHead className="text-right">Total Tagihan</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Tanggal</TableHead>
               <TableHead className="text-right">Aksi</TableHead>
@@ -230,36 +237,51 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
                         aria-label={`Pilih pesanan ${shipment.transactionId}`}
                     />
                   </TableCell>
-                  <TableCell className="font-mono">{shipment.transactionId}</TableCell>
-                  <TableCell>{shipment.customerName}</TableCell>
+                  <TableCell className="font-mono text-xs">{shipment.transactionId}</TableCell>
+                  <TableCell className="font-medium">{shipment.customerName}</TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
                       {shipment.products.map((p, index) => (
-                        <Badge key={index} variant="secondary" className="font-normal">
-                          {p.name} (x{p.quantity})
-                        </Badge>
+                        <span key={index} className="text-xs">
+                          • {p.name} (x{p.quantity})
+                        </span>
                       ))}
                     </div>
                   </TableCell>
                   <TableCell>
-                    {shipment.bodyMeasurements ? (
-                      <Badge variant="outline" className="font-normal whitespace-pre-wrap max-w-xs">{typeof shipment.bodyMeasurements === 'string' ? shipment.bodyMeasurements : JSON.stringify(shipment.bodyMeasurements, null, 2)}</Badge>
-                    ) : (
-                      <span className='text-xs text-muted-foreground'>-</span>
-                    )}
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <div className="text-xs max-w-[150px] truncate cursor-help bg-muted px-2 py-1 rounded">
+                                    {formatMeasurements(shipment.bodyMeasurements)}
+                                </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <div className="space-y-1 text-xs">
+                                    <p>LD: {shipment.bodyMeasurements?.ld || '-'}</p>
+                                    <p>LP: {shipment.bodyMeasurements?.lp || '-'}</p>
+                                    <p>Panggul: {shipment.bodyMeasurements?.lPanggul || '-'}</p>
+                                    <p>Bahu: {shipment.bodyMeasurements?.lBahu || '-'}</p>
+                                    <p>Lengan: {shipment.bodyMeasurements?.pLengan || '-'}</p>
+                                    <p>Baju: {shipment.bodyMeasurements?.pBaju || '-'}</p>
+                                    {shipment.bodyMeasurements?.notes && <p className="border-t mt-1 pt-1 italic">{shipment.bodyMeasurements.notes}</p>}
+                                </div>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                   </TableCell>
-                  <TableCell className="font-medium">{formatRupiah(shipment.downPayment || 0)}</TableCell>
-                  <TableCell className="text-right font-medium">{formatRupiah(shipment.totalAmount)}</TableCell>
+                  <TableCell className="text-red-600 font-medium">{formatRupiah(shipment.downPayment || 0)}</TableCell>
+                  <TableCell className="text-right font-bold">{formatRupiah(shipment.totalAmount)}</TableCell>
                   <TableCell>
                     <Badge variant={getStatusVariant(shipment.status)}>
-                        {shipment.status === 'Proses' ? 'Baru' : shipment.status}
+                        {shipment.status === 'Proses' ? 'Baru' : shipment.status === 'Pengemasan' ? 'Sedang Dijahit' : shipment.status}
                     </Badge>
                   </TableCell>
-                   <TableCell>
+                   <TableCell className="text-xs">
                     {isClient ? (
-                        format(new Date(shipment.createdAt), 'dd MMM yyyy', { locale: id })
+                        format(new Date(shipment.createdAt), 'dd/MM/yy', { locale: id })
                     ) : (
-                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-4 w-12" />
                     )}
                   </TableCell>
                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
@@ -277,9 +299,9 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                             <AlertDialogHeader>
-                            <AlertDialogTitle>Apakah Anda yakin?</AlertDialogTitle>
+                            <AlertDialogTitle>Hapus Data Pesanan?</AlertDialogTitle>
                             <AlertDialogDescription>
-                                Tindakan ini tidak dapat dibatalkan. Ini akan menghapus data pesanan secara permanen.
+                                Tindakan ini tidak dapat dibatalkan. Seluruh informasi pesanan dan ukuran pelanggan akan terhapus.
                             </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -287,8 +309,9 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
                             <AlertDialogAction
                                 onClick={() => onDelete(shipment.id)}
                                 disabled={!!isDeleting}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                             >
-                                Lanjutkan
+                                Hapus Permanen
                             </AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
@@ -299,13 +322,13 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={10} className="h-24 text-center">
-                  Tidak ada pesanan baru yang tersedia saat ini.
+                <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
+                  Belum ada pesanan masuk yang tersedia.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
-          <TableCaption>Daftar semua pesanan masuk yang menunggu untuk diproses.</TableCaption>
+          <TableCaption>Daftar pesanan butik yang menunggu untuk dikerjakan oleh tim penjahit.</TableCaption>
         </Table>
       </div>
 

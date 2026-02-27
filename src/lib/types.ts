@@ -1,5 +1,4 @@
 
-
 export interface Product {
     id: string;
     code: string; // Kode Item
@@ -52,13 +51,23 @@ export interface Purchase {
 
 
 export interface ShipmentProduct {
-    productId: string; // Reference to the master product
+    productId: string; // Reference to the master product (can be 'manual' for boutique)
     code: string;
     name: string;
     quantity: number;
     price: number; // Can be overridden from master product's price
     costPrice: number; // Cost price at the time of sale
     imageUrl: string | null;
+}
+
+export interface BodyMeasurements {
+    ld?: string;
+    lp?: string;
+    lPanggul?: string;
+    lBahu?: string;
+    pLengan?: string;
+    pBaju?: string;
+    notes?: string;
 }
 
 export interface Shipment {
@@ -85,7 +94,7 @@ export interface Shipment {
     createdAt: string; // ISO String for when it was added
     paidAt?: string;
     downPayment?: number;
-    bodyMeasurements?: any;
+    bodyMeasurements?: BodyMeasurements;
 }
 
 export interface ReturnedProduct {
