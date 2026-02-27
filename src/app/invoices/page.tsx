@@ -76,20 +76,20 @@ export default function InvoicesPage() {
       <Tabs defaultValue="packaging">
         <div className="flex justify-between items-end mb-4">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Manajemen Pengiriman</h1>
-              <p className="text-muted-foreground">Kelola pengiriman yang siap dikirim dan lihat arsip yang sudah selesai.</p>
+              <h1 className="text-3xl font-bold tracking-tight">Manajemen Arsip Pemesanan Butik</h1>
+              <p className="text-muted-foreground">Kelola pemesanan yang telah selesai atau sedang dalam tahap penyelesaian akhir.</p>
             </div>
             <TabsList>
-              <TabsTrigger value="packaging">Siap Kirim ({packagingShipments.length})</TabsTrigger>
-              <TabsTrigger value="archive">Arsip Terkirim ({deliveredShipments.length})</TabsTrigger>
+              <TabsTrigger value="packaging">Sedang Dijahit ({packagingShipments.length})</TabsTrigger>
+              <TabsTrigger value="archive">Arsip Selesai ({deliveredShipments.length})</TabsTrigger>
             </TabsList>
         </div>
         <TabsContent value="packaging">
             <Card>
                 <CardHeader>
-                    <CardTitle>Siap Kirim</CardTitle>
+                    <CardTitle>Pesanan Sedang Diproses</CardTitle>
                     <CardDescription>
-                        Daftar pengiriman yang sudah dikemas dan siap untuk ditandai sebagai 'Terkirim'.
+                        Daftar pemesanan yang sedang dikerjakan oleh tim penjahit.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -105,9 +105,9 @@ export default function InvoicesPage() {
         <TabsContent value="archive">
             <Card>
                 <CardHeader>
-                    <CardTitle>Arsip Pengiriman Terkirim</CardTitle>
+                    <CardTitle>Arsip Pemesanan Selesai</CardTitle>
                     <CardDescription>
-                       Daftar semua pengiriman yang telah selesai diproses dan statusnya 'Terkirim'.
+                       Riwayat seluruh pesanan jahitan yang telah selesai diproses dan diambil pelanggan.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
