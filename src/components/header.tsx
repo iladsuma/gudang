@@ -1,7 +1,8 @@
 'use client';
 
+import * as React from 'react';
 import Link from 'next/link';
-import { LogOut, Archive, Settings, ArrowRightLeft, FileBarChart, ShoppingBasket, ClipboardList, Briefcase, Scissors } from 'lucide-react';
+import { LogOut, Archive, Settings, ArrowRightLeft, FileBarChart, ShoppingBasket, ClipboardList, Briefcase, Scissors, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { Button } from './ui/button';
 import { useRouter, usePathname } from 'next/navigation';
@@ -10,14 +11,19 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { ChevronDown } from 'lucide-react';
+} from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
 
 export function Header() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const [mounted, setMounted] = React.useState(false);
+
+  // Mencegah hidrasi mismatch dengan memastikan komponen sudah mounted
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -35,11 +41,9 @@ export function Header() {
           <div className='flex items-center'>
             <Link href="/" className="mr-6 flex items-center space-x-2">
               <Scissors className="h-6 w-6 text-primary" />
-              <span className="font-bold sm:inline-block text-primary">
-                Butik Anita
-              </span>
+              <span className="font-bold sm:inline-block text-primary">Butik Anita</span>
             </Link>
-            {user && (
+            {mounted && user && (
               <nav className="hidden items-center gap-4 text-sm md:flex">
                 {user.role === 'admin' ? (
                   <>
@@ -109,7 +113,7 @@ export function Header() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            {user ? (
+            {mounted && user ? (
               <>
                 <div className="flex flex-col items-end mr-2">
                     <span className="text-xs font-semibold text-primary uppercase">
@@ -123,11 +127,11 @@ export function Header() {
                   <LogOut className="h-4 w-4 text-destructive" />
                 </Button>
               </>
-            ) : (
+            ) : mounted ? (
                <Button asChild variant="outline" size="sm">
                  <Link href="/login">Login</Link>
                </Button>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
