@@ -8,12 +8,9 @@ import { FONNTE_TOKEN, ADMIN_PHONE } from './secrets';
 const formatPhoneNumber = (phone: string | null | undefined) => {
   if (!phone || phone === 'N/A' || phone.trim() === '') return null;
   
-  // Ambil hanya angka
   let cleaned = phone.replace(/\D/g, '');
-  
   if (cleaned.length < 9) return null;
 
-  // Ubah 08... ke 628...
   if (cleaned.startsWith('0')) {
     cleaned = '62' + cleaned.substring(1);
   } else if (cleaned.startsWith('8')) {
@@ -25,90 +22,92 @@ const formatPhoneNumber = (phone: string | null | undefined) => {
 
 /**
  * Fungsi inti untuk mengirim pesan WhatsApp menggunakan API Fonnte.
- * Diimplementasikan sebagai Server Action agar identik dengan cURL PHP dan aman dari CORS.
+ * Menggunakan URLSearchParams untuk stabilitas maksimal di sisi server.
  */
 export async function sendWhatsApp(target: string, message: string) {
   if (!FONNTE_TOKEN) {
-    console.warn("WA Skip: Token Fonnte belum dikonfigurasi.");
-    return { success: false, message: "Token missing" };
+    return { success: false, message: "Token Fonnte belum diisi di secrets.ts" };
   }
 
   const formattedTarget = formatPhoneNumber(target);
   if (!formattedTarget) {
-    return { success: false, message: "Invalid target number" };
+    return { success: false, message: "Nomor target tidak valid" };
   }
 
-  console.log(`[WA Server] Mencoba kirim ke ${formattedTarget}...`);
-
   try {
-    const formData = new FormData();
-    formData.append('target', formattedTarget);
-    formData.append('message', message);
-    formData.append('countryCode', '62');
+    // Menggunakan URLSearchParams agar identik dengan pengiriman form standar
+    const params = new URLSearchParams();
+    params.append('target', formattedTarget);
+    params.append('message', message);
+    params.append('countryCode', '62');
 
     const response = await fetch('https://api.fonnte.com/send', {
       method: 'POST',
       headers: {
         'Authorization': FONNTE_TOKEN,
       },
-      body: formData,
+      body: params,
     });
 
     const result = await response.json();
-    console.log(`[WA Server] Respon dari Fonnte:`, result);
-    return result; // Mengembalikan hasil ke client
+    
+    // Log di terminal server untuk debugging mendalam
+    console.log(`[WA Server] Kirim ke ${formattedTarget}:`, result);
+    
+    return result; 
   } catch (error) {
-    console.error("[WA Server] Fatal error saat mengirim pesan:", error);
+    console.error("[WA Server] Fatal error:", error);
     return { success: false, error: String(error) };
   }
 }
 
 /**
- * Notifikasi Pesanan Baru (Laporan ke Admin dan Pelanggan)
+ * Notifikasi Pesanan Baru (Fixed ke Admin)
  */
 export async function sendNewOrderNotification(shipment: any, customer: any) {
-    const remaining = shipment.totalAmount - (shipment.downPayment || 0);
     const formatRupiah = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
     
-    const messageContent = `👗 *PESANAN BARU*
+    const messageContent = `👗 *PESANAN BARU MASUK*
 No: ${shipment.transactionId}
-Pelanggan: ${customer.name}
+Nama: ${customer.name}
 Total: ${formatRupiah(shipment.totalAmount)}
 DP: ${formatRupiah(shipment.downPayment || 0)}
-Sisa: ${formatRupiah(remaining)}`;
+Sisa: ${formatRupiah(shipment.totalAmount - (shipment.downPayment || 0))}`;
 
-    // 1. Laporan ke Admin (Wajib)
-    const adminResult = await sendWhatsApp(ADMIN_PHONE, `📢 *LAPORAN BUTIK*\n${messageContent}`);
+    // 1. Laporan Wajib ke Admin
+    const adminResult = await sendWhatsApp(ADMIN_PHONE, messageContent);
 
-    // 2. Notifikasi ke Pelanggan (Jika ada nomor valid)
+    // 2. Notifikasi ke Pelanggan (Hanya jika ada nomor valid)
     let customerResult = null;
-    if (customer.phone && customer.phone !== 'N/A') {
-        const welcomeMsg = `Halo ${customer.name}, terima kasih telah memesan di Butik Anita!\n\n${messageContent}`;
-        customerResult = await sendWhatsApp(customer.phone, welcomeMsg);
+    const custPhone = formatPhoneNumber(customer.phone);
+    if (custPhone) {
+        const welcomeMsg = `Halo ${customer.name}, pesanan Anda (${shipment.transactionId}) telah kami terima. Terima kasih!`;
+        customerResult = await sendWhatsApp(custPhone, welcomeMsg);
     }
 
     return { adminResult, customerResult };
 }
 
 /**
- * Notifikasi Pesanan Selesai (Saat ditandai Selesai oleh Penjahit)
+ * Notifikasi Pesanan Selesai
  */
 export async function sendOrderFinishedNotification(shipment: any, customer: any) {
-    const remaining = shipment.totalAmount - (shipment.downPayment || 0);
     const formatRupiah = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
     
-    const messageContent = `✅ *PESANAN SELESAI*
-Halo *${customer.name}*, baju Anda (*${shipment.transactionId}*) sudah selesai dijahit dan siap diambil.
-Sisa Pelunasan: ${formatRupiah(remaining)}`;
+    const messageContent = `✅ *JAHITAN SELESAI*
+No: ${shipment.transactionId}
+Nama: ${customer.name} sudah selesai dan siap diambil.
+Sisa: ${formatRupiah(shipment.totalAmount - (shipment.downPayment || 0))}`;
 
     // 1. Laporan ke Admin
-    const adminResult = await sendWhatsApp(ADMIN_PHONE, `📢 *INFO SELESAI*\n${messageContent}`);
+    const adminResult = await sendWhatsApp(ADMIN_PHONE, messageContent);
 
     // 2. Kabar ke Pelanggan
     let customerResult = null;
-    if (customer.phone && customer.phone !== 'N/A') {
-        const fullMsg = `${messageContent}\n\nSilakan kunjungi Butik Anita untuk pengambilan. Terima kasih!`;
-        customerResult = await sendWhatsApp(customer.phone, fullMsg);
+    const custPhone = formatPhoneNumber(customer.phone);
+    if (custPhone) {
+        const fullMsg = `Halo ${customer.name}, baju Anda (${shipment.transactionId}) sudah selesai dijahit dan siap diambil. Silakan mampir ke Butik Anita.`;
+        customerResult = await sendWhatsApp(custPhone, fullMsg);
     }
 
     return { adminResult, customerResult };

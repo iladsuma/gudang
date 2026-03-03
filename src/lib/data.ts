@@ -125,10 +125,14 @@ export async function addShipment(shipment: Omit<Shipment, 'id' | 'createdAt' | 
 
     saveDB(db);
 
-    // KIRIM NOTIFIKASI WA DAN LOG HASIL KE CONSOLE BROWSER
+    // KIRIM NOTIFIKASI WA DAN LOG HASIL DETAIL KE CONSOLE BROWSER
     const customer = db.customers.find((c: any) => c.id === shipment.customerId);
     sendNewOrderNotification(newShipment, customer || { name: shipment.customerName, phone: 'N/A' })
-        .then(res => console.log("Hasil Kirim WA Pesanan Baru:", res))
+        .then(res => {
+            console.log("=== DEBUG WHATSAPP PESANAN BARU ===");
+            console.log("Admin Result:", JSON.stringify(res.adminResult, null, 2));
+            console.log("Customer Result:", res.customerResult ? JSON.stringify(res.customerResult, null, 2) : "Skipped (Nomor N/A)");
+        })
         .catch(err => console.error("Gagal panggil fungsi WA:", err));
 
     return newShipment;
@@ -176,7 +180,11 @@ export async function processShipmentsToDelivered(shipmentIds: string[]): Promis
             // Trigger Notifikasi Selesai
             const customer = db.customers.find((c: any) => c.id === s.customerId);
             sendOrderFinishedNotification(s, customer || { name: s.customerName, phone: 'N/A' })
-                .then(res => console.log("Hasil Kirim WA Pesanan Selesai:", res))
+                .then(res => {
+                    console.log("=== DEBUG WHATSAPP SELESAI ===");
+                    console.log("Admin Result:", JSON.stringify(res.adminResult, null, 2));
+                    console.log("Customer Result:", res.customerResult ? JSON.stringify(res.customerResult, null, 2) : "Skipped (Nomor N/A)");
+                })
                 .catch(err => console.error("Gagal panggil fungsi WA Selesai:", err));
         }
     }
