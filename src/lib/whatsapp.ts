@@ -1,14 +1,14 @@
 
-import { FONNTE_TOKEN } from './secrets';
+import { FONNTE_TOKEN, ADMIN_PHONE } from './secrets';
 
 /**
  * Fungsi untuk mengirim pesan WhatsApp menggunakan API Fonnte.
- * @param target Nomor WhatsApp tujuan (contoh: 08123456789 atau 628123456789)
+ * @param target Nomor WhatsApp tujuan
  * @param message Isi pesan yang akan dikirim
  */
 export async function sendWhatsApp(target: string, message: string) {
   if (!FONNTE_TOKEN || FONNTE_TOKEN === "YOUR_FONNTE_TOKEN_HERE") {
-    console.warn("WhatsApp tidak terkirim: Token Fonnte belum dikonfigurasi di src/lib/secrets.ts");
+    console.warn("WhatsApp tidak terkirim: Token Fonnte belum dikonfigurasi.");
     return;
   }
 
@@ -16,7 +16,7 @@ export async function sendWhatsApp(target: string, message: string) {
     const formData = new URLSearchParams();
     formData.append('target', target);
     formData.append('message', message);
-    formData.append('countryCode', '62'); // Default Indonesia
+    formData.append('countryCode', '62');
 
     const response = await fetch('https://api.fonnte.com/send', {
       method: 'POST',
@@ -27,18 +27,12 @@ export async function sendWhatsApp(target: string, message: string) {
     });
 
     const result = await response.json();
-    if (!result.status) {
-      console.error("Gagal mengirim WhatsApp:", result.reason || "Unknown error");
-    }
     return result;
   } catch (error) {
     console.error("Error API Fonnte:", error);
   }
 }
 
-/**
- * Format angka ke Rupiah untuk pesan teks
- */
 const formatRupiahText = (number: number) => {
     return new Intl.NumberFormat('id-ID', {
         style: 'currency',
@@ -48,7 +42,7 @@ const formatRupiahText = (number: number) => {
 };
 
 /**
- * Template pesan untuk pesanan baru
+ * Notifikasi untuk Pelanggan (Pesanan Baru)
  */
 export const sendNewOrderNotification = (shipment: any, customer: any) => {
     const remaining = shipment.totalAmount - (shipment.downPayment || 0);
@@ -57,38 +51,44 @@ export const sendNewOrderNotification = (shipment: any, customer: any) => {
     const message = 
 `Halo *${customer.name}*, 
 
-Terima kasih telah memesan di *Butik Anita*. Pesanan Anda telah kami catat dengan rincian sebagai berikut:
+Terima kasih telah memesan di *Butik Anita*. Pesanan Anda telah kami catat:
 
 📌 *No. Transaksi:* ${shipment.transactionId}
-👗 *Item Pesanan:*
+👗 *Item:*
 ${productList}
 
-💰 *Total Biaya:* ${formatRupiahText(shipment.totalAmount)}
-💳 *DP Masuk:* ${formatRupiahText(shipment.downPayment || 0)}
-📉 *Sisa Pelunasan:* *${formatRupiahText(remaining)}*
+💰 *Total:* ${formatRupiahText(shipment.totalAmount)}
+💳 *DP:* ${formatRupiahText(shipment.downPayment || 0)}
+📉 *Sisa:* *${formatRupiahText(remaining)}*
 
-Pesanan Anda sekarang sedang dalam antrean pengerjaan oleh tim penjahit kami. Simpan pesan ini sebagai bukti pesanan Anda.
-
-Terima kasih! 🙏`;
+Pesanan sedang dalam antrean pengerjaan. Simpan pesan ini sebagai bukti. Terima kasih! 🙏`;
 
     return sendWhatsApp(customer.phone, message);
 };
 
 /**
- * Template pesan untuk pesanan selesai
+ * Notifikasi untuk Pelanggan (Pesanan Selesai)
  */
 export const sendOrderFinishedNotification = (shipment: any, customer: any) => {
     const remaining = shipment.totalAmount - (shipment.downPayment || 0);
-    
     const message = 
 `Halo *${customer.name}*, 
 
 Kabar gembira! 🎉
-Jahitan Anda dengan nomor transaksi *${shipment.transactionId}* telah *SELESAI* dikerjakan dan siap untuk diambil.
+Jahitan Anda (*${shipment.transactionId}*) telah *SELESAI* dan siap diambil.
 
 💰 *Sisa Pelunasan:* *${formatRupiahText(remaining)}*
 
-Silakan kunjungi Butik Anita pada jam operasional untuk pengambilan. Sampai jumpa! 👋`;
+Silakan kunjungi Butik Anita untuk pengambilan. 👋`;
 
     return sendWhatsApp(customer.phone, message);
+};
+
+/**
+ * Notifikasi untuk Admin/Pemilik (Setiap ada pesanan baru)
+ */
+export const sendAdminOrderAlert = (shipment: any, customer: any) => {
+    if (!ADMIN_PHONE) return;
+    const message = `📢 *NOTIFIKASI ADMIN*\nAda pesanan baru masuk!\n\nNo: ${shipment.transactionId}\nPelanggan: ${customer.name}\nTotal: ${formatRupiahText(shipment.totalAmount)}\nDP: ${formatRupiahText(shipment.downPayment || 0)}`;
+    return sendWhatsApp(ADMIN_PHONE, message);
 };

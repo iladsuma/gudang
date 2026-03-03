@@ -7,3 +7,6 @@ export const DATABASE_URL = "postgresql://neondb_owner:FfRDIaG85Jp4@ep-weathered
 
 // Token dari dashboard Fonnte Anda (https://fonnte.com)
 export const FONNTE_TOKEN = "h7KiTRi9EzqGjHb7krvL";
+
+// Nomor WhatsApp Pemilik Butik untuk menerima notifikasi sistem
+export const ADMIN_PHONE = "0895801205393";
