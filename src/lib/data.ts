@@ -129,11 +129,11 @@ export async function addShipment(shipment: Omit<Shipment, 'id' | 'createdAt' | 
     // NOTIFIKASI WHATSAPP
     const customer = db.customers.find((c: any) => c.id === shipment.customerId);
     if (customer) {
+        // Jalankan notifikasi tanpa menghambat UI (background fire and forget)
         if (customer.phone) {
-            sendNewOrderNotification(newShipment, customer);
+            sendNewOrderNotification(newShipment, customer).catch(err => console.error("Gagal kirim WA Pelanggan:", err));
         }
-        // Kirim notifikasi ke nomor Admin (Pemilik)
-        sendAdminOrderAlert(newShipment, customer);
+        sendAdminOrderAlert(newShipment, customer).catch(err => console.error("Gagal kirim WA Admin:", err));
     }
 
     return newShipment;
@@ -180,7 +180,7 @@ export async function processShipmentsToDelivered(shipmentIds: string[]): Promis
 
             const customer = db.customers.find((c: any) => c.id === s.customerId);
             if (customer && customer.phone) {
-                sendOrderFinishedNotification(s, customer);
+                sendOrderFinishedNotification(s, customer).catch(err => console.error("Gagal kirim WA Selesai:", err));
             }
         }
     }

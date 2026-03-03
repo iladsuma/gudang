@@ -2,9 +2,21 @@
 import { FONNTE_TOKEN, ADMIN_PHONE } from './secrets';
 
 /**
+ * Memastikan nomor telepon dalam format yang benar (hanya angka)
+ */
+const formatPhoneNumber = (phone: string) => {
+  if (!phone) return "";
+  // Hapus semua karakter selain angka
+  let cleaned = phone.replace(/\D/g, '');
+  // Jika dimulai dengan 08, ganti jadi 628
+  if (cleaned.startsWith('08')) {
+    cleaned = '62' + cleaned.substring(1);
+  }
+  return cleaned;
+};
+
+/**
  * Fungsi untuk mengirim pesan WhatsApp menggunakan API Fonnte.
- * @param target Nomor WhatsApp tujuan
- * @param message Isi pesan yang akan dikirim
  */
 export async function sendWhatsApp(target: string, message: string) {
   if (!FONNTE_TOKEN || FONNTE_TOKEN === "YOUR_FONNTE_TOKEN_HERE") {
@@ -12,9 +24,16 @@ export async function sendWhatsApp(target: string, message: string) {
     return;
   }
 
+  const formattedTarget = formatPhoneNumber(target);
+  if (!formattedTarget) {
+    console.error("WhatsApp tidak terkirim: Nomor target tidak valid.");
+    return;
+  }
+
   try {
-    const formData = new URLSearchParams();
-    formData.append('target', target);
+    // Menggunakan FormData agar sesuai dengan perilaku array di PHP cURL
+    const formData = new FormData();
+    formData.append('target', formattedTarget);
     formData.append('message', message);
     formData.append('countryCode', '62');
 
