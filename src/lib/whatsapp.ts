@@ -1,4 +1,3 @@
-
 'use server';
 
 import { FONNTE_TOKEN, ADMIN_PHONE } from './secrets';
@@ -39,7 +38,7 @@ export async function sendWhatsApp(target: string, message: string) {
     return { success: false, message: "Invalid target number" };
   }
 
-  console.log(`[WA] Mengirim ke ${formattedTarget}...`);
+  console.log(`[WA Server] Mencoba kirim ke ${formattedTarget}...`);
 
   try {
     const formData = new FormData();
@@ -56,45 +55,39 @@ export async function sendWhatsApp(target: string, message: string) {
     });
 
     const result = await response.json();
-    console.log(`[WA] Respon API Fonnte untuk ${formattedTarget}:`, result);
-    return result;
+    console.log(`[WA Server] Respon dari Fonnte:`, result);
+    return result; // Mengembalikan hasil ke client
   } catch (error) {
-    console.error("[WA] Fatal error saat mengirim pesan:", error);
-    return { success: false, error };
+    console.error("[WA Server] Fatal error saat mengirim pesan:", error);
+    return { success: false, error: String(error) };
   }
 }
 
-const formatRupiahText = (number: number) => {
-    return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-    }).format(number);
-};
-
 /**
- * Notifikasi Pesanan Baru (Laporan Otomatis ke Admin dan Pelanggan)
+ * Notifikasi Pesanan Baru (Laporan ke Admin dan Pelanggan)
  */
 export async function sendNewOrderNotification(shipment: any, customer: any) {
     const remaining = shipment.totalAmount - (shipment.downPayment || 0);
+    const formatRupiah = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
     
     const messageContent = `👗 *PESANAN BARU*
 No: ${shipment.transactionId}
 Pelanggan: ${customer.name}
-Total: ${formatRupiahText(shipment.totalAmount)}
-DP: ${formatRupiahText(shipment.downPayment || 0)}
-Sisa: ${formatRupiahText(remaining)}`;
+Total: ${formatRupiah(shipment.totalAmount)}
+DP: ${formatRupiah(shipment.downPayment || 0)}
+Sisa: ${formatRupiah(remaining)}`;
 
-    // 1. Kirim Laporan ke Admin (Fixed & Sederhana)
-    if (ADMIN_PHONE) {
-        await sendWhatsApp(ADMIN_PHONE, `📢 *LAPORAN BUTIK*\n${messageContent}`);
-    }
+    // 1. Laporan ke Admin (Wajib)
+    const adminResult = await sendWhatsApp(ADMIN_PHONE, `📢 *LAPORAN BUTIK*\n${messageContent}`);
 
-    // 2. Kirim Notifikasi ke Pelanggan (Jika ada nomor valid)
+    // 2. Notifikasi ke Pelanggan (Jika ada nomor valid)
+    let customerResult = null;
     if (customer.phone && customer.phone !== 'N/A') {
         const welcomeMsg = `Halo ${customer.name}, terima kasih telah memesan di Butik Anita!\n\n${messageContent}`;
-        await sendWhatsApp(customer.phone, welcomeMsg);
+        customerResult = await sendWhatsApp(customer.phone, welcomeMsg);
     }
+
+    return { adminResult, customerResult };
 }
 
 /**
@@ -102,19 +95,21 @@ Sisa: ${formatRupiahText(remaining)}`;
  */
 export async function sendOrderFinishedNotification(shipment: any, customer: any) {
     const remaining = shipment.totalAmount - (shipment.downPayment || 0);
+    const formatRupiah = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
     
     const messageContent = `✅ *PESANAN SELESAI*
 Halo *${customer.name}*, baju Anda (*${shipment.transactionId}*) sudah selesai dijahit dan siap diambil.
-Sisa Pelunasan: ${formatRupiahText(remaining)}`;
+Sisa Pelunasan: ${formatRupiah(remaining)}`;
 
     // 1. Laporan ke Admin
-    if (ADMIN_PHONE) {
-        await sendWhatsApp(ADMIN_PHONE, `📢 *INFO SELESAI*\n${messageContent}`);
-    }
+    const adminResult = await sendWhatsApp(ADMIN_PHONE, `📢 *INFO SELESAI*\n${messageContent}`);
 
     // 2. Kabar ke Pelanggan
+    let customerResult = null;
     if (customer.phone && customer.phone !== 'N/A') {
         const fullMsg = `${messageContent}\n\nSilakan kunjungi Butik Anita untuk pengambilan. Terima kasih!`;
-        await sendWhatsApp(customer.phone, fullMsg);
+        customerResult = await sendWhatsApp(customer.phone, fullMsg);
     }
+
+    return { adminResult, customerResult };
 }

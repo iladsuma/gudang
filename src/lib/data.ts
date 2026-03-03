@@ -125,10 +125,11 @@ export async function addShipment(shipment: Omit<Shipment, 'id' | 'createdAt' | 
 
     saveDB(db);
 
-    // KIRIM NOTIFIKASI WA (ASINKRON)
+    // KIRIM NOTIFIKASI WA DAN LOG HASIL KE CONSOLE BROWSER
     const customer = db.customers.find((c: any) => c.id === shipment.customerId);
     sendNewOrderNotification(newShipment, customer || { name: shipment.customerName, phone: 'N/A' })
-        .catch(err => console.error("Gagal kirim notifikasi WA:", err));
+        .then(res => console.log("Hasil Kirim WA Pesanan Baru:", res))
+        .catch(err => console.error("Gagal panggil fungsi WA:", err));
 
     return newShipment;
 }
@@ -175,7 +176,8 @@ export async function processShipmentsToDelivered(shipmentIds: string[]): Promis
             // Trigger Notifikasi Selesai
             const customer = db.customers.find((c: any) => c.id === s.customerId);
             sendOrderFinishedNotification(s, customer || { name: s.customerName, phone: 'N/A' })
-                .catch(err => console.error("Gagal kirim notifikasi selesai WA:", err));
+                .then(res => console.log("Hasil Kirim WA Pesanan Selesai:", res))
+                .catch(err => console.error("Gagal panggil fungsi WA Selesai:", err));
         }
     }
     
