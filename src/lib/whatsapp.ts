@@ -1,4 +1,3 @@
-
 'use server';
 
 import { FONNTE_TOKEN, ADMIN_PHONE } from './secrets';
@@ -29,18 +28,17 @@ const formatPhoneNumber = (phone: string | null | undefined) => {
 };
 
 /**
- * Fungsi untuk mengirim pesan WhatsApp menggunakan API Fonnte.
- * Dijalankan di sisi server untuk menghindari CORS.
+ * Fungsi inti untuk mengirim pesan WhatsApp menggunakan API Fonnte.
  */
 export async function sendWhatsApp(target: string, message: string) {
-  if (!FONNTE_TOKEN || FONNTE_TOKEN === "YOUR_FONNTE_TOKEN_HERE") {
+  if (!FONNTE_TOKEN) {
     console.warn("WhatsApp tidak terkirim: Token Fonnte belum dikonfigurasi.");
     return { success: false, message: "Token missing" };
   }
 
   const formattedTarget = formatPhoneNumber(target);
   if (!formattedTarget) {
-    // Tidak perlu log error jika memang nomornya adalah placeholder seperti "N/A"
+    // Return diam-diam jika nomor target "N/A" atau tidak valid
     return { success: false, message: "Invalid target number" };
   }
 
@@ -58,8 +56,7 @@ export async function sendWhatsApp(target: string, message: string) {
       body: formData,
     });
 
-    const result = await response.json();
-    return result;
+    return await response.json();
   } catch (error) {
     console.error("Error API Fonnte:", error);
     return { success: false, error };
@@ -75,53 +72,56 @@ const formatRupiahText = (number: number) => {
 };
 
 /**
- * Notifikasi untuk Pelanggan (Pesanan Baru)
+ * Notifikasi Pesanan Baru (Fixed ke Admin dan Pelanggan jika ada nomor)
  */
 export async function sendNewOrderNotification(shipment: any, customer: any) {
     const remaining = shipment.totalAmount - (shipment.downPayment || 0);
-    const productList = shipment.products.map((p: any) => `- ${p.name} (x${p.quantity})`).join('\n');
     
+    // Pesan Sederhana
     const message = 
-`Halo *${customer.name}*, 
+`👗 *PESANAN BARU - BUTIK ANITA*
 
-Terima kasih telah memesan di *Butik Anita*. Pesanan Anda telah kami catat:
-
-📌 *No. Transaksi:* ${shipment.transactionId}
-👗 *Item:*
-${productList}
-
+📌 *No:* ${shipment.transactionId}
+👤 *Nama:* ${customer.name}
 💰 *Total:* ${formatRupiahText(shipment.totalAmount)}
 💳 *DP:* ${formatRupiahText(shipment.downPayment || 0)}
-📉 *Sisa:* *${formatRupiahText(remaining)}*
+📉 *Sisa:* ${formatRupiahText(remaining)}
 
-Pesanan sedang dalam antrean pengerjaan. Simpan pesan ini sebagai bukti. Terima kasih! 🙏`;
+_Pesanan telah berhasil dicatat ke sistem._`;
 
-    return sendWhatsApp(customer.phone, message);
+    // Kirim ke Admin (Pasti)
+    if (ADMIN_PHONE) {
+        await sendWhatsApp(ADMIN_PHONE, `📢 *LAPORAN ADMIN*\n${message}`);
+    }
+
+    // Kirim ke Pelanggan (Jika ada nomor)
+    if (customer.phone && customer.phone !== 'N/A') {
+        await sendWhatsApp(customer.phone, `Halo ${customer.name}, Terima kasih sudah memesan!\n\n${message}`);
+    }
 }
 
 /**
- * Notifikasi untuk Pelanggan (Pesanan Selesai)
+ * Notifikasi Pesanan Selesai
  */
 export async function sendOrderFinishedNotification(shipment: any, customer: any) {
     const remaining = shipment.totalAmount - (shipment.downPayment || 0);
+    
     const message = 
-`Halo *${customer.name}*, 
+`✅ *PESANAN SELESAI - BUTIK ANITA*
 
-Kabar gembira! 🎉
-Jahitan Anda (*${shipment.transactionId}*) telah *SELESAI* dan siap diambil.
+Baju Anda (*${shipment.transactionId}*) atas nama *${customer.name}* sudah selesai dijahit dan siap diambil.
 
-💰 *Sisa Pelunasan:* *${formatRupiahText(remaining)}*
+💰 *Sisa Bayar:* ${formatRupiahText(remaining)}
 
-Silakan kunjungi Butik Anita untuk pengambilan. 👋`;
+Silakan kunjungi Butik Anita untuk pengambilan. Terima kasih!`;
 
-    return sendWhatsApp(customer.phone, message);
-}
+    // Kirim ke Admin
+    if (ADMIN_PHONE) {
+        await sendWhatsApp(ADMIN_PHONE, `📢 *INFO SELESAI*\n${message}`);
+    }
 
-/**
- * Notifikasi untuk Admin/Pemilik (Setiap ada pesanan baru)
- */
-export async function sendAdminOrderAlert(shipment: any, customer: any) {
-    if (!ADMIN_PHONE) return;
-    const message = `📢 *NOTIFIKASI ADMIN*\nAda pesanan baru masuk!\n\nNo: ${shipment.transactionId}\nPelanggan: ${customer.name}\nTotal: ${formatRupiahText(shipment.totalAmount)}\nDP: ${formatRupiahText(shipment.downPayment || 0)}`;
-    return sendWhatsApp(ADMIN_PHONE, message);
+    // Kirim ke Pelanggan
+    if (customer.phone && customer.phone !== 'N/A') {
+        await sendWhatsApp(customer.phone, message);
+    }
 }

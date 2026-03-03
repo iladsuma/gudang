@@ -1,4 +1,3 @@
-
 import type { 
     Shipment, 
     User, 
@@ -15,7 +14,7 @@ import type {
     Notification
 } from './types';
 import initialData from '../../db.json';
-import { sendNewOrderNotification, sendOrderFinishedNotification, sendAdminOrderAlert } from './whatsapp';
+import { sendNewOrderNotification, sendOrderFinishedNotification } from './whatsapp';
 
 const DB_KEY = 'boutique_local_db_v1';
 
@@ -126,14 +125,10 @@ export async function addShipment(shipment: Omit<Shipment, 'id' | 'createdAt' | 
 
     saveDB(db);
 
-    // NOTIFIKASI WHATSAPP
+    // NOTIFIKASI WHATSAPP KE ADMIN & PELANGGAN
     const customer = db.customers.find((c: any) => c.id === shipment.customerId);
     if (customer) {
-        // Jalankan notifikasi tanpa menghambat UI (background fire and forget)
-        if (customer.phone) {
-            sendNewOrderNotification(newShipment, customer).catch(err => console.error("Gagal kirim WA Pelanggan:", err));
-        }
-        sendAdminOrderAlert(newShipment, customer).catch(err => console.error("Gagal kirim WA Admin:", err));
+        sendNewOrderNotification(newShipment, customer).catch(err => console.error("WA Error:", err));
     }
 
     return newShipment;
@@ -178,9 +173,10 @@ export async function processShipmentsToDelivered(shipmentIds: string[]): Promis
             s.status = 'Terkirim';
             count++;
 
+            // Trigger Notifikasi Selesai
             const customer = db.customers.find((c: any) => c.id === s.customerId);
-            if (customer && customer.phone) {
-                sendOrderFinishedNotification(s, customer).catch(err => console.error("Gagal kirim WA Selesai:", err));
+            if (customer) {
+                sendOrderFinishedNotification(s, customer).catch(err => console.error("WA Error Selesai:", err));
             }
         }
     }
