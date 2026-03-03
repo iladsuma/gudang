@@ -125,11 +125,10 @@ export async function addShipment(shipment: Omit<Shipment, 'id' | 'createdAt' | 
 
     saveDB(db);
 
-    // NOTIFIKASI WHATSAPP KE ADMIN & PELANGGAN
+    // KIRIM NOTIFIKASI WA (ASINKRON)
     const customer = db.customers.find((c: any) => c.id === shipment.customerId);
-    if (customer) {
-        sendNewOrderNotification(newShipment, customer).catch(err => console.error("WA Error:", err));
-    }
+    sendNewOrderNotification(newShipment, customer || { name: shipment.customerName, phone: 'N/A' })
+        .catch(err => console.error("Gagal kirim notifikasi WA:", err));
 
     return newShipment;
 }
@@ -175,9 +174,8 @@ export async function processShipmentsToDelivered(shipmentIds: string[]): Promis
 
             // Trigger Notifikasi Selesai
             const customer = db.customers.find((c: any) => c.id === s.customerId);
-            if (customer) {
-                sendOrderFinishedNotification(s, customer).catch(err => console.error("WA Error Selesai:", err));
-            }
+            sendOrderFinishedNotification(s, customer || { name: s.customerName, phone: 'N/A' })
+                .catch(err => console.error("Gagal kirim notifikasi selesai WA:", err));
         }
     }
     
