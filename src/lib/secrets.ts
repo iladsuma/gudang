@@ -5,5 +5,5 @@
 
 export const DATABASE_URL = "postgresql://neondb_owner:FfRDIaG85Jp4@ep-weathered-salad-a57j3yq9.us-east-2.aws.neon.tech/neondb?sslmode=require";
 
-// Ganti dengan token dari dashboard Fonnte Anda (https://fonnte.com)
-export const FONNTE_TOKEN = "YOUR_FONNTE_TOKEN_HERE";
+// Token dari dashboard Fonnte Anda (https://fonnte.com)
+export const FONNTE_TOKEN = "h7KiTRi9EzqGjHb7krvL";
