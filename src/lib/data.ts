@@ -15,6 +15,7 @@ import type {
     Notification
 } from './types';
 import initialData from '../../db.json';
+import { sendNewOrderNotification, sendOrderFinishedNotification } from './whatsapp';
 
 const DB_KEY = 'boutique_local_db_v1';
 
@@ -84,6 +85,7 @@ export async function addShipment(shipment: Omit<Shipment, 'id' | 'createdAt' | 
     
     db.shipments.unshift(newShipment);
 
+    // Update stocks if products exist
     if (shipment.products) {
         for (const p of shipment.products) {
             const product = db.products.find((prod: any) => prod.id === p.productId);
@@ -105,6 +107,7 @@ export async function addShipment(shipment: Omit<Shipment, 'id' | 'createdAt' | 
         }
     }
 
+    // Record Down Payment
     if (shipment.downPayment && shipment.downPayment > 0 && shipment.accountId) {
         const account = db.accounts.find((a: any) => a.id === shipment.accountId);
         if (account) {
@@ -124,6 +127,13 @@ export async function addShipment(shipment: Omit<Shipment, 'id' | 'createdAt' | 
     }
 
     saveDB(db);
+
+    // Kirim notifikasi WhatsApp ke Pelanggan
+    const customer = db.customers.find((c: any) => c.id === shipment.customerId);
+    if (customer && customer.phone) {
+        sendNewOrderNotification(newShipment, customer);
+    }
+
     return newShipment;
 }
 
@@ -160,12 +170,20 @@ export async function processShipmentsToPackaging(shipmentIds: string[], user: U
 export async function processShipmentsToDelivered(shipmentIds: string[]): Promise<{ count: number }> {
     const db = getDB();
     let count = 0;
-    db.shipments.forEach((s: any) => {
+    
+    for (const s of db.shipments) {
         if (shipmentIds.includes(s.id)) {
             s.status = 'Terkirim';
             count++;
+
+            // Kirim notifikasi WhatsApp bahwa jahitan sudah selesai
+            const customer = db.customers.find((c: any) => c.id === s.customerId);
+            if (customer && customer.phone) {
+                sendOrderFinishedNotification(s, customer);
+            }
         }
-    });
+    }
+    
     saveDB(db);
     return { count };
 }
