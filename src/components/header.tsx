@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -32,7 +31,7 @@ export function Header() {
   };
   
   const isSettingsPage = pathname.startsWith('/settings');
-  const isTransactionPage = ['/cashier', '/purchases', '/returns', '/receivables', '/payables'].includes(pathname);
+  const isTransactionPage = ['/receivables', '/purchases', '/payables'].includes(pathname);
   const isReportPage = pathname.startsWith('/reports');
 
   return (
@@ -62,11 +61,9 @@ export function Header() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
-                        <DropdownMenuItem onSelect={() => router.push('/cashier')}>Penjualan Langsung (Kasir)</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => router.push('/receivables')}>Piutang Usaha (Pelunasan Pesanan)</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => router.push('/purchases')}>Pembelian Bahan (Kain/Alat)</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => router.push('/payables')}>Utang Usaha (Bayar Supplier)</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => router.push('/returns')}>Retur Penjualan</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
 
