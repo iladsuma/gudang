@@ -26,7 +26,11 @@ function MyShipmentsPageContent() {
       const data = await getShipments();
       
       // Filter orders assigned to this user that are in progress or done
-      setShipments(data.filter(s => s.userId === user.id && s.status !== 'Proses'));
+      // Check if user.id is in the comma-separated userId string
+      setShipments(data.filter(s => {
+          const assignedIds = s.userId ? s.userId.split(',') : [];
+          return assignedIds.includes(user.id) && s.status !== 'Proses';
+      }));
       setLoading(false);
   }, [user]);
 

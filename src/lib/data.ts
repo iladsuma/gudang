@@ -129,9 +129,7 @@ export async function addShipment(shipment: Omit<Shipment, 'id' | 'createdAt' | 
     const customer = db.customers.find((c: any) => c.id === shipment.customerId);
     sendNewOrderNotification(newShipment, customer || { name: shipment.customerName, phone: 'N/A' })
         .then(res => {
-            console.log("=== DEBUG WHATSAPP PESANAN BARU ===");
-            console.log("Admin Result:", JSON.stringify(res.adminResult, null, 2));
-            console.log("Customer Result:", res.customerResult ? JSON.stringify(res.customerResult, null, 2) : "Skipped (Nomor N/A)");
+            console.log(`Hasil Kirim WA Pesanan Baru: ${JSON.stringify(res)}`);
         })
         .catch(err => console.error("Gagal panggil fungsi WA:", err));
 
@@ -154,13 +152,15 @@ export async function deleteShipment(id: string): Promise<{ id: string }> {
     return { id };
 }
 
-export async function processShipmentsToPackaging(shipmentIds: string[], user: User | null): Promise<{ count: number }> {
+export async function processShipmentsToPackaging(shipmentIds: string[], users: User[] | null): Promise<{ count: number }> {
     const db = getDB();
     let count = 0;
+    const userIds = users && users.length > 0 ? users.map(u => u.id).join(',') : '';
+    
     db.shipments.forEach((s: any) => {
         if (shipmentIds.includes(s.id)) {
             s.status = 'Pengemasan';
-            if (user) s.userId = user.id;
+            if (userIds) s.userId = userIds;
             count++;
         }
     });
@@ -181,9 +181,7 @@ export async function processShipmentsToDelivered(shipmentIds: string[]): Promis
             const customer = db.customers.find((c: any) => c.id === s.customerId);
             sendOrderFinishedNotification(s, customer || { name: s.customerName, phone: 'N/A' })
                 .then(res => {
-                    console.log("=== DEBUG WHATSAPP SELESAI ===");
-                    console.log("Admin Result:", JSON.stringify(res.adminResult, null, 2));
-                    console.log("Customer Result:", res.customerResult ? JSON.stringify(res.customerResult, null, 2) : "Skipped (Nomor N/A)");
+                    console.log(`Hasil Kirim WA Selesai: ${JSON.stringify(res)}`);
                 })
                 .catch(err => console.error("Gagal panggil fungsi WA Selesai:", err));
         }
@@ -653,7 +651,7 @@ export async function getSalesProfitReport(startDate: Date, endDate: Date, userI
     );
     
     if (userId !== 'all') {
-        deliveredShipments = deliveredShipments.filter((s: any) => s.userId === userId);
+        deliveredShipments = deliveredShipments.filter((s: any) => s.userId.split(',').includes(userId));
     }
     
     const details = deliveredShipments.map((s: any) => {
@@ -665,7 +663,7 @@ export async function getSalesProfitReport(startDate: Date, endDate: Date, userI
             createdAt: s.createdAt,
             customerName: s.customerName,
             userId: s.userId,
-            userName: db.users.find((u: any) => u.id === s.userId)?.username || 'N/A',
+            userName: s.userId.split(',').map((id: string) => db.users.find((u: any) => u.id === id)?.username || 'N/A').join(', '),
             totalRevenue: revenue,
             totalCOGS: totalCOGS,
             profit: revenue - totalCOGS,

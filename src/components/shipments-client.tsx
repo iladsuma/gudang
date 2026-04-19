@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Shipment, BodyMeasurements, User } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2, Loader2, Pencil, CheckCircle, Printer, Send } from 'lucide-react';
+import { PlusCircle, Trash2, Loader2, Pencil, CheckCircle, Printer, Send, UserCheck, ChevronDown } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -46,14 +46,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { cn } from '@/lib/utils';
 
 interface jsPDFWithAutoTable extends jsPDF {
   autoTable: (options: any) => jsPDF;
@@ -76,7 +75,7 @@ export function ShipmentsClient({ shipments: initialShipments, allUsers, onUpdat
   const [selectedShipments, setSelectedShipments] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedAssigneeId, setSelectedAssigneeId] = useState<string>('');
+  const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<string[]>([]);
 
   useEffect(() => {
      setShipments(initialShipments);
@@ -171,28 +170,28 @@ export function ShipmentsClient({ shipments: initialShipments, allUsers, onUpdat
         return;
     }
     
-    // Admin must select an assignee, User is self-assigned
-    const targetUser = isAdminView 
-        ? allUsers.find(u => u.id === selectedAssigneeId)
-        : currentUser;
+    // Admin must select assignees, User is self-assigned
+    const targetUsers = isAdminView 
+        ? allUsers.filter(u => selectedAssigneeIds.includes(u.id))
+        : [currentUser as User];
 
-    if (isAdminView && !selectedAssigneeId) {
-        toast({ variant: 'destructive', title: 'Penjahit Belum Dipilih', description: 'Silakan pilih penjahit yang akan menerima tugas ini.' });
+    if (isAdminView && selectedAssigneeIds.length === 0) {
+        toast({ variant: 'destructive', title: 'Penjahit Belum Dipilih', description: 'Silakan pilih minimal satu penjahit.' });
         return;
     }
 
     setIsProcessing(true);
     try {
-        await processShipmentsToPackaging(selectedShipments, targetUser || null);
+        await processShipmentsToPackaging(selectedShipments, targetUsers.length > 0 ? targetUsers : null);
         toast({ 
             title: 'Sukses!', 
             description: isAdminView 
-                ? `${selectedShipments.length} pesanan berhasil dikirim ke ${targetUser?.username}.` 
+                ? `${selectedShipments.length} pesanan berhasil ditugaskan ke ${targetUsers.map(u => u.username).join(', ')}.` 
                 : `${selectedShipments.length} pesanan telah Anda ambil untuk diproses.` 
         });
         onUpdate();
         setSelectedShipments([]);
-        if (isAdminView) setSelectedAssigneeId('');
+        if (isAdminView) setSelectedAssigneeIds([]);
     } catch (error) {
         toast({ variant: 'destructive', title: 'Gagal Memproses', description: error instanceof Error ? error.message : 'Terjadi kesalahan.' });
     } finally {
@@ -295,23 +294,67 @@ export function ShipmentsClient({ shipments: initialShipments, allUsers, onUpdat
             {isAdminView ? (
                 <>
                     <div className="flex items-center gap-2">
-                        <Select value={selectedAssigneeId} onValueChange={setSelectedAssigneeId}>
-                            <SelectTrigger className="w-[180px]">
-                                <SelectValue placeholder="Pilih Penjahit" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {penjahitList.map(u => (
-                                    <SelectItem key={u.id} value={u.id}>{u.username}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" className="w-[200px] justify-between">
+                                    <div className="flex items-center gap-2 truncate">
+                                        <UserCheck className="h-4 w-4" />
+                                        {selectedAssigneeIds.length > 0 
+                                            ? `${selectedAssigneeIds.length} Penjahit` 
+                                            : "Pilih Penjahit"}
+                                    </div>
+                                    <ChevronDown className="h-4 w-4 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[250px] p-2" align="start">
+                                <div className="space-y-2">
+                                    <p className="text-xs font-semibold text-muted-foreground px-2 py-1 uppercase tracking-wider">Daftar Tim Penjahit</p>
+                                    <div className="max-h-[300px] overflow-y-auto">
+                                        {penjahitList.map(u => (
+                                            <div 
+                                                key={u.id} 
+                                                className={cn(
+                                                    "flex items-center space-x-2 rounded-md p-2 hover:bg-muted cursor-pointer transition-colors",
+                                                    selectedAssigneeIds.includes(u.id) && "bg-primary/5"
+                                                )}
+                                                onClick={() => {
+                                                    if (selectedAssigneeIds.includes(u.id)) {
+                                                        setSelectedAssigneeIds(prev => prev.filter(id => id !== u.id));
+                                                    } else {
+                                                        setSelectedAssigneeIds(prev => [...prev, u.id]);
+                                                    }
+                                                }}
+                                            >
+                                                <Checkbox 
+                                                    checked={selectedAssigneeIds.includes(u.id)}
+                                                    onCheckedChange={() => {}} // Handled by div click
+                                                />
+                                                <span className="text-sm font-medium">{u.username}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {selectedAssigneeIds.length > 0 && (
+                                        <div className="pt-2 border-t mt-2">
+                                            <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                className="w-full text-xs" 
+                                                onClick={() => setSelectedAssigneeIds([])}
+                                            >
+                                                Hapus Pilihan
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+                            </PopoverContent>
+                        </Popover>
                         <Button 
                             onClick={handleProcessToPackaging} 
-                            disabled={selectedShipments.length === 0 || !selectedAssigneeId || isProcessing}
+                            disabled={selectedShipments.length === 0 || selectedAssigneeIds.length === 0 || isProcessing}
                             variant="secondary"
                         >
                              {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                             Kirim ke Penjahit ({selectedShipments.length})
+                             Kirim ({selectedShipments.length})
                         </Button>
                     </div>
                     <Button onClick={handleOpenForm} variant="default">

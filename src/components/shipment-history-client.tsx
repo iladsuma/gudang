@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -52,7 +53,8 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
     return shipments.filter(s => {
       const shipmentDate = new Date(s.createdAt);
       
-      const matchesUser = userFilter === 'all' || s.userId === userFilter;
+      const assignedIds = s.userId ? s.userId.split(',') : [];
+      const matchesUser = userFilter === 'all' || assignedIds.includes(userFilter);
       
       const fromDate = dateRange?.from ? startOfDay(dateRange.from) : null;
       const toDate = dateRange?.to ? endOfDay(dateRange.to) : null;
@@ -170,7 +172,8 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
       for (const shipment of shipmentsToPrint) {
         if (!isFirstPage) doc.addPage();
         
-        const user = allUsers.find(u => u.id === shipment.userId);
+        const assignedIds = shipment.userId ? shipment.userId.split(',') : [];
+        const userNames = assignedIds.map(id => allUsers.find(u => u.id === id)?.username || 'N/A').join(', ');
 
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
@@ -184,7 +187,7 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
         doc.text(`No Transaksi : ${shipment.transactionId}`, rightX, 45, { align: 'right' });
         doc.text(`Pelanggan    : ${shipment.customerName}`, rightX, 55, { align: 'right' });
         doc.text(`Tgl    : ${format(new Date(shipment.createdAt), 'dd/MM/yyyy HH:mm')}`, rightX, 65, { align: 'right' });
-        doc.text(`Kasir  : ${user?.username.toUpperCase() ?? 'N/A'}`, rightX, 75, { align: 'right' });
+        doc.text(`Penjahit  : ${userNames.toUpperCase()}`, rightX, 75, { align: 'right' });
 
         const tableColumn = ["No.", "Nama Item", "Jml Satuan", "Harga", "Diskon", "Total"];
         const tableRows = shipment.products.map((p, i) => [i + 1, p.name, `${p.quantity} PCS`, formatRupiah(p.price), 0, formatRupiah(p.quantity * p.price)]);
@@ -203,7 +206,12 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
     }
   };
 
-  const getUserName = (userId: string) => allUsers.find(u => u.id === userId)?.username || 'N/A';
+  const getUserNameDisplay = (userId: string) => {
+      if (!userId) return 'N/A';
+      const assignedIds = userId.split(',');
+      const names = assignedIds.map(id => allUsers.find(u => u.id === id)?.username || 'N/A');
+      return names.join(', ');
+  };
 
   const handleDatePreset = (preset: DatePreset) => {
     setActivePreset(preset);
@@ -309,7 +317,7 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
               </TableHead>
               <TableHead className="w-[50px]">No.</TableHead>
               <TableHead>No. Transaksi</TableHead>
-              <TableHead>User</TableHead>
+              <TableHead>Penjahit</TableHead>
               <TableHead>Pelanggan</TableHead>
               <TableHead>Produk</TableHead>
               <TableHead>Status</TableHead>
@@ -330,7 +338,11 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
                     </TableCell>
                   <TableCell>{index + 1}</TableCell>
                   <TableCell className='font-medium font-mono'>{shipment.transactionId}</TableCell>
-                  <TableCell>{getUserName(shipment.userId)}</TableCell>
+                  <TableCell>
+                      <div className="max-w-[150px] truncate" title={getUserNameDisplay(shipment.userId)}>
+                        {getUserNameDisplay(shipment.userId)}
+                      </div>
+                  </TableCell>
                   <TableCell>{shipment.customerName}</TableCell>
                   <TableCell>
                       <div className="flex flex-col gap-1">
