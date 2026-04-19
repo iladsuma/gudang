@@ -17,6 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 function ShipmentsPageContent() {
   const { user, loading: authLoading } = useAuth();
   const [shipments, setShipments] = useState<Shipment[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [pageTitle, setPageTitle] = useState('Pemesanan Produk');
   const [pageDescription, setPageDescription] = useState("Daftar pesanan masuk yang menunggu untuk diproses.");
@@ -25,16 +26,20 @@ function ShipmentsPageContent() {
     if (!user) return;
     setLoading(true);
     try {
-        const shipmentData = await getShipments();
+        const [shipmentData, userData] = await Promise.all([
+            getShipments(),
+            getUsers()
+        ]);
         
+        setAllUsers(userData);
+
         if(user?.role === 'admin') {
             // Admin sees all new orders (Proses)
             setShipments(shipmentData.filter(s => s.status === 'Proses'));
             setPageTitle('Manajemen Pesanan Baru');
             setPageDescription("Halaman ini digunakan oleh pemilik/admin untuk mencatat pesanan baru dari pelanggan.");
         } else {
-            // User sees only orders that are in "Proses" status and NOT yet taken by anyone
-            // (If we use userId to track the assigned user, then status 'Proses' means unassigned)
+            // User sees only orders that are in "Proses" status
             setShipments(shipmentData.filter(s => s.status === 'Proses'));
             setPageTitle('Ambil Pesanan Tersedia');
             setPageDescription("Pilih pesanan yang ingin Anda kerjakan. Setelah diambil, pesanan akan pindah ke menu 'Pekerjaan Saya'.");
@@ -88,7 +93,7 @@ function ShipmentsPageContent() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ShipmentsClient shipments={shipments} onUpdate={fetchAndSetData} />
+          <ShipmentsClient shipments={shipments} allUsers={allUsers} onUpdate={fetchAndSetData} />
         </CardContent>
       </Card>
     </div>

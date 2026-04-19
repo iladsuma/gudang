@@ -1,9 +1,10 @@
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import type { Shipment, BodyMeasurements } from '@/lib/types';
+import type { Shipment, BodyMeasurements, User } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2, Loader2, Pencil, CheckCircle, Printer } from 'lucide-react';
+import { PlusCircle, Trash2, Loader2, Pencil, CheckCircle, Printer, Send } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -44,6 +45,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
@@ -51,8 +59,14 @@ interface jsPDFWithAutoTable extends jsPDF {
   autoTable: (options: any) => jsPDF;
 }
 
-export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shipments: Shipment[], onUpdate: () => void; }) {
-  const { user } = useAuth();
+interface ShipmentsClientProps {
+    shipments: Shipment[];
+    allUsers: User[];
+    onUpdate: () => void;
+}
+
+export function ShipmentsClient({ shipments: initialShipments, allUsers, onUpdate }: ShipmentsClientProps) {
+  const { user: currentUser } = useAuth();
   const [shipments, setShipments] = useState(initialShipments);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
@@ -62,6 +76,7 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
   const [selectedShipments, setSelectedShipments] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedAssigneeId, setSelectedAssigneeId] = useState<string>('');
 
   useEffect(() => {
      setShipments(initialShipments);
@@ -155,12 +170,29 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
         toast({ variant: 'destructive', title: 'Tidak Ada Terpilih', description: 'Pilih setidaknya satu pesanan untuk diproses.' });
         return;
     }
+    
+    // Admin must select an assignee, User is self-assigned
+    const targetUser = isAdminView 
+        ? allUsers.find(u => u.id === selectedAssigneeId)
+        : currentUser;
+
+    if (isAdminView && !selectedAssigneeId) {
+        toast({ variant: 'destructive', title: 'Penjahit Belum Dipilih', description: 'Silakan pilih penjahit yang akan menerima tugas ini.' });
+        return;
+    }
+
     setIsProcessing(true);
     try {
-        await processShipmentsToPackaging(selectedShipments, user);
-        toast({ title: 'Sukses!', description: `${selectedShipments.length} pesanan telah Anda ambil untuk diproses.` });
+        await processShipmentsToPackaging(selectedShipments, targetUser || null);
+        toast({ 
+            title: 'Sukses!', 
+            description: isAdminView 
+                ? `${selectedShipments.length} pesanan berhasil dikirim ke ${targetUser?.username}.` 
+                : `${selectedShipments.length} pesanan telah Anda ambil untuk diproses.` 
+        });
         onUpdate();
         setSelectedShipments([]);
+        if (isAdminView) setSelectedAssigneeId('');
     } catch (error) {
         toast({ variant: 'destructive', title: 'Gagal Memproses', description: error instanceof Error ? error.message : 'Terjadi kesalahan.' });
     } finally {
@@ -245,7 +277,8 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
     }
   };
 
-  const isAdminView = user?.role === 'admin';
+  const isAdminView = currentUser?.role === 'admin';
+  const penjahitList = allUsers.filter(u => u.role === 'user');
 
   return (
     <div className="space-y-4">
@@ -258,12 +291,34 @@ export function ShipmentsClient({ shipments: initialShipments, onUpdate }: { shi
                 className="w-full md:w-80"
             />
         </div>
-        <div className="flex justify-end gap-2 w-full md:w-auto">
+        <div className="flex flex-wrap justify-end gap-2 w-full md:w-auto">
             {isAdminView ? (
-                <Button onClick={handleOpenForm} variant="default" className="w-full md:w-auto">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Tambah Pesanan Baru
-                </Button>
+                <>
+                    <div className="flex items-center gap-2">
+                        <Select value={selectedAssigneeId} onValueChange={setSelectedAssigneeId}>
+                            <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="Pilih Penjahit" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {penjahitList.map(u => (
+                                    <SelectItem key={u.id} value={u.id}>{u.username}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Button 
+                            onClick={handleProcessToPackaging} 
+                            disabled={selectedShipments.length === 0 || !selectedAssigneeId || isProcessing}
+                            variant="secondary"
+                        >
+                             {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                             Kirim ke Penjahit ({selectedShipments.length})
+                        </Button>
+                    </div>
+                    <Button onClick={handleOpenForm} variant="default">
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Tambah Pesanan Baru
+                    </Button>
+                </>
             ) : (
                 <Button onClick={handleProcessToPackaging} disabled={selectedShipments.length === 0 || isProcessing} className="w-full md:w-auto">
                     {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
