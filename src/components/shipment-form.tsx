@@ -15,10 +15,9 @@ import { DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/co
 import { Loader2, PlusCircle, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import { addShipment, updateShipment, getCustomers, getAccounts } from '@/lib/data';
+import { addShipment, updateShipment, getAccounts } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Textarea } from './ui/textarea';
 
 
 const shipmentProductSchema = z.object({
@@ -33,19 +32,23 @@ const shipmentProductSchema = z.object({
 
 const bodyMeasurementsSchema = z.object({
     ld: z.string().optional(),
-    lp: z.string().optional(),
-    lPanggul: z.string().optional(),
+    panjangPunggung: z.string().optional(),
     lBahu: z.string().optional(),
     pLengan: z.string().optional(),
-    pBaju: z.string().optional(),
+    lingkarTelapakTangan: z.string().optional(),
+    lp: z.string().optional(),
+    lingkarHip: z.string().optional(),
+    tinggiHip: z.string().optional(),
+    tinggiDuduk: z.string().optional(),
+    pBawah: z.string().optional(),
+    lBawah: z.string().optional(),
     notes: z.string().optional(),
 });
 
 const shipmentFormSchema = z.object({
   userId: z.string().min(1, 'User harus diisi'),
   transactionId: z.string().min(1, 'No. Transaksi harus diisi.'),
-  customerId: z.string().min(1, 'Pelanggan harus dipilih'),
-  customerName: z.string().min(1, 'Nama pelanggan harus ada'),
+  customerName: z.string().min(1, 'Nama pelanggan harus diisi'),
   accountId: z.string().optional(),
   products: z.array(shipmentProductSchema).min(1, 'Minimal harus ada satu item pesanan'),
   downPayment: z.coerce.number().min(0).optional(),
@@ -117,7 +120,6 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
   const { toast } = useToast();
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [customers, setCustomers] = React.useState<Customer[]>([]);
   const [accounts, setAccounts] = React.useState<Account[]>([]);
 
   const isEditMode = !!shipmentToEdit;
@@ -135,20 +137,26 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
     defaultValues: isEditMode ? {
         userId: shipmentToEdit.userId, 
         transactionId: shipmentToEdit.transactionId,
-        customerId: shipmentToEdit.customerId,
         customerName: shipmentToEdit.customerName,
         accountId: shipmentToEdit.accountId || '',
         products: shipmentToEdit.products || [],
-        bodyMeasurements: shipmentToEdit.bodyMeasurements || { ld: '', lp: '', lPanggul: '', lBahu: '', pLengan: '', pBaju: '', notes: '' },
+        bodyMeasurements: shipmentToEdit.bodyMeasurements || { 
+            ld: '', panjangPunggung: '', lBahu: '', pLengan: '', 
+            lingkarTelapakTangan: '', lp: '', lingkarHip: '', 
+            tinggiHip: '', tinggiDuduk: '', pBawah: '', lBawah: '', notes: '' 
+        },
         downPayment: shipmentToEdit.downPayment || 0,
     } : {
       userId: user?.id || '',
       transactionId: generateTransactionId(),
-      customerId: '',
       customerName: '',
       accountId: '',
       products: [{ productId: 'manual', code: 'JHT', name: '', quantity: 1, price: 0, costPrice: 0, imageUrl: null }],
-      bodyMeasurements: { ld: '', lp: '', lPanggul: '', lBahu: '', pLengan: '', pBaju: '', notes: '' },
+      bodyMeasurements: { 
+        ld: '', panjangPunggung: '', lBahu: '', pLengan: '', 
+        lingkarTelapakTangan: '', lp: '', lingkarHip: '', 
+        tinggiHip: '', tinggiDuduk: '', pBawah: '', lBawah: '', notes: '' 
+      },
       downPayment: 0,
     },
   });
@@ -159,7 +167,6 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
   });
 
   React.useEffect(() => {
-    getCustomers().then(setCustomers);
     getAccounts().then(setAccounts);
   }, []);
 
@@ -183,8 +190,10 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
         const totalProductCost = data.products.reduce((sum, p) => sum + (p.price * p.quantity), 0);
         const totalAmount = totalProductCost;
 
+        // For manual input, we use a generic customer ID or just store the name
         const payload: Omit<Shipment, 'id' | 'createdAt' | 'status'> = { 
             ...data, 
+            customerId: 'cust_manual', // Marker for manual entry
             userId: data.userId,
             customerName: data.customerName,
             products: data.products,
@@ -213,14 +222,6 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
     }
   };
   
-  const handleCustomerChange = (customerId: string) => {
-    const customer = customers.find(c => c.id === customerId);
-    if (customer) {
-        form.setValue('customerId', customer.id, { shouldValidate: true });
-        form.setValue('customerName', customer.name, { shouldValidate: true });
-    }
-  }
-  
   return (
     <>
       <DialogHeader>
@@ -248,24 +249,12 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
                     />
                      <FormField
                       control={form.control}
-                      name="customerId"
+                      name="customerName"
                       render={({ field }) => (
                           <FormItem>
-                          <FormLabel>Pelanggan</FormLabel>
+                          <FormLabel>Nama Pelanggan</FormLabel>
                           <FormControl>
-                              <Select onValueChange={(value) => {
-                                field.onChange(value);
-                                handleCustomerChange(value);
-                              }} defaultValue={field.value}>
-                                  <SelectTrigger>
-                                      <SelectValue placeholder="Pilih pelanggan" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                      {customers.map(c => (
-                                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                                      ))}
-                                  </SelectContent>
-                              </Select>
+                              <Input placeholder="Ketik nama pelanggan..." {...field} />
                           </FormControl>
                           <FormMessage />
                           </FormItem>
@@ -277,15 +266,12 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
                   <CardHeader className="pb-3">
                       <CardTitle className="text-base">Informasi Ukuran Badan (cm)</CardTitle>
                   </CardHeader>
-                  <CardContent className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  <CardContent className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                       <FormField control={form.control} name="bodyMeasurements.ld" render={({ field }) => (
                           <FormItem><FormLabel>Lingkar Dada (LD)</FormLabel><FormControl><Input placeholder="0" {...field} /></FormControl></FormItem>
                       )} />
-                      <FormField control={form.control} name="bodyMeasurements.lp" render={({ field }) => (
-                          <FormItem><FormLabel>Lingkar Pinggang (LP)</FormLabel><FormControl><Input placeholder="0" {...field} /></FormControl></FormItem>
-                      )} />
-                      <FormField control={form.control} name="bodyMeasurements.lPanggul" render={({ field }) => (
-                          <FormItem><FormLabel>Lingkar Panggul</FormLabel><FormControl><Input placeholder="0" {...field} /></FormControl></FormItem>
+                      <FormField control={form.control} name="bodyMeasurements.panjangPunggung" render={({ field }) => (
+                          <FormItem><FormLabel>Panjang Punggung</FormLabel><FormControl><Input placeholder="0" {...field} /></FormControl></FormItem>
                       )} />
                       <FormField control={form.control} name="bodyMeasurements.lBahu" render={({ field }) => (
                           <FormItem><FormLabel>Lebar Bahu</FormLabel><FormControl><Input placeholder="0" {...field} /></FormControl></FormItem>
@@ -293,12 +279,30 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
                       <FormField control={form.control} name="bodyMeasurements.pLengan" render={({ field }) => (
                           <FormItem><FormLabel>Panjang Lengan</FormLabel><FormControl><Input placeholder="0" {...field} /></FormControl></FormItem>
                       )} />
-                      <FormField control={form.control} name="bodyMeasurements.pBaju" render={({ field }) => (
-                          <FormItem><FormLabel>Panjang Baju</FormLabel><FormControl><Input placeholder="0" {...field} /></FormControl></FormItem>
+                      <FormField control={form.control} name="bodyMeasurements.lingkarTelapakTangan" render={({ field }) => (
+                          <FormItem><FormLabel>Lk. Telapak Tangan</FormLabel><FormControl><Input placeholder="0" {...field} /></FormControl></FormItem>
+                      )} />
+                      <FormField control={form.control} name="bodyMeasurements.lp" render={({ field }) => (
+                          <FormItem><FormLabel>Lingkar Pinggang (LP)</FormLabel><FormControl><Input placeholder="0" {...field} /></FormControl></FormItem>
+                      )} />
+                      <FormField control={form.control} name="bodyMeasurements.lingkarHip" render={({ field }) => (
+                          <FormItem><FormLabel>Lk. Hip/Pinggul</FormLabel><FormControl><Input placeholder="0" {...field} /></FormControl></FormItem>
+                      )} />
+                      <FormField control={form.control} name="bodyMeasurements.tinggiHip" render={({ field }) => (
+                          <FormItem><FormLabel>Tinggi Hip/Pinggul</FormLabel><FormControl><Input placeholder="0" {...field} /></FormControl></FormItem>
+                      )} />
+                      <FormField control={form.control} name="bodyMeasurements.tinggiDuduk" render={({ field }) => (
+                          <FormItem><FormLabel>Tinggi Duduk</FormLabel><FormControl><Input placeholder="0" {...field} /></FormControl></FormItem>
+                      )} />
+                      <FormField control={form.control} name="bodyMeasurements.pBawah" render={({ field }) => (
+                          <FormItem><FormLabel>Pjg Rok/Celana</FormLabel><FormControl><Input placeholder="0" {...field} /></FormControl></FormItem>
+                      )} />
+                      <FormField control={form.control} name="bodyMeasurements.lBawah" render={({ field }) => (
+                          <FormItem><FormLabel>Lbr Rok/Celana</FormLabel><FormControl><Input placeholder="0" {...field} /></FormControl></FormItem>
                       )} />
                       <div className="col-span-full">
                         <FormField control={form.control} name="bodyMeasurements.notes" render={({ field }) => (
-                            <FormItem><FormLabel>Catatan Tambahan Ukuran</FormLabel><FormControl><Textarea placeholder="Cth: Ukuran celana, lingkar paha, dll." {...field} /></FormControl></FormItem>
+                            <FormItem><FormLabel>Catatan Tambahan Ukuran</FormLabel><FormControl><Textarea placeholder="Cth: Model kerah, hiasan kancing, dll." {...field} /></FormControl></FormItem>
                         )} />
                       </div>
                   </CardContent>

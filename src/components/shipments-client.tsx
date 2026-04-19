@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Shipment, BodyMeasurements, User } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2, Loader2, Pencil, CheckCircle, Printer, Send, UserCheck, ChevronDown } from 'lucide-react';
+import { PlusCircle, Trash2, Loader2, Pencil, Printer, Send, UserCheck, ChevronDown } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -204,10 +204,9 @@ export function ShipmentsClient({ shipments: initialShipments, allUsers, onUpdat
       const parts = [];
       if (m.ld) parts.push(`LD:${m.ld}`);
       if (m.lp) parts.push(`LP:${m.lp}`);
-      if (m.lPanggul) parts.push(`Pg:${m.lPanggul}`);
+      if (m.lingkarHip) parts.push(`Hip:${m.lingkarHip}`);
       if (m.lBahu) parts.push(`Bh:${m.lBahu}`);
       if (m.pLengan) parts.push(`Ln:${m.pLengan}`);
-      if (m.pBaju) parts.push(`Bj:${m.pBaju}`);
       return parts.join(' | ') || '-';
   };
 
@@ -224,7 +223,7 @@ export function ShipmentsClient({ shipments: initialShipments, allUsers, onUpdat
         
         doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
-        doc.text('Jl. Raya Butik No. 123', 40, 15, { align: 'center' });
+        doc.text('Sistem Manajemen Pesanan', 40, 15, { align: 'center' });
         doc.text('------------------------------------------', 40, 18, { align: 'center' });
 
         doc.text(`Tgl: ${format(new Date(shipment.createdAt), 'dd/MM/yy HH:mm')}`, 5, 23);
@@ -236,13 +235,15 @@ export function ShipmentsClient({ shipments: initialShipments, allUsers, onUpdat
         doc.text('UKURAN BADAN (cm):', 5, 39);
         doc.setFont('helvetica', 'normal');
         const m = shipment.bodyMeasurements;
-        doc.text(`LD: ${m?.ld || '-'} | LP: ${m?.lp || '-'} | Bahu: ${m?.lBahu || '-'}`, 5, 43);
-        doc.text(`Panggul: ${m?.lPanggul || '-'} | Lengan: ${m?.pLengan || '-'} | Baju: ${m?.pBaju || '-'}`, 5, 47);
-        if (m?.notes) doc.text(`Catatan: ${m.notes}`, 5, 51, { maxWidth: 70 });
+        doc.text(`LD: ${m?.ld || '-'} | LP: ${m?.lp || '-'} | Pjg. Punggung: ${m?.panjangPunggung || '-'}`, 5, 43);
+        doc.text(`Lebar Bahu: ${m?.lBahu || '-'} | Pjg. Lengan: ${m?.pLengan || '-'}`, 5, 47);
+        doc.text(`Hip: ${m?.lingkarHip || '-'} | T. Hip: ${m?.tinggiHip || '-'} | T. Duduk: ${m?.tinggiDuduk || '-'}`, 5, 51);
+        doc.text(`Pjg Bawah: ${m?.pBawah || '-'} | Lbr Bawah: ${m?.lBawah || '-'}`, 5, 55);
+        if (m?.notes) doc.text(`Catatan: ${m.notes}`, 5, 59, { maxWidth: 70 });
 
-        doc.text('------------------------------------------', 40, 55, { align: 'center' });
+        doc.text('------------------------------------------', 40, 65, { align: 'center' });
         
-        let yPos = 60;
+        let yPos = 70;
         shipment.products.forEach(p => {
             doc.text(`${p.name} (x${p.quantity})`, 5, yPos);
             doc.text(formatRupiah(p.price * p.quantity), 75, yPos, { align: 'right' });
@@ -385,7 +386,7 @@ export function ShipmentsClient({ shipments: initialShipments, allUsers, onUpdat
               <TableHead>No. Pesanan</TableHead>
               <TableHead>Pelanggan</TableHead>
               <TableHead>Item Pesanan</TableHead>
-              <TableHead>Ukuran (cm)</TableHead>
+              <TableHead>Ukuran Ringkas</TableHead>
               {isAdminView && <TableHead>Pembayaran</TableHead>}
               <TableHead className="text-right">Total Tagihan</TableHead>
               <TableHead>Status Jahit</TableHead>
@@ -423,15 +424,25 @@ export function ShipmentsClient({ shipments: initialShipments, allUsers, onUpdat
                                     {formatMeasurements(shipment.bodyMeasurements)}
                                 </div>
                             </TooltipTrigger>
-                            <TooltipContent>
-                                <div className="space-y-1 text-xs">
-                                    <p>LD: {shipment.bodyMeasurements?.ld || '-'}</p>
-                                    <p>LP: {shipment.bodyMeasurements?.lp || '-'}</p>
-                                    <p>Panggul: {shipment.bodyMeasurements?.lPanggul || '-'}</p>
-                                    <p>Bahu: {shipment.bodyMeasurements?.lBahu || '-'}</p>
-                                    <p>Lengan: {shipment.bodyMeasurements?.pLengan || '-'}</p>
-                                    <p>Baju: {shipment.bodyMeasurements?.pBaju || '-'}</p>
-                                    {shipment.bodyMeasurements?.notes && <p className="border-t mt-1 pt-1 italic">{shipment.bodyMeasurements.notes}</p>}
+                            <TooltipContent className="w-80">
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                                    <p className="font-semibold col-span-2 border-b pb-1 mb-1">DETAIL UKURAN (cm)</p>
+                                    <p>LD: <span className="font-medium">{shipment.bodyMeasurements?.ld || '-'}</span></p>
+                                    <p>Pjg. Punggung: <span className="font-medium">{shipment.bodyMeasurements?.panjangPunggung || '-'}</span></p>
+                                    <p>Lebar Bahu: <span className="font-medium">{shipment.bodyMeasurements?.lBahu || '-'}</span></p>
+                                    <p>Pjg. Lengan: <span className="font-medium">{shipment.bodyMeasurements?.pLengan || '-'}</span></p>
+                                    <p>Lk. Telapak: <span className="font-medium">{shipment.bodyMeasurements?.lingkarTelapakTangan || '-'}</span></p>
+                                    <p>Lingkar Pinggang: <span className="font-medium">{shipment.bodyMeasurements?.lp || '-'}</span></p>
+                                    <p>Lingkar Hip: <span className="font-medium">{shipment.bodyMeasurements?.lingkarHip || '-'}</span></p>
+                                    <p>Tinggi Hip: <span className="font-medium">{shipment.bodyMeasurements?.tinggiHip || '-'}</span></p>
+                                    <p>Tinggi Duduk: <span className="font-medium">{shipment.bodyMeasurements?.tinggiDuduk || '-'}</span></p>
+                                    <p>Pjg Rok/Cln: <span className="font-medium">{shipment.bodyMeasurements?.pBawah || '-'}</span></p>
+                                    <p>Lbr Rok/Cln: <span className="font-medium">{shipment.bodyMeasurements?.lBawah || '-'}</span></p>
+                                    {shipment.bodyMeasurements?.notes && (
+                                        <div className="col-span-2 border-t mt-1 pt-1 italic text-muted-foreground">
+                                            {shipment.bodyMeasurements.notes}
+                                        </div>
+                                    )}
                                 </div>
                             </TooltipContent>
                         </Tooltip>
@@ -519,7 +530,7 @@ export function ShipmentsClient({ shipments: initialShipments, allUsers, onUpdat
           if(!open) handleFormCancel();
           setIsFormOpen(open);
         }}>
-          <DialogContent className="sm:max-w-4xl">
+          <DialogContent className="sm:max-w-5xl">
             <ShipmentForm
               key={editingShipment ? editingShipment.id : 'new'}
               shipmentToEdit={editingShipment}

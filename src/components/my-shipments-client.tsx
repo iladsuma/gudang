@@ -1,7 +1,8 @@
+
 'use client';
 
 import * as React from 'react';
-import type { Shipment } from '@/lib/types';
+import type { Shipment, BodyMeasurements } from '@/lib/types';
 import {
   Table,
   TableBody,
@@ -24,6 +25,12 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { processShipmentsToDelivered } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function MyShipmentsClient({ shipments: initialShipments, onUpdate }: { shipments: Shipment[], onUpdate?: () => void }) {
   const [shipments, setShipments] = React.useState(initialShipments);
@@ -71,6 +78,15 @@ export function MyShipmentsClient({ shipments: initialShipments, onUpdate }: { s
     }
   }
 
+  const formatSummaryMeasurements = (m?: BodyMeasurements) => {
+      if (!m) return '-';
+      const parts = [];
+      if (m.ld) parts.push(`LD:${m.ld}`);
+      if (m.lp) parts.push(`LP:${m.lp}`);
+      if (m.pLengan) parts.push(`Ln:${m.pLengan}`);
+      return parts.join('|') || '-';
+  };
+
   return (
     <div className='space-y-4'>
         <div className="flex justify-end">
@@ -88,7 +104,7 @@ export function MyShipmentsClient({ shipments: initialShipments, onUpdate }: { s
               <TableHead>No. Transaksi</TableHead>
               <TableHead>Pelanggan</TableHead>
               <TableHead>Produk</TableHead>
-              <TableHead>Ukuran</TableHead>
+              <TableHead>Ukuran (Arahkan Kursor)</TableHead>
               <TableHead>Status Jahit</TableHead>
               <TableHead className="text-right">Total Tagihan</TableHead>
               <TableHead className="text-right">Aksi</TableHead>
@@ -120,7 +136,31 @@ export function MyShipmentsClient({ shipments: initialShipments, onUpdate }: { s
                     </Accordion>
                   </TableCell>
                   <TableCell>
-                      <span className='text-[10px] whitespace-pre-wrap'>{typeof shipment.bodyMeasurements === 'string' ? shipment.bodyMeasurements : `LD:${shipment.bodyMeasurements?.ld || '-'} | LP:${shipment.bodyMeasurements?.lp || '-'}`}</span>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <span className='text-[10px] cursor-help border-b border-dotted'>
+                                    {formatSummaryMeasurements(shipment.bodyMeasurements)}
+                                </span>
+                            </TooltipTrigger>
+                            <TooltipContent className="w-64">
+                                <div className="grid grid-cols-2 gap-1 text-[10px]">
+                                    <p className="font-bold col-span-2 border-b mb-1 uppercase">Detail Ukuran</p>
+                                    <p>LD: {shipment.bodyMeasurements?.ld || '-'}</p>
+                                    <p>Pjg. Punggung: {shipment.bodyMeasurements?.panjangPunggung || '-'}</p>
+                                    <p>Lbr. Bahu: {shipment.bodyMeasurements?.lBahu || '-'}</p>
+                                    <p>Pjg. Lengan: {shipment.bodyMeasurements?.pLengan || '-'}</p>
+                                    <p>Lk. Pinggang: {shipment.bodyMeasurements?.lp || '-'}</p>
+                                    <p>Lk. Hip: {shipment.bodyMeasurements?.lingkarHip || '-'}</p>
+                                    <p>T. Hip: {shipment.bodyMeasurements?.tinggiHip || '-'}</p>
+                                    <p>T. Duduk: {shipment.bodyMeasurements?.tinggiDuduk || '-'}</p>
+                                    <p>Pjg Bawah: {shipment.bodyMeasurements?.pBawah || '-'}</p>
+                                    <p>Lbr Bawah: {shipment.bodyMeasurements?.lBawah || '-'}</p>
+                                    {shipment.bodyMeasurements?.notes && <p className="col-span-2 italic text-muted-foreground border-t pt-1 mt-1">{shipment.bodyMeasurements.notes}</p>}
+                                </div>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                   </TableCell>
                    <TableCell>
                       <Badge variant={getStatusVariant(shipment.status)}>

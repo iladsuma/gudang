@@ -61,12 +61,17 @@ export interface ShipmentProduct {
 }
 
 export interface BodyMeasurements {
-    ld?: string;
-    lp?: string;
-    lPanggul?: string;
-    lBahu?: string;
-    pLengan?: string;
-    pBaju?: string;
+    ld?: string; // Lingkar Dada
+    panjangPunggung?: string;
+    lBahu?: string; // Lebar Bahu
+    pLengan?: string; // Panjang Lengan
+    lingkarTelapakTangan?: string;
+    lp?: string; // Lingkar Pinggang
+    lingkarHip?: string; // Lingkar Hip/Pinggul
+    tinggiHip?: string; // Tinggi Hip/Pinggul
+    tinggiDuduk?: string;
+    pBawah?: string; // Panjang Rok/Cln
+    lBawah?: string; // Lebar Rok/Celana
     notes?: string;
 }
 
