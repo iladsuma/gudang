@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Shipment, BodyMeasurements, User } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2, Loader2, Pencil, Printer, Send, UserCheck, ChevronDown } from 'lucide-react';
+import { PlusCircle, Trash2, Loader2, Pencil, Printer, Send, UserCheck, ChevronDown, ZoomIn } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -17,6 +17,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import { ShipmentForm } from './shipment-form';
 import { useToast } from '@/hooks/use-toast';
@@ -41,9 +42,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import {
   Tooltip,
-  TooltipContent,
   TooltipProvider,
   TooltipTrigger,
+  TooltipContent,
 } from "@/components/ui/tooltip";
 import {
     Popover,
@@ -62,6 +63,26 @@ interface ShipmentsClientProps {
     shipments: Shipment[];
     allUsers: User[];
     onUpdate: () => void;
+}
+
+function ImagePreview({ src, category }: { src: string | null, category: string }) {
+    if (!src) return null;
+    
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <div className="relative h-8 w-8 rounded border bg-muted flex items-center justify-center overflow-hidden cursor-zoom-in group shrink-0">
+                    <img src={src} alt={category} className="h-8 w-8 object-cover group-hover:scale-110 transition-transform" />
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                        <ZoomIn className="h-3 w-3 text-white" />
+                    </div>
+                </div>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-3xl flex items-center justify-center p-1 bg-transparent border-none shadow-none">
+                <img src={src} alt={category} className="max-w-full max-h-[80vh] rounded-lg shadow-2xl object-contain" />
+            </DialogContent>
+        </Dialog>
+    );
 }
 
 export function ShipmentsClient({ shipments: initialShipments, allUsers, onUpdate }: ShipmentsClientProps) {
@@ -170,7 +191,6 @@ export function ShipmentsClient({ shipments: initialShipments, allUsers, onUpdat
         return;
     }
     
-    // Admin must select assignees, User is self-assigned
     const targetUsers = isAdminView 
         ? allUsers.filter(u => selectedAssigneeIds.includes(u.id))
         : [currentUser as User];
@@ -248,6 +268,12 @@ export function ShipmentsClient({ shipments: initialShipments, allUsers, onUpdat
             doc.text(`${p.name} (x${p.quantity})`, 5, yPos);
             doc.text(formatRupiah(p.price * p.quantity), 75, yPos, { align: 'right' });
             yPos += 4;
+            if (p.notes) {
+                doc.setFontSize(6);
+                doc.text(`Ket: ${p.notes}`, 7, yPos, { maxWidth: 65 });
+                doc.setFontSize(8);
+                yPos += 3;
+            }
         });
 
         doc.text('------------------------------------------', 40, yPos, { align: 'center' });
@@ -385,7 +411,7 @@ export function ShipmentsClient({ shipments: initialShipments, allUsers, onUpdat
               </TableHead>
               <TableHead>No. Pesanan</TableHead>
               <TableHead>Pelanggan</TableHead>
-              <TableHead>Item Pesanan</TableHead>
+              <TableHead>Item Pesanan & Ket</TableHead>
               <TableHead>Ukuran Ringkas</TableHead>
               {isAdminView && <TableHead>Pembayaran</TableHead>}
               <TableHead className="text-right">Total Tagihan</TableHead>
@@ -408,11 +434,15 @@ export function ShipmentsClient({ shipments: initialShipments, allUsers, onUpdat
                   <TableCell className="font-mono text-xs">{shipment.transactionId}</TableCell>
                   <TableCell className="font-medium">{shipment.customerName}</TableCell>
                   <TableCell>
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-2">
                       {shipment.products.map((p, index) => (
-                        <span key={index} className="text-xs">
-                          • {p.name} (x{p.quantity})
-                        </span>
+                        <div key={index} className="flex items-center gap-2 text-xs">
+                          <ImagePreview src={p.imageUrl} category={p.name} />
+                          <div className="flex flex-col">
+                            <span className="font-medium">{p.name} (x{p.quantity})</span>
+                            {p.notes && <span className="text-[10px] text-muted-foreground italic truncate max-w-[150px]">{p.notes}</span>}
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </TableCell>

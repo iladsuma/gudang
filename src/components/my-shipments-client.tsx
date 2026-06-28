@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/accordion"
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { ArrowRight, FileText, CheckCircle, Loader2 } from 'lucide-react';
+import { ArrowRight, FileText, CheckCircle, Loader2, ZoomIn } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -31,6 +31,27 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+
+function ImagePreview({ src, category }: { src: string | null, category: string }) {
+    if (!src) return null;
+    
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <div className="relative h-10 w-10 rounded border bg-muted flex items-center justify-center overflow-hidden cursor-zoom-in group shrink-0">
+                    <img src={src} alt={category} className="h-10 w-10 object-cover group-hover:scale-110 transition-transform" />
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                        <ZoomIn className="h-3 w-3 text-white" />
+                    </div>
+                </div>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-3xl flex items-center justify-center p-1 bg-transparent border-none shadow-none">
+                <img src={src} alt={category} className="max-w-full max-h-[80vh] rounded-lg shadow-2xl object-contain" />
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 export function MyShipmentsClient({ shipments: initialShipments, onUpdate }: { shipments: Shipment[], onUpdate?: () => void }) {
   const [shipments, setShipments] = React.useState(initialShipments);
@@ -103,8 +124,8 @@ export function MyShipmentsClient({ shipments: initialShipments, onUpdate }: { s
             <TableRow>
               <TableHead>No. Transaksi</TableHead>
               <TableHead>Pelanggan</TableHead>
-              <TableHead>Produk</TableHead>
-              <TableHead>Ukuran (Arahkan Kursor)</TableHead>
+              <TableHead>Produk & Detail</TableHead>
+              <TableHead>Ukuran (Hover)</TableHead>
               <TableHead>Status Jahit</TableHead>
               <TableHead className="text-right">Total Tagihan</TableHead>
               <TableHead className="text-right">Aksi</TableHead>
@@ -123,11 +144,14 @@ export function MyShipmentsClient({ shipments: initialShipments, onUpdate }: { s
                                 {shipment.totalItems} item
                             </AccordionTrigger>
                             <AccordionContent className='pt-2'>
-                                <div className='flex flex-col gap-1 text-xs text-muted-foreground'>
-                                {shipment.products && shipment.products.map(product => (
-                                    <div key={product.productId} className='flex items-center gap-2'>
-                                        <ArrowRight className='h-3 w-3'/>
-                                        <Badge variant="outline">{product.name} (x{product.quantity})</Badge>
+                                <div className='flex flex-col gap-3 text-xs'>
+                                {shipment.products && shipment.products.map((product, idx) => (
+                                    <div key={idx} className='flex items-start gap-2 border-l-2 border-primary/20 pl-2 py-1'>
+                                        <ImagePreview src={product.imageUrl} category={product.name} />
+                                        <div className="flex flex-col">
+                                            <p className="font-bold">{product.name} (x{product.quantity})</p>
+                                            {product.notes && <p className="text-muted-foreground italic">Ket: {product.notes}</p>}
+                                        </div>
                                     </div>
                                 ))}
                                 </div>

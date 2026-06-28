@@ -59,6 +59,7 @@ export interface ShipmentProduct {
     price: number; 
     costPrice: number; // Cost price (HPP)
     imageUrl: string | null;
+    notes?: string; // Deskripsi spesifik per item baju
 }
 
 export interface BodyMeasurements {

@@ -5,21 +5,20 @@ import * as React from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { Shipment, Customer, ShipmentProduct, Account, User, BodyMeasurements, Product, DeliveryMethod } from '@/lib/types';
+import type { Shipment, ShipmentProduct, Account, Product } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Loader2, PlusCircle, Trash2, ImageIcon } from 'lucide-react';
+import { DialogFooter, DialogHeader, DialogTitle, DialogDescription, Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Loader2, PlusCircle, Trash2, ImageIcon, ZoomIn } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { addShipment, updateShipment, getAccounts, getProducts } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from './ui/textarea';
 import Image from 'next/image';
-
 
 const shipmentProductSchema = z.object({
   productId: z.string(),
@@ -30,6 +29,7 @@ const shipmentProductSchema = z.object({
   price: z.coerce.number().min(0, 'Harga harus diisi'),
   costPrice: z.coerce.number().min(0),
   imageUrl: z.string().nullable().default(null),
+  notes: z.string().optional(),
 });
 
 const bodyMeasurementsSchema = z.object({
@@ -65,7 +65,6 @@ const shipmentFormSchema = z.object({
     message: 'Akun pembayaran harus dipilih jika ada DP.',
     path: ['accountId'],
 });
-
 
 type ShipmentFormValues = z.infer<typeof shipmentFormSchema>;
 
@@ -118,6 +117,27 @@ const Summary = ({ control }: { control: any }) => {
     );
 };
 
+function ImagePreview({ src, category }: { src: string | null, category: string }) {
+    if (!src) return <ImageIcon className="h-4 w-4 text-muted-foreground" />;
+    
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <div className="relative h-10 w-10 rounded border bg-muted flex items-center justify-center overflow-hidden cursor-zoom-in group">
+                    <Image src={src} alt={category} width={40} height={40} className="object-cover group-hover:scale-110 transition-transform" />
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                        <ZoomIn className="h-4 w-4 text-white" />
+                    </div>
+                </div>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-3xl flex items-center justify-center p-1 bg-transparent border-none shadow-none">
+                <div className="relative w-full max-h-[80vh] aspect-auto flex items-center justify-center">
+                    <img src={src} alt={category} className="max-w-full max-h-[80vh] rounded-lg shadow-2xl object-contain" />
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFormProps) {
   const { toast } = useToast();
@@ -157,7 +177,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
       customerName: '',
       deliveryMethod: 'Diambil di Toko',
       accountId: '',
-      products: [{ productId: '', code: '', category: '', name: '', quantity: 1, price: 0, costPrice: 0, imageUrl: null }],
+      products: [{ productId: '', code: '', category: '', name: '', quantity: 1, price: 0, costPrice: 0, imageUrl: null, notes: '' }],
       bodyMeasurements: { 
         ld: '', panjangPunggung: '', lBahu: '', pLengan: '', 
         lingkarTelapakTangan: '', lp: '', lingkarHip: '', 
@@ -186,7 +206,8 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
           quantity: 1,
           price: 0,
           costPrice: 0,
-          imageUrl: null
+          imageUrl: null,
+          notes: ''
       });
   };
 
@@ -202,7 +223,6 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
         form.setValue(`products.${index}.imageUrl`, product.imageUrl);
     }
   };
-
 
   const onSubmit = async (data: ShipmentFormValues) => {
     setIsSubmitting(true);
@@ -358,11 +378,12 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
                           <TableHeader>
                               <TableRow>
                                   <TableHead className="w-[80px]">Gambar</TableHead>
-                                  <TableHead>Jenis Jahitan</TableHead>
-                                  <TableHead className="w-[100px]">Jumlah</TableHead>
-                                  <TableHead className="w-[180px]">Harga Jasa (Rp)</TableHead>
-                                  <TableHead className="w-[150px] text-right">Subtotal</TableHead>
-                                  <TableHead className="w-[50px]"></TableHead>
+                                  <TableHead className="w-[200px]">Jenis Jahitan</TableHead>
+                                  <TableHead>Deskripsi/Model</TableHead>
+                                  <TableHead className="w-[80px]">Jumlah</TableHead>
+                                  <TableHead className="w-[150px]">Harga Jasa (Rp)</TableHead>
+                                  <TableHead className="w-[130px] text-right">Subtotal</TableHead>
+                                  <TableHead className="w-[40px]"></TableHead>
                               </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -373,13 +394,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
                                   return (
                                   <TableRow key={field.id}>
                                        <TableCell>
-                                          <div className="h-10 w-10 rounded border bg-muted flex items-center justify-center overflow-hidden">
-                                              {item.imageUrl ? (
-                                                  <Image src={item.imageUrl} alt={item.category} width={40} height={40} className="object-cover" />
-                                              ) : (
-                                                  <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                                              )}
-                                          </div>
+                                          <ImagePreview src={item.imageUrl} category={item.category} />
                                       </TableCell>
                                        <TableCell>
                                           <FormField
@@ -402,6 +417,20 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
                                                               ))}
                                                           </SelectContent>
                                                       </Select>
+                                                      <FormMessage />
+                                                  </FormItem>
+                                              )}
+                                          />
+                                      </TableCell>
+                                      <TableCell>
+                                          <FormField
+                                              control={form.control}
+                                              name={`products.${index}.notes`}
+                                              render={({ field: notesField }) => (
+                                                  <FormItem>
+                                                      <FormControl>
+                                                          <Input placeholder="Cth: Lengan balon, kerah shanghai..." {...notesField} />
+                                                      </FormControl>
                                                       <FormMessage />
                                                   </FormItem>
                                               )}
