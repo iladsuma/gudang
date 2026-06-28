@@ -2,13 +2,13 @@
 export interface Product {
     id: string;
     code: string; // Kode Item
-    name: string;
+    name: string; // Will store category name now as primary identifier
     price: number; // Harga Jual
-    costPrice: number; // Harga Pokok
+    costPrice: number; // Harga Pokok (HPP)
     stock: number;
     minStock: number; // Stok Minimal
     unit: string; // Satuan (PCS, DUS, dll)
-    category: string; // Kategori Barang
+    category: string; // Master category
     imageUrl: string;
 }
 
@@ -51,12 +51,13 @@ export interface Purchase {
 
 
 export interface ShipmentProduct {
-    productId: string; // Reference to the master product (can be 'manual' for boutique)
+    productId: string; // Reference to the master product
     code: string;
     name: string;
+    category: string;
     quantity: number;
-    price: number; // Can be overridden from master product's price
-    costPrice: number; // Cost price at the time of sale
+    price: number; 
+    costPrice: number; // Cost price (HPP)
     imageUrl: string | null;
 }
 
@@ -75,6 +76,8 @@ export interface BodyMeasurements {
     notes?: string;
 }
 
+export type DeliveryMethod = 'Diambil di Toko' | 'Dikirim Kurir Toko';
+
 export interface Shipment {
     id: string;
     userId: string;
@@ -84,6 +87,7 @@ export interface Shipment {
     accountId: string; // Akun yang menerima pembayaran
     status: 'Proses' | 'Pengemasan' | 'Terkirim';
     paymentStatus: PaymentStatus;
+    deliveryMethod: DeliveryMethod;
     receipt?: { 
         fileName: string;
         dataUrl: string; // Base64 encoded PDF

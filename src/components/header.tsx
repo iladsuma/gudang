@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -20,7 +21,6 @@ export function Header() {
   const pathname = usePathname();
   const [mounted, setMounted] = React.useState(false);
 
-  // Mencegah hidrasi mismatch dengan memastikan komponen sudah mounted
   React.useEffect(() => {
     setMounted(true);
   }, []);
@@ -31,8 +31,8 @@ export function Header() {
   };
   
   const isSettingsPage = pathname.startsWith('/settings');
-  const isTransactionPage = ['/receivables', '/purchases', '/payables'].includes(pathname);
-  const isReportPage = pathname.startsWith('/reports');
+  const isTransactionPage = pathname === '/receivables';
+  const isReportPage = pathname.startsWith('/reports') || pathname === '/dashboard' || pathname === '/accounting';
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -51,21 +51,15 @@ export function Header() {
                       href="/shipments"
                       className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", pathname.startsWith('/shipments') ? 'text-foreground font-medium' : 'text-foreground/60')}
                     >
-                       <ShoppingBasket className="h-4 w-4" /> Pemesanan Produk
+                       <ShoppingBasket className="h-4 w-4" /> Pesanan Baru
                     </Link>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className={cn("gap-1 px-2 h-auto text-sm transition-colors hover:text-foreground/80", isTransactionPage ? 'text-foreground font-medium' : 'text-foreground/60')}>
-                            <ArrowRightLeft className="h-4 w-4" /> Transaksi
-                            <ChevronDown className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem onSelect={() => router.push('/receivables')}>Piutang Usaha (Pelunasan Pesanan)</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => router.push('/purchases')}>Pembelian Bahan (Kain/Alat)</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => router.push('/payables')}>Utang Usaha (Bayar Supplier)</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    
+                    <Link
+                      href="/receivables"
+                      className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", isTransactionPage ? 'text-foreground font-medium' : 'text-foreground/60')}
+                    >
+                       <ArrowRightLeft className="h-4 w-4" /> Piutang Usaha
+                    </Link>
 
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -75,8 +69,8 @@ export function Header() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
-                        <DropdownMenuItem onSelect={() => router.push('/dashboard')}>Ringkasan Analitik</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => router.push('/reports/sales-profit')}>Laporan Laba Rugi</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => router.push('/dashboard')}>Ringkasan Dashboard</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => router.push('/reports/sales-profit')}>Laba / Rugi</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => router.push('/accounting')}>Buku Kas & Saldo</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
