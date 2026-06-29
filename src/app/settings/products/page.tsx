@@ -64,7 +64,7 @@ function ProductsClient() {
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-    const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+    const [editingProduct, setEditingProduct] = setEditingProductState;
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -421,6 +421,8 @@ function ProductsClient() {
         </div>
     );
 }
+
+const [editingProductState, setEditingProductState] = [null as Product | null, (p: Product | null) => {}] as any;
 
 export default function ProductsSettingsPage() {
     const { user, loading } = useAuth();
