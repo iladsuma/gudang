@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DialogFooter, DialogHeader, DialogTitle, DialogDescription, Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
-import { Loader2, PlusCircle, Trash2, ImageIcon, ZoomIn, Images, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, ImageIcon, ZoomIn, Images, ChevronLeft, ChevronRight, Truck } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { addShipment, updateShipment, getAccounts, getProducts } from '@/lib/data';
@@ -53,6 +53,7 @@ const shipmentFormSchema = z.object({
   transactionId: z.string().min(1, 'No. Transaksi harus diisi.'),
   customerName: z.string().min(1, 'Nama pelanggan harus diisi'),
   deliveryMethod: z.enum(['Diambil di Toko', 'Dikirim Kurir Toko']).optional(),
+  deliveryDistance: z.coerce.number().min(0).optional(),
   accountId: z.string().optional(),
   products: z.array(shipmentProductSchema).min(1, 'Minimal harus ada satu item pesanan'),
   downPayment: z.coerce.number().min(0).optional(),
@@ -132,7 +133,6 @@ function GalleryViewer({ images, category }: { images: string[] | undefined, cat
 
 export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFormProps) {
   const { toast } = useToast();
-  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [accounts, setAccounts] = React.useState<Account[]>([]);
   const [masterProducts, setMasterProducts] = React.useState<Product[]>([]);
@@ -146,6 +146,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
         transactionId: shipmentToEdit.transactionId,
         customerName: shipmentToEdit.customerName,
         deliveryMethod: shipmentToEdit.deliveryMethod || 'Diambil di Toko',
+        deliveryDistance: shipmentToEdit.deliveryDistance || 0,
         accountId: shipmentToEdit.accountId || '',
         products: shipmentToEdit.products || [],
         bodyMeasurements: shipmentToEdit.bodyMeasurements || { 
@@ -159,6 +160,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
       transactionId: `ANT-${Date.now().toString().slice(-6)}`,
       customerName: '',
       deliveryMethod: 'Diambil di Toko',
+      deliveryDistance: 0,
       accountId: '',
       products: [{ productId: '', code: '', category: '', name: '', quantity: 1, price: 0, costPrice: 0, imageUrl: null, imageUrls: [], notes: '' }],
       bodyMeasurements: { ld: '', lp: '', notes: '' },
@@ -187,13 +189,26 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
     }
   };
 
+  const deliveryMethod = form.watch('deliveryMethod');
+  const distance = form.watch('deliveryDistance') || 0;
+
+  const deliveryFee = React.useMemo(() => {
+    if (deliveryMethod !== 'Dikirim Kurir Toko') return 0;
+    if (distance <= 0) return 0;
+    if (distance <= 5) return 2000;
+    if (distance <= 10) return 4000;
+    if (distance <= 20) return 10000;
+    if (distance <= 30) return 15000;
+    return 15000;
+  }, [deliveryMethod, distance]);
+
   const onSubmit = async (data: ShipmentFormValues) => {
     setIsSubmitting(true);
     try {
         const totalItems = data.products.reduce((sum, p) => sum + p.quantity, 0);
         const totalProductCost = data.products.reduce((sum, p) => sum + (p.price * p.quantity), 0);
+        const totalAmount = totalProductCost + deliveryFee;
         
-        // Use null for customerId since we only take manual name in this form
         const payload = { 
             ...data, 
             userId: (data.userId && data.userId.trim() !== '') ? data.userId : null,
@@ -201,9 +216,10 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
             totalItems,
             totalProductCost,
             totalPackingCost: 0,
-            totalAmount: totalProductCost,
-            totalRevenue: totalProductCost,
-            paymentStatus: (data.downPayment || 0) >= totalProductCost ? 'Lunas' : 'Belum Lunas',
+            deliveryFee: deliveryFee,
+            totalAmount: totalAmount,
+            totalRevenue: totalAmount,
+            paymentStatus: (data.downPayment || 0) >= totalAmount ? 'Lunas' : 'Belum Lunas',
         };
 
         if (isEditMode) {
@@ -232,7 +248,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
         <Form {...form}>
             <form id="shipment-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <FormField control={form.control} name="transactionId" render={({ field }) => (
                         <FormItem><FormLabel>No. Pesanan</FormLabel><FormControl><Input {...field} readOnly className="bg-muted font-mono" /></FormControl></FormItem>
                   )} />
@@ -247,6 +263,15 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
                           </Select>
                         </FormItem>
                   )} />
+                  {deliveryMethod === 'Dikirim Kurir Toko' && (
+                    <FormField control={form.control} name="deliveryDistance" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="flex items-center gap-1"><Truck className="h-3 w-3" /> Jarak Kirim (km)</FormLabel>
+                            <FormControl><Input type="number" placeholder="Contoh: 7" {...field} /></FormControl>
+                            <p className="text-[10px] text-muted-foreground mt-1">Ongkir: {formatRupiah(deliveryFee)}</p>
+                        </FormItem>
+                    )} />
+                  )}
               </div>
 
               <Card>
@@ -325,11 +350,23 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
                             </FormItem>
                         )} />
                     </div>
-                    <div className="border-t border-primary/20 pt-3 flex justify-between items-center">
-                        <span className="text-xs font-bold uppercase">Sisa Pelunasan:</span>
-                        <span className="text-xl font-bold text-primary">
-                            {formatRupiah(form.watch('products').reduce((s, p) => s + (p.price * p.quantity), 0) - (form.watch('downPayment') || 0))}
-                        </span>
+                    <div className="border-t border-primary/20 pt-3 space-y-1">
+                        <div className="flex justify-between items-center text-xs">
+                            <span className="text-muted-foreground">Total Jasa:</span>
+                            <span>{formatRupiah(form.watch('products').reduce((s, p) => s + (p.price * p.quantity), 0))}</span>
+                        </div>
+                        {deliveryFee > 0 && (
+                            <div className="flex justify-between items-center text-xs">
+                                <span className="text-muted-foreground">Ongkir ({distance} km):</span>
+                                <span>{formatRupiah(deliveryFee)}</span>
+                            </div>
+                        )}
+                        <div className="flex justify-between items-center pt-2">
+                            <span className="text-xs font-bold uppercase">Sisa Pelunasan:</span>
+                            <span className="text-xl font-bold text-primary">
+                                {formatRupiah((form.watch('products').reduce((s, p) => s + (p.price * p.quantity), 0) + deliveryFee) - (form.watch('downPayment') || 0))}
+                            </span>
+                        </div>
                     </div>
                   </CardContent>
               </Card>

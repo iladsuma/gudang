@@ -84,12 +84,14 @@ export interface Shipment {
     id: string;
     userId: string | null;
     transactionId: string;
-    customerId: string | null; // Changed to nullable
+    customerId: string | null; 
     customerName: string;
     accountId: string; 
     status: 'Proses' | 'Pengemasan' | 'Terkirim';
     paymentStatus: PaymentStatus;
     deliveryMethod: DeliveryMethod;
+    deliveryDistance?: number;
+    deliveryFee?: number;
     receipt?: { 
         fileName: string;
         dataUrl: string; 

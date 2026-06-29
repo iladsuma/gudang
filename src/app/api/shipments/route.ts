@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
             }
         });
 
-        const newShipment = await db.query.shipments.findFirst({ where: eq(shipments.id, newShipmentId) });
+        const newShipment = await tx.query.shipments.findFirst({ where: eq(shipments.id, newShipmentId) });
         
         return NextResponse.json(newShipment, { status: 201 });
     } catch (error) {
