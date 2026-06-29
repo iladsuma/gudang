@@ -1,4 +1,3 @@
-
 import { pgTable, text, varchar, real, integer, timestamp, pgEnum, jsonb, boolean, date } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 

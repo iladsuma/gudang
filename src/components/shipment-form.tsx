@@ -52,7 +52,7 @@ const shipmentFormSchema = z.object({
   transactionId: z.string().min(1, 'No. Transaksi harus diisi.'),
   customerName: z.string().min(1, 'Nama pelanggan harus diisi'),
   deliveryMethod: z.enum(['Diambil di Toko', 'Dikirim Kurir Toko']).optional(),
-  deliveryDistance: z.coerce.number().min(0).max(30, 'Jarak maksimal 30 km').optional(),
+  deliveryDistance: z.coerce.number().min(0).max(30, 'Jarak maksimal hanya sampai 30 km').optional(),
   accountId: z.string().optional(),
   products: z.array(shipmentProductSchema).min(1, 'Minimal harus ada satu item pesanan'),
   downPayment: z.coerce.number().min(0).optional(),
@@ -194,7 +194,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
   const deliveryFee = React.useMemo(() => {
     if (deliveryMethod !== 'Dikirim Kurir Toko') return 0;
     if (distance <= 0) return 0;
-    // Perhitungan baru: Rp 500 per kilometer
+    // Perhitungan: Rp 500 per kilometer
     return distance * 500;
   }, [deliveryMethod, distance]);
 
