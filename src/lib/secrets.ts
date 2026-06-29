@@ -1,6 +1,6 @@
 /**
  * @fileOverview Manajemen rahasia aplikasi.
- * File ini sekarang membaca dari variabel lingkungan (.env) untuk keamanan.
+ * File ini membaca dari variabel lingkungan (.env) untuk keamanan.
  */
 
 export const DATABASE_URL = process.env.DATABASE_URL || "";
