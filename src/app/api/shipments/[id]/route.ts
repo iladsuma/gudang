@@ -39,8 +39,10 @@ export async function PATCH(
     // Fetch current rates from settings
     const settings = await db.select().from(appSettings);
     const feePerKm = parseInt(settings.find(s => s.key === 'courier_fee_per_km')?.value || '1000');
-    const profitPerKm = parseInt(settings.find(s => s.key === 'courier_profit_per_km')?.value || '750');
-    const costPerKm = feePerKm - profitPerKm;
+    const fuelConsumption = parseFloat(settings.find(s => s.key === 'courier_fuel_consumption')?.value || '40');
+    const fuelPrice = parseFloat(settings.find(s => s.key === 'fuel_price')?.value || '10000');
+    
+    const costPerKm = fuelPrice / fuelConsumption;
 
     // Sanitize userId for nullability
     const { userId, ...updateData } = body;
@@ -56,7 +58,8 @@ export async function PATCH(
           ...updateData,
           userId: sanitizedUserId,
           deliveryFee: deliveryFee,
-          deliveryCost: deliveryCost
+          deliveryCost: deliveryCost,
+          deliveryDistance: distance,
       })
       .where(eq(shipments.id, id));
 
