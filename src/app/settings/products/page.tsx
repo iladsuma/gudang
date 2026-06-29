@@ -1,10 +1,9 @@
-
 'use client';
 
 import * as React from 'react';
 import { useEffect, useState, useCallback } from 'react';
 import { getProducts, addProduct, updateProduct, deleteMultipleProducts } from '@/lib/data';
-import type { Product, ProductSelection, SortableProductField, SortOrder } from '@/lib/types';
+import type { Product, SortableProductField, SortOrder } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -36,7 +35,6 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from '@/components/ui/dialog';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
@@ -48,6 +46,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import Image from 'next/image';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const productFormSchema = z.object({
   code: z.string().min(1, 'Kode harus diisi.'),
@@ -64,9 +63,11 @@ function ProductsClient() {
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const { toast } = useToast();
 
     const [sortBy, setSortBy] = useState<SortableProductField>('category');
@@ -148,7 +149,7 @@ function ProductsClient() {
         try {
             const payload = {
                 ...data,
-                name: data.category, // Use category as the name
+                name: data.category,
                 stock: 0,
                 minStock: 0,
             };
@@ -169,13 +170,42 @@ function ProductsClient() {
         }
     };
 
+    const handleDelete = async (ids: string[]) => {
+        setIsDeleting(true);
+        try {
+            await deleteMultipleProducts(ids);
+            toast({ title: 'Sukses', description: `${ids.length} item berhasil dihapus.` });
+            setSelectedIds([]);
+            fetchProducts();
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Kesalahan', description: 'Gagal menghapus data.' });
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     const handleSort = (field: SortableProductField) => {
         if (sortBy === field) {
-            setSortBy(field);
             setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
         } else {
             setSortBy(field);
             setSortOrder('asc');
+        }
+    };
+
+    const handleSelectAll = (checked: boolean) => {
+        if (checked) {
+            setSelectedIds(products.map(p => p.id));
+        } else {
+            setSelectedIds([]);
+        }
+    };
+
+    const handleSelectOne = (id: string, checked: boolean) => {
+        if (checked) {
+            setSelectedIds(prev => [...prev, id]);
+        } else {
+            setSelectedIds(prev => prev.filter(item => item !== id));
         }
     };
 
@@ -189,19 +219,47 @@ function ProductsClient() {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <h3 className="text-lg font-medium">Daftar Jenis & Harga Jahitan</h3>
-                <Button onClick={() => handleOpenForm(null)}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Tambah Jenis Jahitan
-                </Button>
+                <div className="flex items-center gap-2">
+                    {selectedIds.length > 0 && (
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" disabled={isDeleting}>
+                                    {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                                    Hapus Terpilih ({selectedIds.length})
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Hapus {selectedIds.length} item?</AlertDialogTitle>
+                                    <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan. Jenis jahitan yang dihapus tidak akan tersedia lagi untuk pesanan baru.</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDelete(selectedIds)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Hapus Permanen</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    )}
+                    <Button onClick={() => handleOpenForm(null)}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Tambah Jenis Jahitan
+                    </Button>
+                </div>
             </div>
 
             <div className="rounded-md border">
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead className="w-[100px]">Gambar</TableHead>
+                            <TableHead className="w-[50px]">
+                                <Checkbox 
+                                    checked={products.length > 0 && selectedIds.length === products.length}
+                                    onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                                />
+                            </TableHead>
+                            <TableHead className="w-[80px]">Gambar</TableHead>
                             <TableHead className="cursor-pointer" onClick={() => handleSort('code')}>
                                 <div className='flex items-center gap-2'>Kode {sortBy === 'code' && <ArrowUpDown className="h-4 w-4" />}</div>
                             </TableHead>
@@ -215,16 +273,22 @@ function ProductsClient() {
                     </TableHeader>
                     <TableBody>
                         {loading ? (
-                            <TableRow><TableCell colSpan={6} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
+                            <TableRow><TableCell colSpan={7} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
                         ) : products.length > 0 ? (
                             products.map((product) => (
-                                <TableRow key={product.id}>
+                                <TableRow key={product.id} data-state={selectedIds.includes(product.id) ? "selected" : ""}>
                                     <TableCell>
-                                        <div className="h-12 w-12 rounded border bg-muted flex items-center justify-center overflow-hidden">
+                                        <Checkbox 
+                                            checked={selectedIds.includes(product.id)}
+                                            onCheckedChange={(checked) => handleSelectOne(product.id, !!checked)}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="h-10 w-10 rounded border bg-muted flex items-center justify-center overflow-hidden">
                                             {product.imageUrl ? (
-                                                <Image src={product.imageUrl} alt={product.category} width={48} height={48} className="object-cover h-full w-full" />
+                                                <Image src={product.imageUrl} alt={product.category} width={40} height={40} className="object-cover h-full w-full" />
                                             ) : (
-                                                <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                                                <ImageIcon className="h-5 w-5 text-muted-foreground" />
                                             )}
                                         </div>
                                     </TableCell>
@@ -233,12 +297,29 @@ function ProductsClient() {
                                     <TableCell className="text-primary font-semibold">{formatRupiah(product.price)}</TableCell>
                                     <TableCell className="text-muted-foreground">{formatRupiah(product.costPrice)}</TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon" onClick={() => handleOpenForm(product)}><Pencil className="h-4 w-4" /></Button>
+                                        <div className="flex justify-end gap-1">
+                                            <Button variant="ghost" size="icon" onClick={() => handleOpenForm(product)}><Pencil className="h-4 w-4" /></Button>
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Hapus jenis jahitan ini?</AlertDialogTitle>
+                                                        <AlertDialogDescription>Anda akan menghapus kategori &quot;{product.category}&quot; ({product.code}).</AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDelete([product.id])} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Hapus</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             ))
                         ) : (
-                            <TableRow><TableCell colSpan={6} className="h-24 text-center text-muted-foreground">Belum ada data jenis jahitan.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={7} className="h-24 text-center text-muted-foreground">Belum ada data jenis jahitan.</TableCell></TableRow>
                         )}
                     </TableBody>
                 </Table>
