@@ -1,3 +1,4 @@
+
 import type { 
     Shipment, 
     User, 
@@ -16,7 +17,8 @@ import type {
 import initialData from '../../db.json';
 import { sendNewOrderNotification, sendOrderFinishedNotification } from './whatsapp';
 
-const DB_KEY = 'boutique_local_db_v1';
+// Menambah versi DB untuk memaksa refresh data jahitan baru
+const DB_KEY = 'boutique_local_db_v2';
 
 function getDB() {
     if (typeof window === 'undefined') return initialData;
@@ -125,7 +127,6 @@ export async function addShipment(shipment: Omit<Shipment, 'id' | 'createdAt' | 
 
     saveDB(db);
 
-    // KIRIM NOTIFIKASI WA DAN LOG HASIL DETAIL KE CONSOLE BROWSER
     const customer = db.customers.find((c: any) => c.id === shipment.customerId);
     sendNewOrderNotification(newShipment, customer || { name: shipment.customerName, phone: 'N/A' })
         .then(res => {
@@ -177,7 +178,6 @@ export async function processShipmentsToDelivered(shipmentIds: string[]): Promis
             s.status = 'Terkirim';
             count++;
 
-            // Trigger Notifikasi Selesai
             const customer = db.customers.find((c: any) => c.id === s.customerId);
             sendOrderFinishedNotification(s, customer || { name: s.customerName, phone: 'N/A' })
                 .then(res => {

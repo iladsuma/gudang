@@ -1,3 +1,4 @@
+
 import "dotenv/config";
 import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
@@ -35,13 +36,12 @@ const main = async () => {
     const data = JSON.parse(fileContent);
 
     // Insert new data
-    await db.insert(schema.users).values(data.users);
-    await db.insert(schema.accounts).values(data.accounts);
-    await db.insert(schema.products).values(data.products);
-    await db.insert(schema.expeditions).values(data.expeditions);
-    await db.insert(schema.packagingOptions).values(data.packagingOptions);
-    await db.insert(schema.customers).values(data.customers);
-    await db.insert(schema.suppliers).values(data.suppliers);
+    if (data.users.length) await db.insert(schema.users).values(data.users);
+    if (data.accounts.length) await db.insert(schema.accounts).values(data.accounts);
+    if (data.products.length) await db.insert(schema.products).values(data.products);
+    if (data.expeditions.length) await db.insert(schema.expeditions).values(data.expeditions);
+    if (data.customers.length) await db.insert(schema.customers).values(data.customers);
+    if (data.suppliers.length) await db.insert(schema.suppliers).values(data.suppliers);
     
     console.log("Seeding finished.");
   } catch (error) {

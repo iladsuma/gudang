@@ -12,146 +12,150 @@
       "username": "user",
       "role": "user",
       "password": "user"
-    },
-    {
-      "username": "user2",
-      "role": "user",
-      "password": "user2",
-      "id": "usr_1756108094133"
     }
   ],
   "products": [
     {
       "id": "prod_1",
-      "code": "BA-001",
-      "name": "Baju Anak",
-      "price": 75000,
+      "code": "JH-001",
+      "name": "Dress",
+      "price": 150000,
       "costPrice": 50000,
-      "stock": 100,
-      "minStock": 10,
+      "stock": 0,
+      "minStock": 0,
       "unit": "PCS",
-      "category": "Pakaian",
-      "imageUrl": "https://placehold.co/100x100.png"
+      "category": "Dress",
+      "imageUrl": ""
     },
     {
       "id": "prod_2",
-      "code": "CP-001",
-      "name": "Celana Panjang",
-      "price": 150000,
-      "costPrice": 120000,
-      "stock": 50,
-      "minStock": 5,
+      "code": "JH-002",
+      "name": "Kemeja",
+      "price": 100000,
+      "costPrice": 30000,
+      "stock": 0,
+      "minStock": 0,
       "unit": "PCS",
-      "category": "Pakaian",
-      "imageUrl": "https://placehold.co/100x100.png"
+      "category": "Kemeja",
+      "imageUrl": ""
     },
     {
       "id": "prod_3",
-      "code": "TP-001",
-      "name": "Topi",
-      "price": 50000,
-      "costPrice": 35000,
-      "stock": 75,
-      "minStock": 15,
+      "code": "JH-003",
+      "name": "Blouse",
+      "price": 120000,
+      "costPrice": 40000,
+      "stock": 0,
+      "minStock": 0,
+      "unit": "PCS",
+      "category": "Blouse",
+      "imageUrl": ""
+    },
+    {
+      "id": "prod_4",
+      "code": "JH-004",
+      "name": "Gamis",
+      "price": 175000,
+      "costPrice": 60000,
+      "stock": 0,
+      "minStock": 0,
+      "unit": "PCS",
+      "category": "Gamis",
+      "imageUrl": ""
+    },
+    {
+      "id": "prod_5",
+      "code": "JH-005",
+      "name": "Rok",
+      "price": 85000,
+      "costPrice": 25000,
+      "stock": 0,
+      "minStock": 0,
+      "unit": "PCS",
+      "category": "Rok",
+      "imageUrl": ""
+    },
+    {
+      "id": "prod_6",
+      "code": "JH-006",
+      "name": "Celana",
+      "price": 95000,
+      "costPrice": 30000,
+      "stock": 0,
+      "minStock": 0,
+      "unit": "PCS",
+      "category": "Celana",
+      "imageUrl": ""
+    },
+    {
+      "id": "prod_7",
+      "code": "JH-007",
+      "name": "Jas",
+      "price": 450000,
+      "costPrice": 150000,
+      "stock": 0,
+      "minStock": 0,
+      "unit": "PCS",
+      "category": "Jas",
+      "imageUrl": ""
+    },
+    {
+      "id": "prod_8",
+      "code": "JH-008",
+      "name": "Kebaya",
+      "price": 300000,
+      "costPrice": 100000,
+      "stock": 0,
+      "minStock": 0,
+      "unit": "PCS",
+      "category": "Kebaya",
+      "imageUrl": ""
+    },
+    {
+      "id": "prod_9",
+      "code": "JH-009",
+      "name": "Hijab",
+      "price": 25000,
+      "costPrice": 10000,
+      "stock": 0,
+      "minStock": 0,
+      "unit": "PCS",
+      "category": "Hijab",
+      "imageUrl": ""
+    },
+    {
+      "id": "prod_10",
+      "code": "JH-010",
+      "name": "Aksesoris",
+      "price": 20000,
+      "costPrice": 5000,
+      "stock": 0,
+      "minStock": 0,
       "unit": "PCS",
       "category": "Aksesoris",
-      "imageUrl": "https://placehold.co/100x100.png"
+      "imageUrl": ""
     }
   ],
   "expeditions": [
-    {
-      "id": "exp_1",
-      "name": "JNE"
-    },
-    {
-      "id": "exp_2",
-      "name": "POS"
-    },
-    {
-      "id": "exp_3",
-      "name": "J&T"
-    },
-    {
-      "id": "exp_4",
-      "name": "ANTERAJA"
-    },
-    {
-      "id": "exp_5",
-      "name": "SICEPAT"
-    }
+    { "id": "exp_1", "name": "Diambil di Toko" },
+    { "id": "exp_2", "name": "Kurir Toko" }
   ],
-  "packagingOptions": [
-    {
-      "id": "pkg_1",
-      "name": "Plastik",
-      "cost": 500
-    },
-    {
-      "id": "pkg_2",
-      "name": "Kardus Kecil",
-      "cost": 1500
-    },
-    {
-      "id": "pkg_3",
-      "name": "Kardus + Bubble Wrap",
-      "cost": 3000
-    }
-  ],
+  "packagingOptions": [],
   "accounts": [
     {
         "id": "acc_1",
         "name": "Kas Tunai",
         "type": "Cash",
-        "balance": 5000000,
-        "notes": "Kas fisik yang dipegang di toko."
-    },
-    {
-        "id": "acc_2",
-        "name": "Bank BCA",
-        "type": "Bank",
-        "balance": 25000000,
-        "notes": "Rekening operasional utama"
-    },
-    {
-        "id": "acc_3",
-        "name": "GoPay",
-        "type": "E-Wallet",
-        "balance": 1500000,
-        "notes": "E-Wallet untuk transaksi digital"
+        "balance": 0,
+        "notes": "Kas fisik di butik",
+        "createdAt": "2024-01-01T00:00:00.000Z"
     }
   ],
   "shipments": [],
-  "checkoutHistory": [],
   "stockMovements": [],
   "financialTransactions": [],
-  "customers": [
-    {
-      "id": "cust_1",
-      "name": "Pelanggan Umum",
-      "address": "N/A",
-      "phone": "N/A"
-    },
-    {
-      "id": "cust_2",
-      "name": "Budi Santoso",
-      "address": "Jl. Merdeka No. 10, Jakarta",
-      "phone": "081234567890"
-    }
-  ],
-  "suppliers": [
-    {
-      "id": "sup_1",
-      "name": "Supplier A",
-      "address": "Jl. Industri No. 1, Bandung",
-      "phone": "022-123456"
-    },
-    {
-      "id": "sup_2",
-      "name": "CV. Maju Jaya",
-      "address": "Jl. Raya Bogor Km. 20, Jakarta",
-      "phone": "021-987654"
-    }
-  ],
+  "customers": [],
+  "suppliers": [],
   "purchases": [],
   "returns": []
 }
