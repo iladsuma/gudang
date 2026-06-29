@@ -1,4 +1,3 @@
-
 import "dotenv/config";
 import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
@@ -13,7 +12,7 @@ const main = async () => {
   try {
     console.log("Seeding database...");
 
-    // Delete all existing data
+    // Membersihkan data lama untuk menghindari duplikasi saat seeding ulang
     await db.delete(schema.users);
     await db.delete(schema.accounts);
     await db.delete(schema.products);
@@ -29,24 +28,37 @@ const main = async () => {
     
     console.log("Existing data cleared.");
 
-
-    // Read data from db.json
+    // Membaca data dari db.json
     const dbPath = path.join(process.cwd(), "db.json");
     const fileContent = await fs.readFile(dbPath, "utf-8");
     const data = JSON.parse(fileContent);
 
-    // Insert new data
-    if (data.users.length) await db.insert(schema.users).values(data.users);
-    if (data.accounts.length) await db.insert(schema.accounts).values(data.accounts);
-    if (data.products.length) await db.insert(schema.products).values(data.products);
-    if (data.expeditions.length) await db.insert(schema.expeditions).values(data.expeditions);
-    if (data.customers.length) await db.insert(schema.customers).values(data.customers);
-    if (data.suppliers.length) await db.insert(schema.suppliers).values(data.suppliers);
+    // Memasukkan data baru
+    if (data.users && data.users.length) {
+      console.log(`Inserting ${data.users.length} users...`);
+      await db.insert(schema.users).values(data.users);
+    }
     
-    console.log("Seeding finished.");
+    if (data.accounts && data.accounts.length) {
+      console.log(`Inserting ${data.accounts.length} accounts...`);
+      await db.insert(schema.accounts).values(data.accounts);
+    }
+    
+    if (data.products && data.products.length) {
+      console.log(`Inserting ${data.products.length} product categories...`);
+      await db.insert(schema.products).values(data.products);
+    }
+    
+    if (data.expeditions && data.expeditions.length) {
+      console.log(`Inserting ${data.expeditions.length} expeditions...`);
+      await db.insert(schema.expeditions).values(data.expeditions);
+    }
+    
+    console.log("Seeding finished successfully.");
+    process.exit(0);
   } catch (error) {
-    console.error(error);
-    throw new Error("Failed to seed database");
+    console.error("Seeding failed:", error);
+    process.exit(1);
   }
 };
 
