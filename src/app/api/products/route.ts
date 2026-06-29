@@ -1,7 +1,7 @@
 import { db } from '@/lib/db';
 import { products, stockMovements } from '@/app/drizzle/schema';
 import { NextRequest, NextResponse } from 'next/server';
-import { desc, eq, sql } from 'drizzle-orm';
+import { desc, inArray } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,9 +23,10 @@ export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
         const { stock, ...productData } = body;
+        const newProductId = `prod_${Date.now()}`;
         const newProduct = {
             ...productData,
-            id: `prod_${Date.now()}`,
+            id: newProductId,
             stock: stock || 0,
         };
 
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
             if (newProduct.stock > 0) {
                 await tx.insert(stockMovements).values({
                     id: `sm_${Date.now()}`,
-                    productId: newProduct.id,
+                    productId: newProductId,
                     type: 'Stok Awal',
                     quantityChange: newProduct.stock,
                     stockBefore: 0,
@@ -46,6 +47,7 @@ export async function POST(req: NextRequest) {
         
         return NextResponse.json(newProduct, { status: 201 });
     } catch (error) {
+        console.error("POST Product API Error:", error);
         const message = error instanceof Error ? error.message : 'An unexpected error occurred';
         return NextResponse.json({ message }, { status: 500 });
     }
@@ -59,7 +61,7 @@ export async function DELETE(req: NextRequest) {
             return NextResponse.json({ message: 'IDs are required' }, { status: 400 });
         }
         
-        await db.delete(products).where(sql`id IN ${ids}`);
+        await db.delete(products).where(inArray(products.id, ids));
         
         return NextResponse.json({ ids }, { status: 200 });
     } catch (error) {

@@ -169,6 +169,7 @@ function ProductsClient() {
             setIsFormOpen(false);
             fetchProducts();
         } catch (error) {
+            console.error('Save Product Error:', error);
             toast({ variant: 'destructive', title: 'Kesalahan', description: 'Gagal menyimpan data.' });
         } finally {
             setIsSubmitting(false);
@@ -408,6 +409,7 @@ function ProductsClient() {
                                 </div>
                             </div>
                             <DialogFooter>
+                                <button type="button" className="hidden" /> 
                                 <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>Batal</Button>
                                 <Button type="submit" disabled={isSubmitting}>
                                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
