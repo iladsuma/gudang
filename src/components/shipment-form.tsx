@@ -48,7 +48,7 @@ const bodyMeasurementsSchema = z.object({
 });
 
 const shipmentFormSchema = z.object({
-  userId: z.string().min(1, 'User harus diisi'),
+  userId: z.string().optional(),
   transactionId: z.string().min(1, 'No. Transaksi harus diisi.'),
   customerName: z.string().min(1, 'Nama pelanggan harus diisi'),
   deliveryMethod: z.enum(['Diambil di Toko', 'Dikirim Kurir Toko']),
@@ -160,7 +160,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
   const form = useForm<ShipmentFormValues>({
     resolver: zodResolver(shipmentFormSchema),
     defaultValues: isEditMode ? {
-        userId: shipmentToEdit.userId, 
+        userId: shipmentToEdit.userId || '', 
         transactionId: shipmentToEdit.transactionId,
         customerName: shipmentToEdit.customerName,
         deliveryMethod: shipmentToEdit.deliveryMethod || 'Diambil di Toko',
@@ -173,7 +173,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
         },
         downPayment: shipmentToEdit.downPayment || 0,
     } : {
-      userId: user?.id || '',
+      userId: '', // Kosongkan agar masuk ke daftar "Pesanan Baru" admin untuk ditawarkan
       transactionId: generateTransactionId(),
       customerName: '',
       deliveryMethod: 'Diambil di Toko',
@@ -234,6 +234,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
 
         const payload: Omit<Shipment, 'id' | 'createdAt' | 'status'> = { 
             ...data, 
+            userId: data.userId || '', // Memastikan tetap string kosong jika tidak ada userId
             customerId: 'cust_manual',
             totalItems,
             totalProductCost,
