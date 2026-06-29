@@ -1,23 +1,23 @@
 
 export interface Product {
     id: string;
-    code: string; // Kode Item
-    name: string; // Will store category name now as primary identifier
-    price: number; // Harga Jual
-    costPrice: number; // Harga Pokok (HPP)
+    code: string; 
+    name: string; 
+    price: number; 
+    costPrice: number; 
     stock: number;
-    minStock: number; // Stok Minimal
-    unit: string; // Satuan (PCS, DUS, dll)
-    category: string; // Master category
-    imageUrl: string;
+    minStock: number; 
+    unit: string; 
+    category: string; 
+    imageUrls: string[]; // Changed from imageUrl: string
 }
 
 export interface StockMovement {
     id: string;
     productId: string;
-    referenceId?: string; // e.g., shipmentId or purchaseId or returnId
+    referenceId?: string; 
     type: 'Stok Awal' | 'Penjualan' | 'Stok Opname' | 'Pembelian' | 'Retur';
-    quantityChange: number; // e.g., -5 for sale, +50 for purchase
+    quantityChange: number; 
     stockBefore: number;
     stockAfter: number;
     notes?: string;
@@ -29,7 +29,7 @@ export interface PurchaseProduct {
     code: string;
     name: string;
     quantity: number;
-    costPrice: number; // Harga beli saat transaksi ini
+    costPrice: number; 
     imageUrl: string | null;
 }
 
@@ -39,41 +39,42 @@ export interface Purchase {
     id: string;
     supplierId: string;
     supplierName: string;
-    purchaseNumber: string; // Nomor faktur pembelian
-    accountId: string | null; // Akun yang digunakan untuk membayar, bisa null jika belum lunas
+    purchaseNumber: string; 
+    accountId: string | null; 
     status: 'Selesai' | 'Draf';
     paymentStatus: PaymentStatus;
     products: PurchaseProduct[];
     totalAmount: number;
-    createdAt: string; // ISO String for when it was added
+    createdAt: string; 
     paidAt?: string;
 }
 
 
 export interface ShipmentProduct {
-    productId: string; // Reference to the master product
+    productId: string; 
     code: string;
     name: string;
     category: string;
     quantity: number;
     price: number; 
-    costPrice: number; // Cost price (HPP)
+    costPrice: number; 
     imageUrl: string | null;
-    notes?: string; // Deskripsi spesifik per item baju
+    imageUrls?: string[]; // Added for multiple images support
+    notes?: string; 
 }
 
 export interface BodyMeasurements {
-    ld?: string; // Lingkar Dada
+    ld?: string; 
     panjangPunggung?: string;
-    lBahu?: string; // Lebar Bahu
-    pLengan?: string; // Panjang Lengan
+    lBahu?: string; 
+    pLengan?: string; 
     lingkarTelapakTangan?: string;
-    lp?: string; // Lingkar Pinggang
-    lingkarHip?: string; // Lingkar Hip/Pinggul
-    tinggiHip?: string; // Tinggi Hip/Pinggul
+    lp?: string; 
+    lingkarHip?: string; 
+    tinggiHip?: string; 
     tinggiDuduk?: string;
-    pBawah?: string; // Panjang Rok/Cln
-    lBawah?: string; // Lebar Rok/Celana
+    pBawah?: string; 
+    lBawah?: string;
     notes?: string;
 }
 
@@ -85,20 +86,20 @@ export interface Shipment {
     transactionId: string;
     customerId: string;
     customerName: string;
-    accountId: string; // Akun yang menerima pembayaran
+    accountId: string; 
     status: 'Proses' | 'Pengemasan' | 'Terkirim';
     paymentStatus: PaymentStatus;
     deliveryMethod: DeliveryMethod;
     receipt?: { 
         fileName: string;
-        dataUrl: string; // Base64 encoded PDF
+        dataUrl: string; 
     };
     products: ShipmentProduct[];
     totalItems: number;
-    totalProductCost: number; // Total price of products
-    totalAmount: number; // Grand total
-    totalRevenue: number; // Explicitly store revenue
-    createdAt: string; // ISO String for when it was added
+    totalProductCost: number; 
+    totalAmount: number; 
+    totalRevenue: number; 
+    createdAt: string; 
     paidAt?: string;
     downPayment?: number;
     bodyMeasurements?: BodyMeasurements;
@@ -154,29 +155,26 @@ export interface CheckoutItem {
 
 
 export interface ProcessedShipmentSummary {
-    shipmentId: string; // Add the original shipment ID
+    shipmentId: string; 
     transactionId: string;
     totalAmount: number;
     totalItems: number;
 }
 
 
-// This interface represents a processed shipment record in the history.
-// It can now represent a batch of processed shipments.
 export interface Checkout {
-    id: string; // Unique ID for the batch process
-    processorName: string; // User who processed the batch
-    processedShipments: ProcessedShipmentSummary[]; // Summary of all shipments in this batch
-    totalBatchItems: number; // Sum of all items from all shipments in the batch
-    totalBatchAmount: number; // Sum of all amounts from all shipments in the batch
-    createdAt: string; // ISO String for when it was processed
+    id: string; 
+    processorName: string; 
+    processedShipments: ProcessedShipmentSummary[]; 
+    totalBatchItems: number; 
+    totalBatchAmount: number; 
+    createdAt: string; 
 }
 
 export interface CartItem extends Product {
     quantity: number;
 }
 
-// Interface for what is selected on the products page
 export interface ProductSelection {
     [productId: string]: boolean;
 }
@@ -196,15 +194,15 @@ export interface Account {
 export interface FinancialTransaction {
   id: string;
   accountId: string;
-  account: { // For relation query
+  account: { 
       name: string;
   };
   type: 'in' | 'out';
   amount: number;
   category: string;
   description: string;
-  transactionDate: string; // Should be a string in 'YYYY-MM-DD' format
-  referenceId?: string; // Optional reference to a sale, purchase, etc.
+  transactionDate: string; 
+  referenceId?: string; 
   createdAt: string;
 }
 
@@ -237,9 +235,9 @@ export interface SalesProfitReportData {
 
 export interface Notification {
     id: string;
-    recipientId: string; // 'admin' or a specific user ID
+    recipientId: string; 
     message: string;
     url?: string;
     isRead: boolean;
-    createdAt: number; // timestamp
+    createdAt: number; 
 }

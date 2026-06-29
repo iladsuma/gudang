@@ -1,3 +1,4 @@
+
 import { pgTable, text, varchar, real, integer, timestamp, pgEnum, jsonb, boolean, date } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
@@ -37,7 +38,7 @@ export const products = pgTable('products', {
   minStock: integer('min_stock').notNull(),
   unit: varchar('unit', { length: 50 }).notNull(),
   category: varchar('category', { length: 255 }).notNull(),
-  imageUrl: text('image_url'),
+  imageUrls: jsonb('image_url').notNull().default([]), // Changed from text('image_url') to jsonb
 });
 
 export const expeditions = pgTable('expeditions', {
@@ -76,8 +77,8 @@ export const shipments = pgTable('shipments', {
   accountId: text('account_id'),
   status: shipmentStatusEnum('status').notNull(),
   paymentStatus: paymentStatusEnum('payment_status').notNull().default('Lunas'),
-  receipt: jsonb('receipt'), // { fileName: string, dataUrl: string }
-  products: jsonb('products').notNull(), // ShipmentProduct[]
+  receipt: jsonb('receipt'), 
+  products: jsonb('products').notNull(), 
   totalItems: integer('total_items').notNull(),
   totalProductCost: real('total_product_cost').notNull(),
   totalPackingCost: real('total_packing_cost'),
@@ -97,7 +98,7 @@ export const purchases = pgTable('purchases', {
     accountId: text('account_id'),
     status: purchaseStatusEnum('status').notNull(),
     paymentStatus: paymentStatusEnum('payment_status').notNull().default('Lunas'),
-    products: jsonb('products').notNull(), // PurchaseProduct[]
+    products: jsonb('products').notNull(), 
     totalAmount: real('total_amount').notNull(),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     paidAt: timestamp('paid_at'),
@@ -108,7 +109,7 @@ export const returns = pgTable('returns', {
     originalShipmentId: text('original_shipment_id').notNull(),
     originalTransactionId: varchar('original_transaction_id', { length: 255 }).notNull(),
     customerName: varchar('customer_name', { length: 255 }).notNull(),
-    products: jsonb('products').notNull(), // ReturnedProduct[]
+    products: jsonb('products').notNull(), 
     reason: text('reason').notNull(),
     totalAmount: real('total_amount').notNull(),
     createdAt: timestamp('created_at').notNull().defaultNow(),

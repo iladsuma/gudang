@@ -12,13 +12,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DialogFooter, DialogHeader, DialogTitle, DialogDescription, Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
-import { Loader2, PlusCircle, Trash2, ImageIcon, ZoomIn } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, ImageIcon, ZoomIn, Images, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { addShipment, updateShipment, getAccounts, getProducts } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from './ui/textarea';
-import Image from 'next/image';
+import { cn } from '@/lib/utils';
 
 const shipmentProductSchema = z.object({
   productId: z.string(),
@@ -29,6 +29,7 @@ const shipmentProductSchema = z.object({
   price: z.coerce.number().min(0, 'Harga harus diisi'),
   costPrice: z.coerce.number().min(0),
   imageUrl: z.string().nullable().default(null),
+  imageUrls: z.array(z.string()).optional(),
   notes: z.string().optional(),
 });
 
@@ -62,7 +63,7 @@ const shipmentFormSchema = z.object({
     }
     return true;
 }, {
-    message: 'Akun pembayaran harus dipilih jika ada DP.',
+    message: 'Pilih akun pembayaran.',
     path: ['accountId'],
 });
 
@@ -75,65 +76,54 @@ interface ShipmentFormProps {
 }
 
 const formatRupiah = (number: number) => {
-    if (isNaN(number)) return 'Rp 0';
-    return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-    }).format(number);
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
 };
 
-const Summary = ({ control }: { control: any }) => {
-    const productsValue = useWatch({ control, name: 'products' });
-    const downPayment = useWatch({ control, name: 'downPayment' });
-    
-    const summary = React.useMemo(() => {
-        const subtotal = productsValue?.reduce((sum: number, product: any) => sum + ((product?.price || 0) * (product?.quantity || 0)), 0) || 0;
-        const dp = Number(downPayment) || 0;
-        const remaining = subtotal - dp;
-        
-        return { subtotal, dp, remaining };
-    }, [productsValue, downPayment]);
-  
-    return (
-      <CardFooter className="flex flex-col items-end bg-slate-50 dark:bg-slate-900 p-4 gap-2">
-        <div className="w-full max-w-sm space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Subtotal Tagihan</span>
-            <span className="font-medium">{formatRupiah(summary.subtotal)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Uang Muka (DP)</span>
-            <span className="font-medium text-red-600">-{formatRupiah(summary.dp)}</span>
-          </div>
-        </div>
-        <div className="w-full max-w-sm space-y-2 text-sm">
-          <div className="flex justify-between border-t pt-2 mt-2">
-            <span className="text-base font-bold">Sisa Pelunasan</span>
-            <span className="text-base font-bold text-primary">{formatRupiah(summary.remaining)}</span>
-          </div>
-        </div>
-      </CardFooter>
-    );
-};
+function GalleryViewer({ images, category }: { images: string[] | undefined, category: string }) {
+    const [index, setIndex] = React.useState(0);
+    if (!images || images.length === 0) return null;
 
-function ImagePreview({ src, category }: { src: string | null, category: string }) {
-    if (!src) return <ImageIcon className="h-4 w-4 text-muted-foreground" />;
-    
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <div className="relative h-10 w-10 rounded border bg-muted flex items-center justify-center overflow-hidden cursor-zoom-in group">
-                    <img src={src} alt={category} className="h-10 w-10 object-cover group-hover:scale-110 transition-transform" />
-                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                        <ZoomIn className="h-4 w-4 text-white" />
-                    </div>
-                </div>
+                <Button variant="outline" size="sm" className="h-8 px-2 text-[10px]">
+                    <Images className="h-3 w-3 mr-1" /> Katalog
+                </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-3xl flex items-center justify-center p-1 bg-transparent border-none shadow-none">
-                <DialogTitle className="sr-only">Pratinjau Gambar {category}</DialogTitle>
-                <div className="relative w-full max-h-[80vh] aspect-auto flex items-center justify-center">
-                    <img src={src} alt={category} className="max-w-full max-h-[80vh] rounded-lg shadow-2xl object-contain" />
+            <DialogContent className="sm:max-w-3xl p-0 overflow-hidden bg-black/95 border-none shadow-none">
+                <DialogTitle className="sr-only">Galeri {category}</DialogTitle>
+                <div className="relative w-full h-[70vh] flex items-center justify-center">
+                    <img src={images[index]} alt={`${category} ${index + 1}`} className="max-w-full max-h-full object-contain" />
+                    
+                    {images.length > 1 && (
+                        <>
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="absolute left-4 text-white hover:bg-white/20"
+                                onClick={() => setIndex((i) => (i === 0 ? images.length - 1 : i - 1))}
+                            >
+                                <ChevronLeft className="h-8 w-8" />
+                            </Button>
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="absolute right-4 text-white hover:bg-white/20"
+                                onClick={() => setIndex((i) => (i === images.length - 1 ? 0 : i + 1))}
+                            >
+                                <ChevronRight className="h-8 w-8" />
+                            </Button>
+                            <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
+                                {images.map((_, i) => (
+                                    <div key={i} className={cn("h-1.5 w-1.5 rounded-full", i === index ? "bg-white" : "bg-white/30")} />
+                                ))}
+                            </div>
+                        </>
+                    )}
+                </div>
+                <div className="p-4 bg-white dark:bg-slate-900 text-center">
+                    <p className="font-bold text-sm">{category}</p>
+                    <p className="text-xs text-muted-foreground">Gambar {index + 1} dari {images.length}</p>
                 </div>
             </DialogContent>
         </Dialog>
@@ -149,14 +139,6 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
 
   const isEditMode = !!shipmentToEdit;
 
-  const generateTransactionId = React.useCallback(() => {
-    const userNamePart = user?.username.split(' ')[0].toUpperCase() || 'ADMIN';
-    const date = new Date();
-    const datePart = `${String(date.getFullYear()).slice(-2)}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
-    const randomPart = Math.random().toString(36).substring(2, 5).toUpperCase();
-    return `${userNamePart}-${datePart}-${randomPart}`;
-  }, [user]);
-  
   const form = useForm<ShipmentFormValues>({
     resolver: zodResolver(shipmentFormSchema),
     defaultValues: isEditMode ? {
@@ -173,44 +155,23 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
         },
         downPayment: shipmentToEdit.downPayment || 0,
     } : {
-      userId: '', // Kosongkan agar masuk ke daftar "Pesanan Baru" admin untuk ditawarkan
-      transactionId: generateTransactionId(),
+      userId: '', 
+      transactionId: `ANT-${Date.now().toString().slice(-6)}`,
       customerName: '',
       deliveryMethod: 'Diambil di Toko',
       accountId: '',
-      products: [{ productId: '', code: '', category: '', name: '', quantity: 1, price: 0, costPrice: 0, imageUrl: null, notes: '' }],
-      bodyMeasurements: { 
-        ld: '', panjangPunggung: '', lBahu: '', pLengan: '', 
-        lingkarTelapakTangan: '', lp: '', lingkarHip: '', 
-        tinggiHip: '', tinggiDuduk: '', pBawah: '', lBawah: '', notes: '' 
-      },
+      products: [{ productId: '', code: '', category: '', name: '', quantity: 1, price: 0, costPrice: 0, imageUrl: null, imageUrls: [], notes: '' }],
+      bodyMeasurements: { ld: '', lp: '', notes: '' },
       downPayment: 0,
     },
   });
   
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: 'products',
-  });
+  const { fields, append, remove } = useFieldArray({ control: form.control, name: 'products' });
 
   React.useEffect(() => {
     getAccounts().then(setAccounts);
     getProducts().then(setMasterProducts);
   }, []);
-
-  const handleAddItem = () => {
-      append({
-          productId: '',
-          code: '',
-          category: '',
-          name: '',
-          quantity: 1,
-          price: 0,
-          costPrice: 0,
-          imageUrl: null,
-          notes: ''
-      });
-  };
 
   const handleCategorySelect = (index: number, productId: string) => {
     const product = masterProducts.find(p => p.id === productId);
@@ -221,7 +182,8 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
         form.setValue(`products.${index}.name`, product.category);
         form.setValue(`products.${index}.price`, product.price);
         form.setValue(`products.${index}.costPrice`, product.costPrice);
-        form.setValue(`products.${index}.imageUrl`, product.imageUrl);
+        form.setValue(`products.${index}.imageUrl`, product.imageUrls?.[0] || null);
+        form.setValue(`products.${index}.imageUrls`, product.imageUrls || []);
     }
   };
 
@@ -230,302 +192,151 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
     try {
         const totalItems = data.products.reduce((sum, p) => sum + p.quantity, 0);
         const totalProductCost = data.products.reduce((sum, p) => sum + (p.price * p.quantity), 0);
-        const totalAmount = totalProductCost;
-
-        const payload: Omit<Shipment, 'id' | 'createdAt' | 'status'> = { 
+        const payload = { 
             ...data, 
-            userId: data.userId || '', // Memastikan tetap string kosong jika tidak ada userId
+            userId: data.userId || '', 
             customerId: 'cust_manual',
             totalItems,
             totalProductCost,
             totalPackingCost: 0,
-            totalAmount,
-            totalRevenue: totalAmount,
-            paymentStatus: (data.downPayment || 0) >= totalAmount ? 'Lunas' : 'Belum Lunas',
+            totalAmount: totalProductCost,
+            totalRevenue: totalProductCost,
+            paymentStatus: (data.downPayment || 0) >= totalProductCost ? 'Lunas' : 'Belum Lunas',
         };
-
         if (isEditMode) {
             const updated = await updateShipment(shipmentToEdit.id, payload);
-            toast({ title: 'Sukses!', description: `Pesanan ${data.transactionId} diperbarui.` });
             onSuccess(updated);
         } else {
             const newShipment = await addShipment(payload);
-            toast({ title: 'Sukses!', description: `Pesanan ${data.transactionId} ditambahkan.` });
             onSuccess(newShipment);
         }
     } catch (error) {
-        toast({ variant: 'destructive', title: 'Kesalahan', description: error instanceof Error ? error.message : 'Terjadi kesalahan.' });
+        toast({ variant: 'destructive', title: 'Kesalahan', description: String(error) });
     } finally {
         setIsSubmitting(false);
     }
   };
   
   return (
-    <>
-      <DialogHeader>
+    <div className="flex flex-col h-full max-h-[95vh]">
+      <DialogHeader className="p-4 border-b">
         <DialogTitle>{isEditMode ? 'Edit Pesanan' : 'Buat Pesanan Baru'}</DialogTitle>
-        <DialogDescription>
-          {isEditMode ? `Perbarui detail untuk pesanan ${shipmentToEdit.transactionId}` : 'Isi formulir untuk mencatat pesanan baru dari pelanggan.'}
-        </DialogDescription>
       </DialogHeader>
-      <div className="pr-4 max-h-[70vh] overflow-y-auto">
+      
+      <div className="flex-1 overflow-y-auto p-4 space-y-6">
         <Form {...form}>
-            <form id="shipment-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-1">
-                  <FormField
-                    control={form.control}
-                    name="transactionId"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>No. Pesanan</FormLabel>
-                        <FormControl>
-                            <Input {...field} readOnly disabled className="bg-muted font-mono" />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                     <FormField
-                      control={form.control}
-                      name="customerName"
-                      render={({ field }) => (
-                          <FormItem>
-                          <FormLabel>Nama Pelanggan</FormLabel>
-                          <FormControl>
-                              <Input placeholder="Nama Lengkap..." {...field} />
-                          </FormControl>
-                          <FormMessage />
-                          </FormItem>
-                      )}
-                  />
-                  <FormField
-                      control={form.control}
-                      name="deliveryMethod"
-                      render={({ field }) => (
-                          <FormItem>
-                          <FormLabel>Metode Pengiriman</FormLabel>
+            <form id="shipment-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <FormField control={form.control} name="transactionId" render={({ field }) => (
+                        <FormItem><FormLabel>No. Pesanan</FormLabel><FormControl><Input {...field} readOnly className="bg-muted font-mono" /></FormControl></FormItem>
+                  )} />
+                   <FormField control={form.control} name="customerName" render={({ field }) => (
+                        <FormItem><FormLabel>Nama Pelanggan</FormLabel><FormControl><Input placeholder="Contoh: Ibu Rina" {...field} /></FormControl></FormItem>
+                  )} />
+                  <FormField control={form.control} name="deliveryMethod" render={({ field }) => (
+                        <FormItem><FormLabel>Pengambilan</FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                  <SelectTrigger>
-                                      <SelectValue placeholder="Pilih Pengiriman" />
-                                  </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                  <SelectItem value="Diambil di Toko">Diambil di Toko</SelectItem>
-                                  <SelectItem value="Dikirim Kurir Toko">Dikirim Kurir Toko</SelectItem>
-                              </SelectContent>
+                              <FormControl><SelectTrigger><SelectValue placeholder="Metode" /></SelectTrigger></FormControl>
+                              <SelectContent><SelectItem value="Diambil di Toko">Diambil di Toko</SelectItem><SelectItem value="Dikirim Kurir Toko">Dikirim Kurir Toko</SelectItem></SelectContent>
                           </Select>
-                          <FormMessage />
-                          </FormItem>
-                      )}
-                  />
+                        </FormItem>
+                  )} />
               </div>
 
               <Card>
-                  <CardHeader className="pb-3">
-                      <CardTitle className="text-base">Informasi Ukuran Badan (cm)</CardTitle>
-                  </CardHeader>
-                  <CardContent className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                      <FormField control={form.control} name="bodyMeasurements.ld" render={({ field }) => (
-                          <FormItem><FormLabel>LD</FormLabel><FormControl><Input placeholder="0" {...field} /></FormControl></FormItem>
-                      )} />
-                      <FormField control={form.control} name="bodyMeasurements.panjangPunggung" render={({ field }) => (
-                          <FormItem><FormLabel>Pjg Punggung</FormLabel><FormControl><Input placeholder="0" {...field} /></FormControl></FormItem>
-                      )} />
-                      <FormField control={form.control} name="bodyMeasurements.lBahu" render={({ field }) => (
-                          <FormItem><FormLabel>Lebar Bahu</FormLabel><FormControl><Input placeholder="0" {...field} /></FormControl></FormItem>
-                      )} />
-                      <FormField control={form.control} name="bodyMeasurements.pLengan" render={({ field }) => (
-                          <FormItem><FormLabel>Pjg Lengan</FormLabel><FormControl><Input placeholder="0" {...field} /></FormControl></FormItem>
-                      )} />
-                      <FormField control={form.control} name="bodyMeasurements.lingkarTelapakTangan" render={({ field }) => (
-                          <FormItem><FormLabel>Lk. Telapak</FormLabel><FormControl><Input placeholder="0" {...field} /></FormControl></FormItem>
-                      )} />
-                      <FormField control={form.control} name="bodyMeasurements.lp" render={({ field }) => (
-                          <FormItem><FormLabel>LP (Pinggang)</FormLabel><FormControl><Input placeholder="0" {...field} /></FormControl></FormItem>
-                      )} />
-                      <FormField control={form.control} name="bodyMeasurements.lingkarHip" render={({ field }) => (
-                          <FormItem><FormLabel>Lk. Hip</FormLabel><FormControl><Input placeholder="0" {...field} /></FormControl></FormItem>
-                      )} />
-                      <FormField control={form.control} name="bodyMeasurements.tinggiHip" render={({ field }) => (
-                          <FormItem><FormLabel>T. Hip</FormLabel><FormControl><Input placeholder="0" {...field} /></FormControl></FormItem>
-                      )} />
-                      <FormField control={form.control} name="bodyMeasurements.tinggiDuduk" render={({ field }) => (
-                          <FormItem><FormLabel>Tinggi Duduk</FormLabel><FormControl><Input placeholder="0" {...field} /></FormControl></FormItem>
-                      )} />
-                      <FormField control={form.control} name="bodyMeasurements.pBawah" render={({ field }) => (
-                          <FormItem><FormLabel>Pjg Bawah</FormLabel><FormControl><Input placeholder="0" {...field} /></FormControl></FormItem>
-                      )} />
-                      <FormField control={form.control} name="bodyMeasurements.lBawah" render={({ field }) => (
-                          <FormItem><FormLabel>Lbr Bawah</FormLabel><FormControl><Input placeholder="0" {...field} /></FormControl></FormItem>
-                      )} />
+                  <CardHeader className="p-4 pb-0"><CardTitle className="text-sm font-bold uppercase text-primary">Ukuran Badan (cm)</CardTitle></CardHeader>
+                  <CardContent className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4">
+                      {['ld', 'lp', 'panjangPunggung', 'lBahu', 'pLengan', 'lingkarHip', 'tinggiHip', 'pBawah'].map((key) => (
+                          <FormField key={key} control={form.control} name={`bodyMeasurements.${key}` as any} render={({ field }) => (
+                              <FormItem><FormLabel className="text-[10px] uppercase font-bold">{key.replace(/([A-Z])/g, ' $1')}</FormLabel><FormControl><Input placeholder="0" className="h-8 text-xs" {...field} /></FormControl></FormItem>
+                          )} />
+                      ))}
                       <div className="col-span-full">
                         <FormField control={form.control} name="bodyMeasurements.notes" render={({ field }) => (
-                            <FormItem><FormLabel>Catatan Tambahan Ukuran</FormLabel><FormControl><Textarea placeholder="Detail model kerah, saku, dll." {...field} /></FormControl></FormItem>
+                            <FormItem><FormLabel className="text-[10px] uppercase font-bold">Model / Detail Lainnya</FormLabel><FormControl><Textarea placeholder="Cth: Pakai furing, model kerah shanghai, dll." className="text-xs" {...field} /></FormControl></FormItem>
                         )} />
                       </div>
                   </CardContent>
               </Card>
               
               <Card>
-                  <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
-                      <CardTitle className="text-base">Daftar Jahitan / Pesanan</CardTitle>
-                      <Button type="button" variant="outline" size="sm" onClick={handleAddItem}>
-                          <PlusCircle className="mr-2 h-4 w-4" /> Tambah Baju
+                  <CardHeader className="p-4 flex flex-row items-center justify-between"><CardTitle className="text-sm font-bold uppercase text-primary">Daftar Jahitan</CardTitle>
+                      <Button type="button" variant="outline" size="sm" onClick={() => append({ productId: '', code: '', category: '', name: '', quantity: 1, price: 0, costPrice: 0, imageUrl: null, imageUrls: [], notes: '' })}>
+                          <PlusCircle className="mr-1 h-3 w-3" /> Tambah
                       </Button>
                   </CardHeader>
-                  <CardContent>
-                      <div className="overflow-x-auto">
-                      <Table>
-                          <TableHeader>
-                              <TableRow>
-                                  <TableHead className="w-[80px]">Gambar</TableHead>
-                                  <TableHead className="w-[200px]">Jenis Jahitan</TableHead>
-                                  <TableHead>Deskripsi/Model</TableHead>
-                                  <TableHead className="w-[80px]">Jumlah</TableHead>
-                                  <TableHead className="w-[150px]">Harga Jasa (Rp)</TableHead>
-                                  <TableHead className="w-[130px] text-right">Subtotal</TableHead>
-                                  <TableHead className="w-[40px]"></TableHead>
-                              </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                              {fields.map((field, index) => {
-                                  const item = form.watch(`products.${index}`);
-                                  const subtotal = (item.price || 0) * (item.quantity || 0);
-
-                                  return (
-                                  <TableRow key={field.id}>
-                                       <TableCell>
-                                          <ImagePreview src={item.imageUrl} category={item.category} />
-                                      </TableCell>
-                                       <TableCell>
-                                          <FormField
-                                              control={form.control}
-                                              name={`products.${index}.productId`}
-                                              render={({ field: pidField }) => (
-                                                  <FormItem>
-                                                      <Select 
-                                                        onValueChange={(val) => handleCategorySelect(index, val)} 
-                                                        defaultValue={pidField.value}
-                                                      >
-                                                          <FormControl>
-                                                              <SelectTrigger>
-                                                                  <SelectValue placeholder="Pilih Jenis" />
-                                                              </SelectTrigger>
-                                                          </FormControl>
-                                                          <SelectContent>
-                                                              {masterProducts.map(p => (
-                                                                  <SelectItem key={p.id} value={p.id}>{p.category} ({p.code})</SelectItem>
-                                                              ))}
-                                                          </SelectContent>
-                                                      </Select>
-                                                      <FormMessage />
-                                                  </FormItem>
-                                              )}
-                                          />
-                                      </TableCell>
-                                      <TableCell>
-                                          <FormField
-                                              control={form.control}
-                                              name={`products.${index}.notes`}
-                                              render={({ field: notesField }) => (
-                                                  <FormItem>
-                                                      <FormControl>
-                                                          <Input placeholder="Cth: Lengan balon, kerah shanghai..." {...notesField} />
-                                                      </FormControl>
-                                                      <FormMessage />
-                                                  </FormItem>
-                                              )}
-                                          />
-                                      </TableCell>
-                                      <TableCell>
-                                          <FormField
-                                              control={form.control}
-                                              name={`products.${index}.quantity`}
-                                              render={({ field: qtyField }) => (
-                                                  <FormItem><FormControl><Input type="number" min="1" {...qtyField} /></FormControl><FormMessage /></FormItem>
-                                              )}
-                                          />
-                                      </TableCell>
-                                      <TableCell>
-                                         <FormField
-                                              control={form.control}
-                                              name={`products.${index}.price`}
-                                              render={({ field: priceField }) => (
-                                                  <FormItem><FormControl><Input type="number" min="0" {...priceField} /></FormControl><FormMessage /></FormItem>
-                                              )}
-                                          />
-                                      </TableCell>
-                                      <TableCell className="text-right font-medium">
-                                          {formatRupiah(subtotal > 0 ? subtotal : 0)}
-                                      </TableCell>
-                                      <TableCell>
-                                          <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length === 1}>
-                                              <Trash2 className="h-4 w-4 text-destructive" />
-                                          </Button>
-                                      </TableCell>
-                                  </TableRow>
-                              )})}
-                          </TableBody>
-                      </Table>
+                  <CardContent className="p-2 sm:p-4">
+                      <div className="space-y-4">
+                          {fields.map((field, index) => {
+                              const item = form.watch(`products.${index}`);
+                              return (
+                                <div key={field.id} className="p-3 border rounded-lg bg-slate-50/50 space-y-3">
+                                    <div className="flex items-start gap-3">
+                                        <div className="flex-1">
+                                            <FormField control={form.control} name={`products.${index}.productId`} render={({ field: pidField }) => (
+                                                <FormItem>
+                                                    <Select onValueChange={(val) => handleCategorySelect(index, val)} defaultValue={pidField.value}>
+                                                        <FormControl><SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Pilih Jenis Jahitan" /></SelectTrigger></FormControl>
+                                                        <SelectContent>{masterProducts.map(p => <SelectItem key={p.id} value={p.id}>{p.category}</SelectItem>)}</SelectContent>
+                                                    </Select>
+                                                </FormItem>
+                                            )} />
+                                        </div>
+                                        {item.imageUrls && item.imageUrls.length > 0 && (
+                                            <GalleryViewer images={item.imageUrls} category={item.category} />
+                                        )}
+                                        <Button type="button" variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => remove(index)} disabled={fields.length === 1}><Trash2 className="h-4 w-4" /></Button>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <FormField control={form.control} name={`products.${index}.quantity`} render={({ field: qf }) => (
+                                            <FormItem><FormLabel className="text-[10px] uppercase font-bold">Jml</FormLabel><FormControl><Input type="number" className="h-8 text-xs" {...qf} /></FormControl></FormItem>
+                                        )} />
+                                        <FormField control={form.control} name={`products.${index}.price`} render={({ field: pf }) => (
+                                            <FormItem><FormLabel className="text-[10px] uppercase font-bold">Harga (Rp)</FormLabel><FormControl><Input type="number" className="h-8 text-xs" {...pf} /></FormControl></FormItem>
+                                        )} />
+                                    </div>
+                                    <p className="text-[10px] text-right font-bold text-primary">Subtotal: {formatRupiah((item.price || 0) * (item.quantity || 0))}</p>
+                                </div>
+                              )
+                          })}
                       </div>
-                      <FormMessage>{form.formState.errors.products?.root?.message}</FormMessage>
                   </CardContent>
-                  <Summary control={form.control} />
               </Card>
 
-              <Card>
-                  <CardHeader className="pb-3">
-                      <CardTitle className="text-base">Pembayaran DP</CardTitle>
-                  </CardHeader>
-                  <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="downPayment"
-                      render={({ field }) => (
-                          <FormItem>
-                          <FormLabel>Uang Muka (DP)</FormLabel>
-                          <FormControl>
-                              <Input type="number" placeholder="0" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                          </FormItem>
-                      )}
-                      />
-                    <FormField
-                        control={form.control}
-                        name="accountId"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>DP Masuk ke Akun</FormLabel>
+              <Card className="bg-primary/5 border-primary/20">
+                  <CardContent className="p-4 space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField control={form.control} name="downPayment" render={({ field }) => (
+                            <FormItem><FormLabel className="font-bold">Uang Muka (DP)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} /></FormControl></FormItem>
+                        )} />
+                        <FormField control={form.control} name="accountId" render={({ field }) => (
+                            <FormItem><FormLabel className="font-bold">Diterima Di Akun</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Pilih akun" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        {accounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name} ({formatRupiah(acc.balance)})</SelectItem>)}
-                                    </SelectContent>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Pilih Akun" /></SelectTrigger></FormControl>
+                                    <SelectContent>{accounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}</SelectContent>
                                 </Select>
                                 <FormMessage />
                             </FormItem>
-                        )}
-                    />
+                        )} />
+                    </div>
+                    <div className="border-t border-primary/20 pt-3 flex justify-between items-center">
+                        <span className="text-xs font-bold uppercase">Sisa Pelunasan:</span>
+                        <span className="text-xl font-bold text-primary">
+                            {formatRupiah(form.watch('products').reduce((s, p) => s + (p.price * p.quantity), 0) - (form.watch('downPayment') || 0))}
+                        </span>
+                    </div>
                   </CardContent>
               </Card>
             </form>
         </Form>
       </div>
-      <DialogFooter className="mt-auto pt-4">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Batal
+      
+      <div className="p-4 border-t bg-white dark:bg-slate-900 grid grid-cols-2 gap-3">
+        <Button type="button" variant="outline" onClick={onCancel} className="w-full">Batal</Button>
+        <Button type="submit" form="shipment-form" disabled={isSubmitting} className="w-full">
+          {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : (isEditMode ? 'Update' : 'Simpan Pesanan')}
         </Button>
-        <Button type="submit" form="shipment-form" disabled={isSubmitting}>
-          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {isEditMode ? 'Simpan Perubahan' : 'Simpan Pesanan'}
-        </Button>
-      </DialogFooter>
-    </>
+      </div>
+    </div>
   );
 }
