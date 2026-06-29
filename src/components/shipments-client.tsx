@@ -18,6 +18,7 @@ import {
   Dialog,
   DialogContent,
   DialogTrigger,
+  DialogTitle,
 } from '@/components/ui/dialog';
 import { ShipmentForm } from './shipment-form';
 import { useToast } from '@/hooks/use-toast';
@@ -79,6 +80,7 @@ function ImagePreview({ src, category }: { src: string | null, category: string 
                 </div>
             </DialogTrigger>
             <DialogContent className="sm:max-w-3xl flex items-center justify-center p-1 bg-transparent border-none shadow-none">
+                <DialogTitle className="sr-only">Pratinjau Gambar {category}</DialogTitle>
                 <img src={src} alt={category} className="max-w-full max-h-[80vh] rounded-lg shadow-2xl object-contain" />
             </DialogContent>
         </Dialog>
@@ -598,6 +600,7 @@ export function ShipmentsClient({ shipments: initialShipments, allUsers, onUpdat
           setIsFormOpen(open);
         }}>
           <DialogContent className="sm:max-w-5xl">
+            <DialogTitle className="sr-only">Formulir Pesanan</DialogTitle>
             <ShipmentForm
               key={editingShipment ? editingShipment.id : 'new'}
               shipmentToEdit={editingShipment}

@@ -27,11 +27,11 @@ import { processShipmentsToDelivered } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import {
   Tooltip,
-  TooltipContent,
   TooltipProvider,
+  TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from '@/components/ui/dialog';
 
 function ImagePreview({ src, category }: { src: string | null, category: string }) {
     if (!src) return null;
@@ -47,6 +47,7 @@ function ImagePreview({ src, category }: { src: string | null, category: string 
                 </div>
             </DialogTrigger>
             <DialogContent className="sm:max-w-3xl flex items-center justify-center p-1 bg-transparent border-none shadow-none">
+                <DialogTitle className="sr-only">Pratinjau Gambar {category}</DialogTitle>
                 <img src={src} alt={category} className="max-w-full max-h-[80vh] rounded-lg shadow-2xl object-contain" />
             </DialogContent>
         </Dialog>

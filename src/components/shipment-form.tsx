@@ -124,13 +124,14 @@ function ImagePreview({ src, category }: { src: string | null, category: string 
         <Dialog>
             <DialogTrigger asChild>
                 <div className="relative h-10 w-10 rounded border bg-muted flex items-center justify-center overflow-hidden cursor-zoom-in group">
-                    <Image src={src} alt={category} width={40} height={40} className="object-cover group-hover:scale-110 transition-transform" />
+                    <img src={src} alt={category} className="h-10 w-10 object-cover group-hover:scale-110 transition-transform" />
                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                         <ZoomIn className="h-4 w-4 text-white" />
                     </div>
                 </div>
             </DialogTrigger>
             <DialogContent className="sm:max-w-3xl flex items-center justify-center p-1 bg-transparent border-none shadow-none">
+                <DialogTitle className="sr-only">Pratinjau Gambar {category}</DialogTitle>
                 <div className="relative w-full max-h-[80vh] aspect-auto flex items-center justify-center">
                     <img src={src} alt={category} className="max-w-full max-h-[80vh] rounded-lg shadow-2xl object-contain" />
                 </div>
