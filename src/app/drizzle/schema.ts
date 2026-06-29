@@ -15,6 +15,7 @@ export const users = pgTable('users', {
   id: text('id').primaryKey(),
   username: varchar('username', { length: 255 }).notNull().unique(),
   role: userRoleEnum('role').notNull(),
+  phone: varchar('phone', { length: 50 }),
   password: text('password').notNull(),
 });
 

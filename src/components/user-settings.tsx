@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -55,11 +54,8 @@ import { useAuth } from '@/context/auth-context';
 const userFormSchema = z.object({
   username: z.string().min(1, 'Username harus diisi.'),
   role: z.enum(['admin', 'user'], { required_error: 'Peran harus dipilih.' }),
+  phone: z.string().min(10, 'Nomor WA minimal 10 digit untuk notifikasi.'),
   password: z.string().optional(),
-}).refine(data => {
-    // Make password required when creating a new user, but optional when editing.
-    // This is handled in the submission logic, but could be refined here if needed.
-    return true;
 });
 
 type UserFormValues = z.infer<typeof userFormSchema>;
@@ -76,7 +72,7 @@ export function UserSettings() {
 
     const form = useForm<UserFormValues>({
         resolver: zodResolver(userFormSchema),
-        defaultValues: { username: '', role: 'user', password: '' },
+        defaultValues: { username: '', role: 'user', phone: '', password: '' },
     });
 
     const fetchUsers = React.useCallback(async () => {
@@ -96,10 +92,11 @@ export function UserSettings() {
             form.reset({
                 username: user.username,
                 role: user.role,
+                phone: user.phone || '',
                 password: '', // Password is not fetched, so it's blank for editing
             });
         } else {
-            form.reset({ username: '', role: 'user', password: '' });
+            form.reset({ username: '', role: 'user', phone: '', password: '' });
         }
         setIsFormOpen(true);
     };
@@ -168,10 +165,14 @@ export function UserSettings() {
                             <form onSubmit={form.handleSubmit(onFormSubmit)}>
                                 <DialogHeader>
                                     <DialogTitle>{editingUser ? 'Edit Pengguna' : 'Tambah Pengguna Baru'}</DialogTitle>
+                                    <DialogDescription>Masukkan detail akun tim butik Anda. Nomor WA digunakan untuk notifikasi penugasan.</DialogDescription>
                                 </DialogHeader>
                                 <div className="grid gap-4 py-4">
                                     <FormField control={form.control} name="username" render={({ field }) => (
                                         <FormItem><FormLabel>Username</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                     <FormField control={form.control} name="phone" render={({ field }) => (
+                                        <FormItem><FormLabel>Nomor WhatsApp</FormLabel><FormControl><Input placeholder="08..." {...field} /></FormControl><FormMessage /></FormItem>
                                     )} />
                                     <FormField control={form.control} name="password" render={({ field }) => (
                                         <FormItem>
@@ -190,8 +191,8 @@ export function UserSettings() {
                                                 </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    <SelectItem value="user">User</SelectItem>
-                                                    <SelectItem value="admin">Admin</SelectItem>
+                                                    <SelectItem value="user">User / Penjahit</SelectItem>
+                                                    <SelectItem value="admin">Admin / Pemilik</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />
@@ -215,18 +216,20 @@ export function UserSettings() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Username</TableHead>
+                            <TableHead>No. WhatsApp</TableHead>
                             <TableHead>Peran</TableHead>
                             <TableHead className="text-right">Aksi</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loading ? (
-                            <TableRow><TableCell colSpan={3} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
+                            <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
                         ) : users.length > 0 ? (
                             users.map((user) => (
                                 <TableRow key={user.id}>
                                     <TableCell className="font-medium">{user.username}</TableCell>
-                                    <TableCell><Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>{user.role}</Badge></TableCell>
+                                    <TableCell className="font-mono text-xs">{user.phone || '-'}</TableCell>
+                                    <TableCell><Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>{user.role === 'admin' ? 'Admin' : 'Penjahit'}</Badge></TableCell>
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="icon" onClick={() => handleOpenForm(user)}><Pencil className="h-4 w-4" /></Button>
                                         
@@ -245,7 +248,7 @@ export function UserSettings() {
                                 </TableRow>
                             ))
                         ) : (
-                            <TableRow><TableCell colSpan={3} className="h-24 text-center">Belum ada data pengguna.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={4} className="h-24 text-center">Belum ada data pengguna.</TableCell></TableRow>
                         )}
                     </TableBody>
                 </Table>

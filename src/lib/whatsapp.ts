@@ -1,3 +1,4 @@
+
 'use server';
 
 import { FONNTE_TOKEN, ADMIN_PHONE } from './secrets';
@@ -107,4 +108,26 @@ Sisa Bayar: ${formatRupiah(shipment.totalAmount - (shipment.downPayment || 0))}`
     }
 
     return { adminResult, customerResult };
+}
+
+/**
+ * Notifikasi Penugasan Penjahit
+ */
+export async function sendTailorAssignmentNotification(shipment: any, tailor: any) {
+    if (!tailor.phone) return null;
+
+    const itemsList = shipment.products.map((p: any) => `- ${p.name} (x${p.quantity})`).join('\n');
+    
+    const messageContent = `✂️ *TUGAS JAHITAN BARU*
+Halo ${tailor.username}, Anda mendapatkan tugas jahitan baru.
+
+No Pesanan: ${shipment.transactionId}
+Pelanggan: ${shipment.customerName}
+
+Daftar Item:
+${itemsList}
+
+Silakan cek menu 'Pekerjaan Saya' di aplikasi untuk detail ukuran. Semangat bekerja!`;
+
+    return await sendWhatsApp(tailor.phone, messageContent);
 }

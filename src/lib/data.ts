@@ -15,7 +15,7 @@ import type {
     Notification
 } from './types';
 import initialData from '../../db.json';
-import { sendNewOrderNotification, sendOrderFinishedNotification } from './whatsapp';
+import { sendNewOrderNotification, sendOrderFinishedNotification, sendTailorAssignmentNotification } from './whatsapp';
 
 // Menambah versi DB untuk memaksa refresh data jahitan baru
 const DB_KEY = 'boutique_local_db_v2';
@@ -163,6 +163,15 @@ export async function processShipmentsToPackaging(shipmentIds: string[], users: 
             s.status = 'Pengemasan';
             if (userIds) s.userId = userIds;
             count++;
+
+            // Kirim notifikasi ke setiap penjahit yang ditugaskan
+            if (users && users.length > 0) {
+                users.forEach(tailor => {
+                    sendTailorAssignmentNotification(s, tailor)
+                        .then(res => console.log(`Notif WA Penjahit ${tailor.username}:`, JSON.stringify(res)))
+                        .catch(err => console.error(`Gagal notif penjahit ${tailor.username}:`, err));
+                });
+            }
         }
     });
     saveDB(db);
