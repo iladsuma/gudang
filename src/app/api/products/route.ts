@@ -1,7 +1,9 @@
 import { db } from '@/lib/db';
 import { products, stockMovements } from '@/app/drizzle/schema';
 import { NextRequest, NextResponse } from 'next/server';
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, sql } from 'drizzle-orm';
+
+export const dynamic = 'force-dynamic';
 
 // GET all products
 export async function GET() {

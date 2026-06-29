@@ -1,7 +1,9 @@
 import { db } from '@/lib/db';
 import { financialTransactions, accounts } from '@/app/drizzle/schema';
-import { and, asc, desc, eq, gte, lte } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, lte, sql } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
 
 // GET financial transactions with filters
 export async function GET(req: NextRequest) {
@@ -51,8 +53,6 @@ export async function POST(req: NextRequest) {
           .where(eq(accounts.id, body.accountId));
     });
 
-    // We can't return the created object directly with all relations, 
-    // so we just confirm success. The client will refetch.
     return NextResponse.json({ message: 'Transaction created' }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'An unexpected error occurred';

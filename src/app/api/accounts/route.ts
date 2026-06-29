@@ -3,6 +3,8 @@ import { accounts, financialTransactions } from '@/app/drizzle/schema';
 import { NextRequest, NextResponse } from 'next/server';
 import { eq, sql } from 'drizzle-orm';
 
+export const dynamic = 'force-dynamic';
+
 // GET all accounts
 export async function GET() {
   try {

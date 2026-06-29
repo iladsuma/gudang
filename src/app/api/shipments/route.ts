@@ -4,6 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { desc, eq, sql } from 'drizzle-orm';
 import type { Shipment, ShipmentProduct } from '@/lib/types';
 
+export const dynamic = 'force-dynamic';
+
 // GET all shipments
 export async function GET() {
   try {
