@@ -52,7 +52,7 @@ const shipmentFormSchema = z.object({
   userId: z.string().optional(),
   transactionId: z.string().min(1, 'No. Transaksi harus diisi.'),
   customerName: z.string().min(1, 'Nama pelanggan harus diisi'),
-  deliveryMethod: z.enum(['Diambil di Toko', 'Dikirim Kurir Toko']),
+  deliveryMethod: z.enum(['Diambil di Toko', 'Dikirim Kurir Toko']).optional(),
   accountId: z.string().optional(),
   products: z.array(shipmentProductSchema).min(1, 'Minimal harus ada satu item pesanan'),
   downPayment: z.coerce.number().min(0).optional(),
@@ -192,9 +192,11 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
     try {
         const totalItems = data.products.reduce((sum, p) => sum + p.quantity, 0);
         const totalProductCost = data.products.reduce((sum, p) => sum + (p.price * p.quantity), 0);
+        
+        // EXPLICITLY send null if userId is empty
         const payload = { 
             ...data, 
-            userId: data.userId || null, // Ensure empty userId is sent as null
+            userId: (data.userId && data.userId.trim() !== '') ? data.userId : null,
             customerId: 'cust_manual',
             totalItems,
             totalProductCost,
@@ -203,14 +205,18 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
             totalRevenue: totalProductCost,
             paymentStatus: (data.downPayment || 0) >= totalProductCost ? 'Lunas' : 'Belum Lunas',
         };
+
         if (isEditMode) {
             const updated = await updateShipment(shipmentToEdit.id, payload as any);
+            toast({ title: 'Berhasil', description: 'Pesanan berhasil diperbarui.' });
             onSuccess(updated);
         } else {
             const newShipment = await addShipment(payload as any);
+            toast({ title: 'Berhasil', description: 'Pesanan baru berhasil disimpan.' });
             onSuccess(newShipment);
         }
     } catch (error) {
+        console.error("Submit Error:", error);
         toast({ variant: 'destructive', title: 'Kesalahan', description: String(error) });
     } finally {
         setIsSubmitting(false);

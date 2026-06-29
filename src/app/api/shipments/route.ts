@@ -1,3 +1,4 @@
+
 import { db } from '@/lib/db';
 import { shipments, products as productsTable, stockMovements, financialTransactions } from '@/app/drizzle/schema';
 import { NextRequest, NextResponse } from 'next/server';
@@ -24,12 +25,17 @@ export async function POST(req: NextRequest) {
     try {
         const body: Omit<Shipment, 'id' | 'createdAt'> & { products: ShipmentProduct[] } = await req.json();
         const newShipmentId = `ship_${Date.now()}`;
-        const transactionId = `ft_${Date.now()}`;
+        const financialTxId = `ft_${Date.now()}`;
         
+        // Sanitize userId: if empty string or undefined, make it null to satisfy database
+        const { userId, ...shipmentData } = body;
+        const sanitizedUserId = (userId && userId.trim() !== '') ? userId : null;
+
         await db.transaction(async (tx) => {
             // 1. Insert the shipment
             await tx.insert(shipments).values({
-                ...body,
+                ...shipmentData,
+                userId: sanitizedUserId,
                 id: newShipmentId,
                 status: 'Proses',
                 createdAt: new Date(),
@@ -37,6 +43,8 @@ export async function POST(req: NextRequest) {
 
             // 2. Update stock for each product
             for (const product of body.products) {
+                if (!product.productId) continue;
+
                 const currentProduct = await tx.query.products.findFirst({ where: eq(productsTable.id, product.productId) });
                 const stockBefore = currentProduct?.stock || 0;
                 const stockAfter = stockBefore - product.quantity;
@@ -60,7 +68,7 @@ export async function POST(req: NextRequest) {
             // 3. Record the Down Payment if it exists
             if (body.downPayment && body.downPayment > 0 && body.accountId) {
                  await tx.insert(financialTransactions).values({
-                    id: transactionId,
+                    id: financialTxId,
                     accountId: body.accountId,
                     type: 'in',
                     amount: body.downPayment,

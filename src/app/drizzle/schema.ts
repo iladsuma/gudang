@@ -68,7 +68,7 @@ export const suppliers = pgTable('suppliers', {
 
 export const shipments = pgTable('shipments', {
   id: text('id').primaryKey(),
-  userId: text('user_id').references(() => users.id), // Removed .notNull()
+  userId: text('user_id').references(() => users.id), 
   transactionId: varchar('transaction_id', { length: 255 }).notNull(),
   customerId: text('customer_id').notNull().references(() => customers.id),
   customerName: varchar('customer_name', { length: 255 }).notNull(),
@@ -88,6 +88,7 @@ export const shipments = pgTable('shipments', {
   paidAt: timestamp('paid_at'),
   downPayment: real('down_payment'),
   bodyMeasurements: jsonb('body_measurements'),
+  deliveryMethod: varchar('delivery_method', { length: 100 }),
 });
 
 export const purchases = pgTable('purchases', {
