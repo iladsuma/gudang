@@ -9,7 +9,7 @@ export interface Product {
     minStock: number; 
     unit: string; 
     category: string; 
-    imageUrls: string[]; // Changed from imageUrl: string
+    imageUrls: string[]; 
 }
 
 export interface StockMovement {
@@ -59,7 +59,7 @@ export interface ShipmentProduct {
     price: number; 
     costPrice: number; 
     imageUrl: string | null;
-    imageUrls?: string[]; // Added for multiple images support
+    imageUrls?: string[]; 
     notes?: string; 
 }
 
@@ -82,7 +82,7 @@ export type DeliveryMethod = 'Diambil di Toko' | 'Dikirim Kurir Toko';
 
 export interface Shipment {
     id: string;
-    userId: string;
+    userId: string | null; // Changed to nullable
     transactionId: string;
     customerId: string;
     customerName: string;

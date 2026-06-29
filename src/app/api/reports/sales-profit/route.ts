@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
 
         let filtered = allShipments;
         if (userId && userId !== 'all') {
-            filtered = allShipments.filter(s => s.userId.split(',').includes(userId));
+            filtered = allShipments.filter(s => s.userId && s.userId.split(',').includes(userId));
         }
 
         const allUsers = await db.select().from(users);
@@ -35,7 +35,9 @@ export async function GET(req: NextRequest) {
         const transactionDetails = filtered.map(s => {
             const prods = s.products as any[];
             const totalCOGS = prods.reduce((sum, p) => sum + (p.costPrice * p.quantity), 0);
-            const userNames = s.userId.split(',').map(id => allUsers.find(u => u.id === id)?.username || 'N/A').join(', ');
+            const userNames = s.userId 
+                ? s.userId.split(',').map(id => allUsers.find(u => u.id === id)?.username || 'N/A').join(', ') 
+                : 'N/A';
 
             return {
                 id: s.id,
@@ -54,7 +56,6 @@ export async function GET(req: NextRequest) {
         const totalCOGS = transactionDetails.reduce((sum, d) => sum + d.totalCOGS, 0);
         const grossProfit = totalRevenue - totalCOGS;
 
-        // Simplified operational expenses from financial transactions
         const expenses = await db.query.financialTransactions.findMany({
             where: and(
                 eq(financialTransactions.type, 'out'),

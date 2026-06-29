@@ -38,7 +38,7 @@ export const products = pgTable('products', {
   minStock: integer('min_stock').notNull(),
   unit: varchar('unit', { length: 50 }).notNull(),
   category: varchar('category', { length: 255 }).notNull(),
-  imageUrls: jsonb('image_url').notNull().default([]), // Changed from text('image_url') to jsonb
+  imageUrls: jsonb('image_url').notNull().default([]),
 });
 
 export const expeditions = pgTable('expeditions', {
@@ -68,7 +68,7 @@ export const suppliers = pgTable('suppliers', {
 
 export const shipments = pgTable('shipments', {
   id: text('id').primaryKey(),
-  userId: text('user_id').notNull().references(() => users.id),
+  userId: text('user_id').references(() => users.id), // Removed .notNull()
   transactionId: varchar('transaction_id', { length: 255 }).notNull(),
   customerId: text('customer_id').notNull().references(() => customers.id),
   customerName: varchar('customer_name', { length: 255 }).notNull(),

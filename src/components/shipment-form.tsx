@@ -194,7 +194,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
         const totalProductCost = data.products.reduce((sum, p) => sum + (p.price * p.quantity), 0);
         const payload = { 
             ...data, 
-            userId: data.userId || '', 
+            userId: data.userId || null, // Ensure empty userId is sent as null
             customerId: 'cust_manual',
             totalItems,
             totalProductCost,
@@ -204,10 +204,10 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
             paymentStatus: (data.downPayment || 0) >= totalProductCost ? 'Lunas' : 'Belum Lunas',
         };
         if (isEditMode) {
-            const updated = await updateShipment(shipmentToEdit.id, payload);
+            const updated = await updateShipment(shipmentToEdit.id, payload as any);
             onSuccess(updated);
         } else {
-            const newShipment = await addShipment(payload);
+            const newShipment = await addShipment(payload as any);
             onSuccess(newShipment);
         }
     } catch (error) {
