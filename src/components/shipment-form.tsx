@@ -53,7 +53,7 @@ const shipmentFormSchema = z.object({
   transactionId: z.string().min(1, 'No. Transaksi harus diisi.'),
   customerName: z.string().min(1, 'Nama pelanggan harus diisi'),
   deliveryMethod: z.enum(['Diambil di Toko', 'Dikirim Kurir Toko']).optional(),
-  deliveryDistance: z.coerce.number().min(0).optional(),
+  deliveryDistance: z.coerce.number().min(0).max(30, 'Jarak maksimal 30 km').optional(),
   accountId: z.string().optional(),
   products: z.array(shipmentProductSchema).min(1, 'Minimal harus ada satu item pesanan'),
   downPayment: z.coerce.number().min(0).optional(),
@@ -266,8 +266,9 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
                   {deliveryMethod === 'Dikirim Kurir Toko' && (
                     <FormField control={form.control} name="deliveryDistance" render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="flex items-center gap-1"><Truck className="h-3 w-3" /> Jarak Kirim (km)</FormLabel>
-                            <FormControl><Input type="number" placeholder="Contoh: 7" {...field} /></FormControl>
+                            <FormLabel className="flex items-center gap-1"><Truck className="h-3 w-3" /> Jarak Kirim (km, Maks 30)</FormLabel>
+                            <FormControl><Input type="number" placeholder="Contoh: 7" max="30" {...field} /></FormControl>
+                            <FormMessage />
                             <p className="text-[10px] text-muted-foreground mt-1">Ongkir: {formatRupiah(deliveryFee)}</p>
                         </FormItem>
                     )} />
