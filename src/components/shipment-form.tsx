@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -195,11 +194,8 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
   const deliveryFee = React.useMemo(() => {
     if (deliveryMethod !== 'Dikirim Kurir Toko') return 0;
     if (distance <= 0) return 0;
-    if (distance <= 5) return 2000;
-    if (distance <= 10) return 4000;
-    if (distance <= 20) return 10000;
-    if (distance <= 30) return 15000;
-    return 15000;
+    // Perhitungan baru: Rp 500 per kilometer
+    return distance * 500;
   }, [deliveryMethod, distance]);
 
   const onSubmit = async (data: ShipmentFormValues) => {
@@ -339,10 +335,10 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
                   <CardContent className="p-4 space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <FormField control={form.control} name="downPayment" render={({ field }) => (
-                            <FormItem><FormLabel className="font-bold">Uang Muka (DP)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} /></FormControl></FormItem>
+                            <FormItem><FormLabel>Uang Muka (DP)</FormLabel><FormControl><Input type="number" placeholder="0" {...field} /></FormControl></FormItem>
                         )} />
                         <FormField control={form.control} name="accountId" render={({ field }) => (
-                            <FormItem><FormLabel className="font-bold">Diterima Di Akun</FormLabel>
+                            <FormItem><FormLabel>Diterima Di Akun</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl><SelectTrigger><SelectValue placeholder="Pilih Akun" /></SelectTrigger></FormControl>
                                     <SelectContent>{accounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}</SelectContent>
