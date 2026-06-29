@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Shipment, BodyMeasurements, User } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2, Loader2, Pencil, Printer, Send, UserCheck, ChevronDown, ZoomIn, CheckCircle } from 'lucide-react';
+import { PlusCircle, Trash2, Loader2, Pencil, Printer, Send, UserCheck, ChevronDown, ZoomIn, CheckCircle, XCircle } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -36,7 +36,7 @@ import { Badge } from './ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { deleteShipment, processShipmentsToPackaging } from '@/lib/data';
+import { deleteShipment, offerShipmentsToTailors, acceptShipments, rejectShipments } from '@/lib/data';
 import { useAuth } from '@/context/auth-context';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -171,7 +171,7 @@ export function ShipmentsClient({ shipments: initialShipments, allUsers, onUpdat
 
   const handleSelectAll = (checked: boolean) => {
       if(checked) {
-          setSelectedShipments(filteredShipments.filter(s => s.status === 'Proses').map(s => s.id));
+          setSelectedShipments(filteredShipments.map(s => s.id));
       } else {
           setSelectedShipments([]);
       }
@@ -185,35 +185,59 @@ export function ShipmentsClient({ shipments: initialShipments, allUsers, onUpdat
       }
   };
 
-  const handleProcessToPackaging = async () => {
+  const handleAdminOffer = async () => {
     if (selectedShipments.length === 0) {
-        toast({ variant: 'destructive', title: 'Tidak Ada Terpilih', description: 'Pilih setidaknya satu pesanan untuk diproses.' });
+        toast({ variant: 'destructive', title: 'Tidak Ada Terpilih', description: 'Pilih setidaknya satu pesanan.' });
         return;
     }
-    
-    const targetUsers = isAdminView 
-        ? allUsers.filter(u => selectedAssigneeIds.includes(u.id))
-        : [currentUser as User];
-
-    if (isAdminView && selectedAssigneeIds.length === 0) {
+    if (selectedAssigneeIds.length === 0) {
         toast({ variant: 'destructive', title: 'Penjahit Belum Dipilih', description: 'Silakan pilih minimal satu penjahit.' });
         return;
     }
 
     setIsProcessing(true);
     try {
-        await processShipmentsToPackaging(selectedShipments, targetUsers.length > 0 ? targetUsers : null);
+        const targetUsers = allUsers.filter(u => selectedAssigneeIds.includes(u.id));
+        await offerShipmentsToTailors(selectedShipments, targetUsers);
         toast({ 
-            title: 'Sukses!', 
-            description: isAdminView 
-                ? `${selectedShipments.length} pesanan berhasil ditugaskan ke ${targetUsers.map(u => u.username).join(', ')}.` 
-                : `${selectedShipments.length} pesanan telah Anda ambil untuk diproses.` 
+            title: 'Tawaran Terkirim!', 
+            description: `${selectedShipments.length} pesanan telah dikirimkan ke tim penjahit untuk ditinjau.` 
         });
         onUpdate();
         setSelectedShipments([]);
-        if (isAdminView) setSelectedAssigneeIds([]);
+        setSelectedAssigneeIds([]);
     } catch (error) {
-        toast({ variant: 'destructive', title: 'Gagal Memproses', description: error instanceof Error ? error.message : 'Terjadi kesalahan.' });
+        toast({ variant: 'destructive', title: 'Gagal', description: 'Terjadi kesalahan saat mengirim tawaran.' });
+    } finally {
+        setIsProcessing(false);
+    }
+  };
+
+  const handleTailorAccept = async () => {
+    if (selectedShipments.length === 0) return;
+    setIsProcessing(true);
+    try {
+        await acceptShipments(selectedShipments);
+        toast({ title: 'Tawaran Diterima!', description: 'Pesanan telah masuk ke daftar pengerjaan Anda.' });
+        onUpdate();
+        setSelectedShipments([]);
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Gagal' });
+    } finally {
+        setIsProcessing(false);
+    }
+  };
+
+  const handleTailorReject = async () => {
+    if (selectedShipments.length === 0) return;
+    setIsProcessing(true);
+    try {
+        await rejectShipments(selectedShipments);
+        toast({ title: 'Tawaran Ditolak', description: 'Pesanan telah dikembalikan ke pemilik butik.' });
+        onUpdate();
+        setSelectedShipments([]);
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Gagal' });
     } finally {
         setIsProcessing(false);
     }
@@ -354,7 +378,7 @@ export function ShipmentsClient({ shipments: initialShipments, allUsers, onUpdat
                                             >
                                                 <Checkbox 
                                                     checked={selectedAssigneeIds.includes(u.id)}
-                                                    onCheckedChange={() => {}} // Handled by div click
+                                                    onCheckedChange={() => {}} 
                                                 />
                                                 <span className="text-sm font-medium">{u.username}</span>
                                             </div>
@@ -376,12 +400,12 @@ export function ShipmentsClient({ shipments: initialShipments, allUsers, onUpdat
                             </PopoverContent>
                         </Popover>
                         <Button 
-                            onClick={handleProcessToPackaging} 
+                            onClick={handleAdminOffer} 
                             disabled={selectedShipments.length === 0 || selectedAssigneeIds.length === 0 || isProcessing}
                             variant="secondary"
                         >
                              {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                             Kirim ({selectedShipments.length})
+                             Kirim Tawaran ({selectedShipments.length})
                         </Button>
                     </div>
                     <Button onClick={handleOpenForm} variant="default">
@@ -390,10 +414,23 @@ export function ShipmentsClient({ shipments: initialShipments, allUsers, onUpdat
                     </Button>
                 </>
             ) : (
-                <Button onClick={handleProcessToPackaging} disabled={selectedShipments.length === 0 || isProcessing} className="w-full md:w-auto">
-                    {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
-                    Terima Pekerjaan ({selectedShipments.length})
-                </Button>
+                <div className='flex gap-2'>
+                    <Button 
+                        onClick={handleTailorReject} 
+                        disabled={selectedShipments.length === 0 || isProcessing} 
+                        variant="destructive"
+                    >
+                        {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-2 h-4 w-4" />}
+                        Tolak ({selectedShipments.length})
+                    </Button>
+                    <Button 
+                        onClick={handleTailorAccept} 
+                        disabled={selectedShipments.length === 0 || isProcessing}
+                    >
+                        {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
+                        Terima ({selectedShipments.length})
+                    </Button>
+                </div>
             )}
         </div>
       </div>
@@ -493,7 +530,7 @@ export function ShipmentsClient({ shipments: initialShipments, allUsers, onUpdat
                   <TableCell className="text-right font-bold">{formatRupiah(shipment.totalAmount)}</TableCell>
                   <TableCell>
                     <Badge variant={getStatusVariant(shipment.status)}>
-                        {shipment.status === 'Proses' ? 'Baru' : shipment.status === 'Pengemasan' ? 'Sedang Dijahit' : shipment.status}
+                        {shipment.status === 'Proses' ? 'Tawaran' : shipment.status === 'Pengemasan' ? 'Sedang Dijahit' : shipment.status}
                     </Badge>
                   </TableCell>
                    <TableCell className="text-xs">
@@ -508,12 +545,11 @@ export function ShipmentsClient({ shipments: initialShipments, allUsers, onUpdat
                         <Button variant="ghost" size="icon" onClick={() => handlePrintReceipt(shipment)} title="Cetak Struk">
                             <Printer className="h-4 w-4" />
                         </Button>
-                        {isAdminView && shipment.status === 'Proses' && (
+                        {isAdminView && (
+                            <>
                             <Button variant="ghost" size="icon" onClick={() => handleEdit(shipment)}>
                                 <Pencil className="h-4 w-4" />
                             </Button>
-                        )}
-                        {isAdminView && (
                             <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <Button variant="ghost" size="icon" disabled={!!isDeleting}>
@@ -539,6 +575,7 @@ export function ShipmentsClient({ shipments: initialShipments, allUsers, onUpdat
                                 </AlertDialogFooter>
                             </AlertDialogContent>
                             </AlertDialog>
+                            </>
                         )}
                      </div>
                   </TableCell>
@@ -547,12 +584,12 @@ export function ShipmentsClient({ shipments: initialShipments, allUsers, onUpdat
             ) : (
               <TableRow>
                 <TableCell colSpan={isAdminView ? 10 : 9} className="h-24 text-center text-muted-foreground">
-                  Belum ada pesanan masuk yang tersedia.
+                  {isAdminView ? "Belum ada pesanan baru yang masuk." : "Anda tidak memiliki tawaran pengerjaan saat ini."}
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
-          <TableCaption>Daftar pesanan butik yang menunggu untuk dikerjakan oleh tim penjahit.</TableCaption>
+          <TableCaption>Sistem konfirmasi penugasan antara Pemilik dan Tim Penjahit.</TableCaption>
         </Table>
       </div>
 

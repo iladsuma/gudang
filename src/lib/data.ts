@@ -153,25 +153,51 @@ export async function deleteShipment(id: string): Promise<{ id: string }> {
     return { id };
 }
 
-export async function processShipmentsToPackaging(shipmentIds: string[], users: User[] | null): Promise<{ count: number }> {
+// ADMIN ACTION: Menawarkan pesanan ke penjahit (Status tetap 'Proses' tapi userId terisi)
+export async function offerShipmentsToTailors(shipmentIds: string[], users: User[]): Promise<{ count: number }> {
     const db = getDB();
     let count = 0;
-    const userIds = users && users.length > 0 ? users.map(u => u.id).join(',') : '';
+    const userIds = users.map(u => u.id).join(',');
     
     db.shipments.forEach((s: any) => {
         if (shipmentIds.includes(s.id)) {
-            s.status = 'Pengemasan';
-            if (userIds) s.userId = userIds;
+            s.userId = userIds; // Tandai ditawarkan ke siapa saja
             count++;
 
-            // Kirim notifikasi ke setiap penjahit yang ditugaskan
-            if (users && users.length > 0) {
-                users.forEach(tailor => {
-                    sendTailorAssignmentNotification(s, tailor)
-                        .then(res => console.log(`Notif WA Penjahit ${tailor.username}:`, JSON.stringify(res)))
-                        .catch(err => console.error(`Gagal notif penjahit ${tailor.username}:`, err));
-                });
-            }
+            // Kirim notifikasi WA
+            users.forEach(tailor => {
+                sendTailorAssignmentNotification(s, tailor)
+                    .then(res => console.log(`Notif WA Penjahit ${tailor.username}:`, JSON.stringify(res)))
+                    .catch(err => console.error(`Gagal notif penjahit ${tailor.username}:`, err));
+            });
+        }
+    });
+    saveDB(db);
+    return { count };
+}
+
+// TAILOR ACTION: Menerima tawaran (Status jadi 'Pengemasan' alias Sedang Dijahit)
+export async function acceptShipments(shipmentIds: string[]): Promise<{ count: number }> {
+    const db = getDB();
+    let count = 0;
+    db.shipments.forEach((s: any) => {
+        if (shipmentIds.includes(s.id)) {
+            s.status = 'Pengemasan';
+            count++;
+        }
+    });
+    saveDB(db);
+    return { count };
+}
+
+// TAILOR ACTION: Menolak tawaran (UserId dikosongkan, pesanan balik ke Admin)
+export async function rejectShipments(shipmentIds: string[]): Promise<{ count: number }> {
+    const db = getDB();
+    let count = 0;
+    db.shipments.forEach((s: any) => {
+        if (shipmentIds.includes(s.id)) {
+            s.userId = ''; // Kosongkan lagi agar balik ke daftar "Pesanan Baru" admin
+            count++;
         }
     });
     saveDB(db);

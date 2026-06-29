@@ -34,15 +34,15 @@ function ShipmentsPageContent() {
         setAllUsers(userData);
 
         if(user?.role === 'admin') {
-            // Admin sees all new orders (Proses)
-            setShipments(shipmentData.filter(s => s.status === 'Proses'));
+            // Admin sees all new orders (Proses AND no userId assigned yet)
+            setShipments(shipmentData.filter(s => s.status === 'Proses' && !s.userId));
             setPageTitle('Manajemen Pesanan Baru');
-            setPageDescription("Halaman ini digunakan oleh pemilik/admin untuk mencatat pesanan baru dari pelanggan.");
+            setPageDescription("Halaman ini digunakan oleh pemilik/admin untuk mencatat pesanan baru dan menawarkan kepada penjahit.");
         } else {
-            // User sees only orders that are in "Proses" status
-            setShipments(shipmentData.filter(s => s.status === 'Proses'));
-            setPageTitle('Ambil Pesanan Tersedia');
-            setPageDescription("Pilih pesanan yang ingin Anda kerjakan. Setelah diambil, pesanan akan pindah ke menu 'Pekerjaan Saya'.");
+            // Tailor sees only orders offered to them (Proses AND userId includes their ID)
+            setShipments(shipmentData.filter(s => s.status === 'Proses' && s.userId?.split(',').includes(user.id)));
+            setPageTitle('Tawaran Ambil Pesanan');
+            setPageDescription("Daftar pesanan yang ditugaskan kepada Anda. Silakan Terima untuk mulai menjahit atau Tolak agar dikirim ke penjahit lain.");
         }
     } catch (error) {
         console.error("Failed to fetch data:", error);
