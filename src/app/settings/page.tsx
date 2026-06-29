@@ -14,7 +14,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, Users, Scissors, Landmark, UserCog, ShoppingBag } from 'lucide-react';
+import { ChevronRight, Users, Scissors, Landmark, UserCog, ShoppingBag, Truck } from 'lucide-react';
 
 export default function SettingsPage() {
     const { user, loading } = useAuth();
@@ -75,6 +75,28 @@ export default function SettingsPage() {
                        <Button asChild variant="outline" className="w-full">
                            <Link href="/settings/accounts">
                                 Kelola Akun <ChevronRight className="ml-2 h-4 w-4" />
+                           </Link>
+                       </Button>
+                    </CardFooter>
+                </Card>
+
+                <Card className="flex flex-col border-primary/20">
+                    <CardHeader>
+                        <div className="flex items-center gap-2 text-primary mb-2">
+                            <Truck className="h-5 w-5" />
+                            <CardTitle>Konfigurasi Kurir</CardTitle>
+                        </div>
+                        <CardDescription>
+                            Atur tarif ongkir per km dan target keuntungan kurir per km.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-grow">
+                       <p className="text-sm text-muted-foreground">Sesuaikan tarif pengiriman dan bagi hasil keuntungan jasa kurir toko.</p>
+                    </CardContent>
+                    <CardFooter>
+                       <Button asChild variant="outline" className="w-full">
+                           <Link href="/settings/courier">
+                                Atur Tarif Kurir <ChevronRight className="ml-2 h-4 w-4" />
                            </Link>
                        </Button>
                     </CardFooter>

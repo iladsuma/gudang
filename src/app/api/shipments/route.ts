@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { shipments, products as productsTable, stockMovements, financialTransactions } from '@/app/drizzle/schema';
+import { shipments, products as productsTable, stockMovements, financialTransactions, appSettings } from '@/app/drizzle/schema';
 import { NextRequest, NextResponse } from 'next/server';
 import { desc, eq, sql } from 'drizzle-orm';
 import type { Shipment, ShipmentProduct } from '@/lib/types';
@@ -26,14 +26,20 @@ export async function POST(req: NextRequest) {
         const newShipmentId = `ship_${Date.now()}`;
         const financialTxId = `ft_${Date.now()}`;
         
-        // Sanitize userId: if empty string or undefined, make it null to satisfy database
+        // Fetch current rates from settings
+        const settings = await db.select().from(appSettings);
+        const feePerKm = parseInt(settings.find(s => s.key === 'courier_fee_per_km')?.value || '1000');
+        const profitPerKm = parseInt(settings.find(s => s.key === 'courier_profit_per_km')?.value || '750');
+        const costPerKm = feePerKm - profitPerKm;
+
+        // Sanitize userId
         const { userId, ...shipmentData } = body;
         const sanitizedUserId = (userId && userId.trim() !== '') ? userId : null;
 
-        // Calculate Courier Cost (per kilo 750 profit, fee is 1000, so cost is 250)
-        // Profit 750/km means deliveryFee (1000/km) - deliveryCost = 750/km -> deliveryCost = 250/km
+        // Calculate Courier Values
         const distance = body.deliveryDistance || 0;
-        const deliveryCost = distance * 250;
+        const deliveryFee = distance * feePerKm;
+        const deliveryCost = distance * costPerKm;
 
         await db.transaction(async (tx) => {
             // 1. Insert the shipment
@@ -43,6 +49,7 @@ export async function POST(req: NextRequest) {
                 id: newShipmentId,
                 status: 'Proses',
                 createdAt: new Date(),
+                deliveryFee: deliveryFee,
                 deliveryCost: deliveryCost,
             });
 

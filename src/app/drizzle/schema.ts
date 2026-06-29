@@ -18,6 +18,13 @@ export const users = pgTable('users', {
   password: text('password').notNull(),
 });
 
+export const appSettings = pgTable('app_settings', {
+  id: text('id').primaryKey(),
+  key: varchar('key', { length: 255 }).notNull().unique(),
+  value: text('value').notNull(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 export const accounts = pgTable('accounts', {
     id: text('id').primaryKey(),
     name: varchar('name', { length: 255 }).notNull(),

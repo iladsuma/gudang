@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { Shipment, ShipmentProduct, Account, Product } from '@/lib/types';
+import type { Shipment, ShipmentProduct, Account, Product, AppSetting } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ import { DialogFooter, DialogHeader, DialogTitle, DialogDescription, Dialog, Dia
 import { Loader2, PlusCircle, Trash2, ImageIcon, ZoomIn, Images, ChevronLeft, ChevronRight, Truck } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import { addShipment, updateShipment, getAccounts, getProducts } from '@/lib/data';
+import { addShipment, updateShipment, getAccounts, getProducts, getAppSettings } from '@/lib/data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from './ui/textarea';
 import { cn } from '@/lib/utils';
@@ -135,6 +135,7 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [accounts, setAccounts] = React.useState<Account[]>([]);
   const [masterProducts, setMasterProducts] = React.useState<Product[]>([]);
+  const [rates, setRates] = React.useState({ feePerKm: 1000 });
 
   const isEditMode = !!shipmentToEdit;
 
@@ -172,6 +173,10 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
   React.useEffect(() => {
     getAccounts().then(setAccounts);
     getProducts().then(setMasterProducts);
+    getAppSettings().then(settings => {
+        const fee = settings.find(s => s.key === 'courier_fee_per_km')?.value;
+        if (fee) setRates({ feePerKm: parseInt(fee) });
+    });
   }, []);
 
   const handleCategorySelect = (index: number, productId: string) => {
@@ -194,9 +199,8 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
   const deliveryFee = React.useMemo(() => {
     if (deliveryMethod !== 'Dikirim Kurir Toko') return 0;
     if (distance <= 0) return 0;
-    // Perhitungan: Rp 1.000 per kilometer
-    return distance * 1000;
-  }, [deliveryMethod, distance]);
+    return distance * rates.feePerKm;
+  }, [deliveryMethod, distance, rates.feePerKm]);
 
   const onSubmit = async (data: ShipmentFormValues) => {
     setIsSubmitting(true);

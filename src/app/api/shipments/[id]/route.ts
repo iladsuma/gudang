@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { shipments } from '@/app/drizzle/schema';
+import { shipments, appSettings } from '@/app/drizzle/schema';
 import { NextRequest, NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 
@@ -36,18 +36,26 @@ export async function PATCH(
     const id = params.id;
     const body = await req.json();
     
+    // Fetch current rates from settings
+    const settings = await db.select().from(appSettings);
+    const feePerKm = parseInt(settings.find(s => s.key === 'courier_fee_per_km')?.value || '1000');
+    const profitPerKm = parseInt(settings.find(s => s.key === 'courier_profit_per_km')?.value || '750');
+    const costPerKm = feePerKm - profitPerKm;
+
     // Sanitize userId for nullability
     const { userId, ...updateData } = body;
     const sanitizedUserId = (userId && userId.trim() !== '') ? userId : null;
 
-    // Recalculate courier cost (750 profit/km from 1000 fee, so 250 cost/km)
+    // Recalculate courier values
     const distance = body.deliveryDistance || 0;
-    const deliveryCost = distance * 250;
+    const deliveryFee = distance * feePerKm;
+    const deliveryCost = distance * costPerKm;
 
     await db.update(shipments)
       .set({
           ...updateData,
           userId: sanitizedUserId,
+          deliveryFee: deliveryFee,
           deliveryCost: deliveryCost
       })
       .where(eq(shipments.id, id));

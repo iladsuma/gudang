@@ -11,6 +11,7 @@ import type {
     SalesProfitReportData,
     Transfer,
     StockMovement,
+    AppSetting,
 } from './types';
 
 /**
@@ -194,4 +195,12 @@ export async function payReceivable(shipmentId: string, accountId: string, paidA
 // LAPORAN
 export async function getSalesProfitReport(startDate: Date, endDate: Date, userId: string): Promise<SalesProfitReportData> {
     return apiFetch(`/api/reports/sales-profit?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&userId=${userId}`);
+}
+
+// SETTINGS
+export async function getAppSettings(): Promise<AppSetting[]> {
+    return apiFetch('/api/settings');
+}
+export async function updateAppSettings(settings: { key: string, value: string }[]): Promise<any> {
+    return apiFetch('/api/settings', { method: 'POST', body: JSON.stringify({ settings }) });
 }

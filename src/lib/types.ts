@@ -11,6 +11,13 @@ export interface Product {
     imageUrls: string[]; 
 }
 
+export interface AppSetting {
+    id: string;
+    key: string;
+    value: string;
+    updatedAt: string;
+}
+
 export interface StockMovement {
     id: string;
     productId: string;
