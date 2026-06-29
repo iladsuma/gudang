@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useEffect, useState, useCallback } from 'react';
-import { getProducts, addProduct, updateProduct, deleteMultipleProducts } from '@/lib/data';
+import { getProducts, addProduct, updateProduct, deleteMultipleProducts, initializeMasterData } from '@/lib/data';
 import type { Product, SortableProductField, SortOrder } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, PlusCircle, Trash2, Pencil, ArrowLeft, ArrowUpDown, Image as ImageIcon, X } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Pencil, ArrowLeft, ArrowUpDown, Image as ImageIcon, X, DatabaseBackup } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -63,6 +63,7 @@ function ProductsClient() {
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isInitializing, setIsInitializing] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -90,20 +91,38 @@ function ProductsClient() {
 
     const fetchProducts = useCallback(async () => {
         setLoading(true);
-        const data = await getProducts();
-        const sorted = [...data].sort((a, b) => {
-            const valA = a[sortBy];
-            const valB = b[sortBy];
-            if (sortOrder === 'asc') return valA > valB ? 1 : -1;
-            return valA < valB ? 1 : -1;
-        });
-        setProducts(sorted);
-        setLoading(false);
+        try {
+            const data = await getProducts();
+            const sorted = [...data].sort((a, b) => {
+                const valA = a[sortBy];
+                const valB = b[sortBy];
+                if (sortOrder === 'asc') return valA > valB ? 1 : -1;
+                return valA < valB ? 1 : -1;
+            });
+            setProducts(sorted);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
     }, [sortBy, sortOrder]);
 
     useEffect(() => {
         fetchProducts();
     }, [fetchProducts]);
+
+    const handleInitialize = async () => {
+        setIsInitializing(true);
+        try {
+            await initializeMasterData();
+            toast({ title: 'Sukses', description: 'Master data jahitan berhasil diinisialisasi ke Neon DB.' });
+            fetchProducts();
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Kesalahan', description: 'Gagal menginisialisasi data.' });
+        } finally {
+            setIsInitializing(false);
+        }
+    };
 
     const handleOpenForm = (product: Product | null) => {
         setEditingProduct(product);
@@ -220,7 +239,19 @@ function ProductsClient() {
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <h3 className="text-lg font-medium">Daftar Jenis & Harga Jahitan</h3>
+                <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-medium">Daftar Jenis & Harga Jahitan</h3>
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleInitialize} 
+                        disabled={isInitializing}
+                        className="text-primary border-primary/20 hover:bg-primary/5"
+                    >
+                        {isInitializing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <DatabaseBackup className="h-4 w-4 mr-2" />}
+                        Inisialisasi Master Data (Dress, dll)
+                    </Button>
+                </div>
                 <div className="flex items-center gap-2">
                     {selectedIds.length > 0 && (
                         <AlertDialog>

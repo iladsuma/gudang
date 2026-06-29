@@ -1,4 +1,3 @@
-
 import type { 
     Shipment, 
     User, 
@@ -16,7 +15,6 @@ import type {
 
 /**
  * @fileOverview Fungsi bridge untuk memanggil API backend (Neon DB).
- * Sebelumnya menggunakan localStorage, sekarang sepenuhnya menggunakan fetch ke /api/*.
  */
 
 async function apiFetch(endpoint: string, options?: RequestInit) {
@@ -116,6 +114,9 @@ export async function updateProduct(id: string, productData: Partial<Product>): 
 }
 export async function deleteMultipleProducts(ids: string[]): Promise<{ ids: string[] }> {
     return apiFetch('/api/products', { method: 'DELETE', body: JSON.stringify({ ids }) });
+}
+export async function initializeMasterData(): Promise<any> {
+    return apiFetch('/api/products/seed', { method: 'POST' });
 }
 
 // STOK

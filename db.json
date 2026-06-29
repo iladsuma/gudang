@@ -1,17 +1,11 @@
-
 {
   "users": [
     {
-      "id": "usr_1",
+      "id": "usr_admin",
       "username": "admin",
       "role": "admin",
-      "password": "admin"
-    },
-    {
-      "id": "usr_2",
-      "username": "user",
-      "role": "user",
-      "password": "user"
+      "password": "admin",
+      "phone": "0895801205393"
     }
   ],
   "products": [
@@ -140,7 +134,6 @@
     { "id": "exp_1", "name": "Diambil di Toko" },
     { "id": "exp_2", "name": "Kurir Toko" }
   ],
-  "packagingOptions": [],
   "accounts": [
     {
         "id": "acc_1",
@@ -155,7 +148,5 @@
   "stockMovements": [],
   "financialTransactions": [],
   "customers": [],
-  "suppliers": [],
-  "purchases": [],
-  "returns": []
+  "suppliers": []
 }
