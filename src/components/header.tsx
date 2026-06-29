@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -58,7 +57,7 @@ export function Header() {
                       href="/receivables"
                       className={cn("transition-colors flex items-center gap-2 hover:text-foreground/80", isTransactionPage ? 'text-foreground font-medium' : 'text-foreground/60')}
                     >
-                       <ArrowRightLeft className="h-4 w-4" /> Piutang Usaha
+                       <ArrowRightLeft className="h-4 w-4" /> Transaksi
                     </Link>
 
                     <DropdownMenu>

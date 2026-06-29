@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -81,7 +80,7 @@ function PaymentForm({ shipment, accounts, onFormSuccess }: { shipment: Shipment
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>Terima Pembayaran Piutang</DialogTitle>
+                    <DialogTitle>Terima Pembayaran</DialogTitle>
                 </DialogHeader>
                 
                 {!isFinished && (
@@ -211,11 +210,11 @@ export default function ReceivablesPage() {
                 <CardHeader>
                     <div className="flex flex-col md:flex-row justify-between items-start gap-4">
                         <div>
-                            <CardTitle>Piutang Usaha (Pelunasan Pesanan)</CardTitle>
+                            <CardTitle>Transaksi (Pelunasan Pesanan)</CardTitle>
                             <CardDescription>Daftar semua faktur penjualan kepada pelanggan yang masih memiliki sisa tagihan.</CardDescription>
                         </div>
                         <div className="text-right p-4 bg-primary/5 rounded-lg border border-primary/10">
-                             <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider">Total Piutang Belum Tertagih</p>
+                             <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider">Total Tagihan Belum Lunas</p>
                              <p className="text-3xl font-bold text-primary">{formatRupiah(totalReceivables)}</p>
                         </div>
                     </div>
@@ -264,7 +263,7 @@ export default function ReceivablesPage() {
                                         <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
                                             <div className="flex flex-col items-center gap-2">
                                                 <CheckCircle2 className="h-8 w-8 text-green-500" />
-                                                <p>Semua piutang telah lunas atau belum ada transaksi baru.</p>
+                                                <p>Semua transaksi telah lunas atau belum ada data baru.</p>
                                             </div>
                                         </TableCell>
                                     </TableRow>
