@@ -194,8 +194,8 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
   const deliveryFee = React.useMemo(() => {
     if (deliveryMethod !== 'Dikirim Kurir Toko') return 0;
     if (distance <= 0) return 0;
-    // Perhitungan: Rp 500 per kilometer
-    return distance * 500;
+    // Perhitungan: Rp 1.000 per kilometer
+    return distance * 1000;
   }, [deliveryMethod, distance]);
 
   const onSubmit = async (data: ShipmentFormValues) => {

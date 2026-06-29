@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -78,7 +77,7 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
 
 
   const formatRupiah = (number: number) => {
-    return new Intl.NumberFormat('id-ID', {}).format(number);
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
   };
   
   const getStatusVariant = (status: Shipment['status']) => {
@@ -175,31 +174,94 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
         const assignedIds = shipment.userId ? shipment.userId.split(',') : [];
         const userNames = assignedIds.map(id => allUsers.find(u => u.id === id)?.username || 'N/A').join(', ');
 
-        doc.setFontSize(14);
+        doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
-        doc.text('FAKTUR PENJUALAN', 20, 30);
+        doc.text('FAKTUR PENJUALAN', 40, 50);
         
-        doc.setFontSize(9);
+        doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        doc.text("Butik Anita", 20, 45);
+        doc.text("Butik Anita", 40, 70);
+        doc.text("Jl. Utama No. 1, Butik Anita", 40, 85);
 
-        const rightX = doc.internal.pageSize.getWidth() - 20;
-        doc.text(`No Transaksi : ${shipment.transactionId}`, rightX, 45, { align: 'right' });
-        doc.text(`Pelanggan    : ${shipment.customerName}`, rightX, 55, { align: 'right' });
-        doc.text(`Tgl    : ${format(new Date(shipment.createdAt), 'dd/MM/yyyy HH:mm')}`, rightX, 65, { align: 'right' });
-        doc.text(`Penjahit  : ${userNames.toUpperCase()}`, rightX, 75, { align: 'right' });
+        const rightX = doc.internal.pageSize.getWidth() - 40;
+        doc.text(`No Transaksi : ${shipment.transactionId}`, rightX, 70, { align: 'right' });
+        doc.text(`Pelanggan    : ${shipment.customerName}`, rightX, 85, { align: 'right' });
+        doc.text(`Tgl Pesan    : ${format(new Date(shipment.createdAt), 'dd/MM/yyyy HH:mm')}`, rightX, 100, { align: 'right' });
+        doc.text(`Tim Penjahit : ${userNames.toUpperCase()}`, rightX, 115, { align: 'right' });
 
-        const tableColumn = ["No.", "Nama Item", "Jml Satuan", "Harga", "Diskon", "Total"];
-        const tableRows = shipment.products.map((p, i) => [i + 1, p.name, `${p.quantity} PCS`, formatRupiah(p.price), 0, formatRupiah(p.quantity * p.price)]);
+        const tableColumn = ["No.", "Kategori Pesanan", "Jumlah", "Harga Jasa", "Total"];
+        const tableRows = shipment.products.map((p, i) => [
+          i + 1, 
+          p.name, 
+          `${p.quantity} PCS`, 
+          formatRupiah(p.price), 
+          formatRupiah(p.quantity * p.price)
+        ]);
 
-        doc.autoTable({ startY: 90, head: [tableColumn], body: tableRows });
+        doc.autoTable({ 
+          startY: 140, 
+          head: [tableColumn], 
+          body: tableRows,
+          theme: 'grid',
+          headStyles: { fillColor: [76, 175, 80], textColor: 255 },
+          columnStyles: {
+            3: { halign: 'right' },
+            4: { halign: 'right' }
+          }
+        });
+
+        const finalY = (doc as any).lastAutoTable.finalY + 20;
+        
+        // Summary calculations
+        const subtotal = shipment.products.reduce((s, p) => s + (p.price * p.quantity), 0);
+        const deliveryFee = shipment.deliveryFee || 0;
+        const total = subtotal + deliveryFee;
+        const dp = shipment.downPayment || 0;
+        const remaining = total - dp;
+
+        doc.setFont('helvetica', 'bold');
+        const summaryLabelX = rightX - 120;
+        
+        doc.text("Subtotal:", summaryLabelX, finalY, { align: 'right' });
+        doc.text(formatRupiah(subtotal), rightX, finalY, { align: 'right' });
+        
+        let currentY = finalY + 15;
+        if (deliveryFee > 0) {
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Ongkir (${shipment.deliveryDistance} km):`, summaryLabelX, currentY, { align: 'right' });
+            doc.text(formatRupiah(deliveryFee), rightX, currentY, { align: 'right' });
+            currentY += 15;
+        }
+
+        doc.setFont('helvetica', 'bold');
+        doc.text("TOTAL TAGIHAN:", summaryLabelX, currentY, { align: 'right' });
+        doc.text(formatRupiah(total), rightX, currentY, { align: 'right' });
+        
+        currentY += 20;
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(200, 0, 0); // Red for DP
+        doc.text("Uang Muka (DP):", summaryLabelX, currentY, { align: 'right' });
+        doc.text(`- ${formatRupiah(dp)}`, rightX, currentY, { align: 'right' });
+        
+        currentY += 20;
+        doc.setTextColor(0, 0, 0); // Black for final
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text("SISA PELUNASAN:", summaryLabelX, currentY, { align: 'right' });
+        doc.text(formatRupiah(remaining), rightX, currentY, { align: 'right' });
+
+        // Footer note
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'italic');
+        doc.text("* Simpan bukti ini untuk pengambilan jahitan.", 40, doc.internal.pageSize.getHeight() - 40);
 
         isFirstPage = false;
       };
       
-      doc.save(`faktur_penjualan_${Date.now()}.pdf`);
+      doc.save(`faktur_butik_anita_${Date.now()}.pdf`);
       toast({ title: 'Sukses!', description: 'Faktur berhasil dibuat.' });
     } catch (err) {
+      console.error(err);
       toast({ variant: 'destructive', title: "Gagal membuat PDF" });
     } finally {
       setIsPrinting(false);
