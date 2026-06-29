@@ -82,9 +82,9 @@ export type DeliveryMethod = 'Diambil di Toko' | 'Dikirim Kurir Toko';
 
 export interface Shipment {
     id: string;
-    userId: string | null; // Changed to nullable
+    userId: string | null;
     transactionId: string;
-    customerId: string;
+    customerId: string | null; // Changed to nullable
     customerName: string;
     accountId: string; 
     status: 'Proses' | 'Pengemasan' | 'Terkirim';

@@ -193,11 +193,11 @@ export function ShipmentForm({ shipmentToEdit, onSuccess, onCancel }: ShipmentFo
         const totalItems = data.products.reduce((sum, p) => sum + p.quantity, 0);
         const totalProductCost = data.products.reduce((sum, p) => sum + (p.price * p.quantity), 0);
         
-        // EXPLICITLY send null if userId is empty
+        // Use null for customerId since we only take manual name in this form
         const payload = { 
             ...data, 
             userId: (data.userId && data.userId.trim() !== '') ? data.userId : null,
-            customerId: 'cust_manual',
+            customerId: null,
             totalItems,
             totalProductCost,
             totalPackingCost: 0,

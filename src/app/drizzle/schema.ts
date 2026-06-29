@@ -70,7 +70,7 @@ export const shipments = pgTable('shipments', {
   id: text('id').primaryKey(),
   userId: text('user_id').references(() => users.id), 
   transactionId: varchar('transaction_id', { length: 255 }).notNull(),
-  customerId: text('customer_id').notNull().references(() => customers.id),
+  customerId: text('customer_id').references(() => customers.id), // Made nullable by removing .notNull()
   customerName: varchar('customer_name', { length: 255 }).notNull(),
   expedition: varchar('expedition', { length: 255 }),
   packagingId: text('packaging_id'),
