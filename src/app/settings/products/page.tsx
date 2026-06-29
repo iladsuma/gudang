@@ -15,7 +15,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, PlusCircle, Trash2, Pencil, ArrowLeft, ArrowUpDown, Image as ImageIcon, X } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Pencil, ArrowUpDown, Image as ImageIcon, X, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -66,7 +66,7 @@ function ProductsClient() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
-    const [previewImage, setPreviewImage] = setPreviewImage(null);
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const { toast } = useToast();
 
@@ -191,7 +191,6 @@ function ProductsClient() {
 
     const handleSort = (field: SortableProductField) => {
         if (sortBy === field) {
-            setSortBy(field);
             setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
         } else {
             setSortBy(field);
@@ -222,10 +221,6 @@ function ProductsClient() {
             minimumFractionDigits: 0,
         }).format(number);
     };
-
-    function setPreviewImage(arg0: string | null): [any, any] {
-        throw new Error('Function not implemented.');
-    }
 
     return (
         <div className="space-y-6">
