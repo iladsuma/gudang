@@ -1,4 +1,3 @@
-
 import { db } from '@/lib/db';
 import { shipments, products as productsTable, stockMovements, financialTransactions } from '@/app/drizzle/schema';
 import { NextRequest, NextResponse } from 'next/server';
@@ -31,6 +30,11 @@ export async function POST(req: NextRequest) {
         const { userId, ...shipmentData } = body;
         const sanitizedUserId = (userId && userId.trim() !== '') ? userId : null;
 
+        // Calculate Courier Cost (per kilo 750 profit, fee is 1000, so cost is 250)
+        // Profit 750/km means deliveryFee (1000/km) - deliveryCost = 750/km -> deliveryCost = 250/km
+        const distance = body.deliveryDistance || 0;
+        const deliveryCost = distance * 250;
+
         await db.transaction(async (tx) => {
             // 1. Insert the shipment
             await tx.insert(shipments).values({
@@ -39,6 +43,7 @@ export async function POST(req: NextRequest) {
                 id: newShipmentId,
                 status: 'Proses',
                 createdAt: new Date(),
+                deliveryCost: deliveryCost,
             });
 
             // 2. Update stock for each product
@@ -80,7 +85,6 @@ export async function POST(req: NextRequest) {
             }
         });
 
-        // FIX: Gunakan 'db' alih-alih 'tx' di luar blok transaksi
         const newShipment = await db.query.shipments.findFirst({ where: eq(shipments.id, newShipmentId) });
         
         return NextResponse.json(newShipment, { status: 201 });

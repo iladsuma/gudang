@@ -90,6 +90,7 @@ export const shipments = pgTable('shipments', {
   deliveryMethod: varchar('delivery_method', { length: 100 }),
   deliveryDistance: real('delivery_distance'),
   deliveryFee: real('delivery_fee'),
+  deliveryCost: real('delivery_cost'),
 });
 
 export const purchases = pgTable('purchases', {

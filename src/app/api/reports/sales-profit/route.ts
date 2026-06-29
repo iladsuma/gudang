@@ -1,4 +1,3 @@
-
 import { db } from '@/lib/db';
 import { shipments, financialTransactions, users } from '@/app/drizzle/schema';
 import { NextRequest, NextResponse } from 'next/server';
@@ -34,7 +33,13 @@ export async function GET(req: NextRequest) {
 
         const transactionDetails = filtered.map(s => {
             const prods = s.products as any[];
-            const totalCOGS = prods.reduce((sum, p) => sum + (p.costPrice * p.quantity), 0);
+            const productCOGS = prods.reduce((sum, p) => sum + (p.costPrice * p.quantity), 0);
+            
+            // Profit Kurir logic: Profit 750/km. Total Fee 1000/km. 
+            // So cost is 250/km.
+            const shippingCost = s.deliveryCost || 0;
+            const totalCOGS = productCOGS + shippingCost;
+            
             const userNames = s.userId 
                 ? s.userId.split(',').map(id => allUsers.find(u => u.id === id)?.username || 'N/A').join(', ') 
                 : 'N/A';

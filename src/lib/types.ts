@@ -1,4 +1,3 @@
-
 export interface Product {
     id: string;
     code: string; 
@@ -92,6 +91,7 @@ export interface Shipment {
     deliveryMethod: DeliveryMethod;
     deliveryDistance?: number;
     deliveryFee?: number;
+    deliveryCost?: number;
     receipt?: { 
         fileName: string;
         dataUrl: string; 

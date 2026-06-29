@@ -1,4 +1,3 @@
-
 import { db } from '@/lib/db';
 import { shipments } from '@/app/drizzle/schema';
 import { NextRequest, NextResponse } from 'next/server';
@@ -41,10 +40,15 @@ export async function PATCH(
     const { userId, ...updateData } = body;
     const sanitizedUserId = (userId && userId.trim() !== '') ? userId : null;
 
+    // Recalculate courier cost (750 profit/km from 1000 fee, so 250 cost/km)
+    const distance = body.deliveryDistance || 0;
+    const deliveryCost = distance * 250;
+
     await db.update(shipments)
       .set({
           ...updateData,
-          userId: sanitizedUserId
+          userId: sanitizedUserId,
+          deliveryCost: deliveryCost
       })
       .where(eq(shipments.id, id));
 
