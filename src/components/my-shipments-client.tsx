@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -19,7 +18,7 @@ import {
 } from "@/components/ui/accordion"
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { ArrowRight, FileText, CheckCircle, Loader2, ZoomIn } from 'lucide-react';
+import { ArrowRight, FileText, CheckCircle, Loader2, ZoomIn, Store, MapPin } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -128,7 +127,7 @@ export function MyShipmentsClient({ shipments: initialShipments, onUpdate }: { s
               <TableHead>Produk & Detail</TableHead>
               <TableHead>Ukuran (Hover)</TableHead>
               <TableHead>Status Jahit</TableHead>
-              <TableHead className="text-right">Total Tagihan</TableHead>
+              <TableHead>Keterangan Kirim</TableHead>
               <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
@@ -137,15 +136,15 @@ export function MyShipmentsClient({ shipments: initialShipments, onUpdate }: { s
               filteredShipments.map((shipment) => (
                 <TableRow key={shipment.id}>
                   <TableCell className='font-medium font-mono text-xs'>{shipment.transactionId}</TableCell>
-                  <TableCell>{shipment.customerName}</TableCell>
+                  <TableCell className="text-xs font-bold">{shipment.customerName}</TableCell>
                   <TableCell>
                     <Accordion type="single" collapsible className="w-full">
                         <AccordionItem value="item-1" className='border-b-0'>
-                            <AccordionTrigger className='py-0 font-normal hover:no-underline'>
+                            <AccordionTrigger className='py-0 font-normal hover:no-underline text-xs'>
                                 {shipment.totalItems} item
                             </AccordionTrigger>
                             <AccordionContent className='pt-2'>
-                                <div className='flex flex-col gap-3 text-xs'>
+                                <div className='flex flex-col gap-3 text-[10px]'>
                                 {shipment.products && shipment.products.map((product, idx) => (
                                     <div key={idx} className='flex items-start gap-2 border-l-2 border-primary/20 pl-2 py-1'>
                                         <ImagePreview src={product.imageUrl} category={product.name} />
@@ -188,16 +187,24 @@ export function MyShipmentsClient({ shipments: initialShipments, onUpdate }: { s
                     </TooltipProvider>
                   </TableCell>
                    <TableCell>
-                      <Badge variant={getStatusVariant(shipment.status)}>
+                      <Badge variant={getStatusVariant(shipment.status)} className="text-[10px]">
                           {shipment.status === 'Pengemasan' ? 'Sedang Dijahit' : shipment.status === 'Terkirim' ? 'Selesai' : shipment.status}
                       </Badge>
                   </TableCell>
-                  <TableCell className="text-right font-medium">{formatRupiah(shipment.totalAmount)}</TableCell>
+                  <TableCell>
+                      <div className="flex items-center gap-1 text-[10px]">
+                          {shipment.deliveryMethod === 'Diambil di Toko' ? (
+                              <><Store className="h-3 w-3 text-blue-500" /> Ambil</>
+                          ) : (
+                              <><MapPin className="h-3 w-3 text-amber-500" /> Kurir</>
+                          )}
+                      </div>
+                  </TableCell>
                   <TableCell className="text-right">
                       {shipment.status === 'Pengemasan' && (
-                          <Button size="sm" onClick={() => handleMarkAsDone(shipment.id)} disabled={!!isProcessing}>
-                              {isProcessing === shipment.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
-                              Selesaikan
+                          <Button size="sm" className="h-8 text-xs px-2" onClick={() => handleMarkAsDone(shipment.id)} disabled={!!isProcessing}>
+                              {isProcessing === shipment.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle className="mr-1 h-3 w-3" />}
+                              Selesai
                           </Button>
                       )}
                   </TableCell>

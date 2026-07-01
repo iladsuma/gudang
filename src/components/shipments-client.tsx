@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Shipment, BodyMeasurements, User } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2, Loader2, Pencil, Printer, Send, UserCheck, ChevronDown, ZoomIn, CheckCircle, XCircle, Info } from 'lucide-react';
+import { PlusCircle, Trash2, Loader2, Pencil, Printer, Send, UserCheck, ChevronDown, ZoomIn, CheckCircle, XCircle, Info, MapPin, Store } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -225,6 +225,7 @@ export function ShipmentsClient({ shipments: initialShipments, allUsers, onUpdat
               <TableHead className="whitespace-nowrap">Pelanggan</TableHead>
               <TableHead className="whitespace-nowrap">Item Pesanan</TableHead>
               <TableHead className="whitespace-nowrap">Detail Ukuran / Model</TableHead>
+              <TableHead className="whitespace-nowrap">Metode Pengiriman</TableHead>
               <TableHead className="text-right whitespace-nowrap">Total Tagihan</TableHead>
               <TableHead className="text-right whitespace-nowrap">Aksi</TableHead>
             </TableRow>
@@ -278,6 +279,20 @@ export function ShipmentsClient({ shipments: initialShipments, allUsers, onUpdat
                           </Tooltip>
                       </TooltipProvider>
                   </TableCell>
+                  <TableCell>
+                      <div className="flex flex-col gap-1">
+                          <Badge variant={shipment.deliveryMethod === 'Diambil di Toko' ? 'secondary' : 'default'} className="w-fit text-[9px] py-0 px-1.5 h-4">
+                              {shipment.deliveryMethod === 'Diambil di Toko' ? (
+                                  <><Store className="h-2 w-2 mr-1" /> Diambil</>
+                              ) : (
+                                  <><MapPin className="h-2 w-2 mr-1" /> Kurir</>
+                              )}
+                          </Badge>
+                          {shipment.deliveryMethod === 'Dikirim Kurir Toko' && (
+                              <span className="text-[9px] text-muted-foreground">{shipment.deliveryDistance} km</span>
+                          )}
+                      </div>
+                  </TableCell>
                   <TableCell className="text-right font-bold text-xs text-primary">{formatRupiah(shipment.totalAmount)}</TableCell>
                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                      <div className='flex gap-1 justify-end'>
@@ -308,7 +323,7 @@ export function ShipmentsClient({ shipments: initialShipments, allUsers, onUpdat
                 </TableRow>
               ))
             ) : (
-              <TableRow><TableCell colSpan={7} className="h-24 text-center text-muted-foreground text-xs">Tidak ada data pesanan baru.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="h-24 text-center text-muted-foreground text-xs">Tidak ada data pesanan baru.</TableCell></TableRow>
             )}
           </TableBody>
         </Table>

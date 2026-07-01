@@ -5,7 +5,7 @@ import type { Shipment, User } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { FileDown, Loader2, Send, Printer, ChevronDown } from 'lucide-react';
+import { FileDown, Loader2, Send, Printer, ChevronDown, Store, MapPin } from 'lucide-react';
 import { Badge } from './ui/badge';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -381,10 +381,10 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
               <TableHead>No. Transaksi</TableHead>
               <TableHead>Penjahit</TableHead>
               <TableHead>Pelanggan</TableHead>
+              <TableHead>Pengiriman</TableHead>
               <TableHead>Produk</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Tanggal</TableHead>
-              <TableHead className="text-right">Total Item</TableHead>
               <TableHead className="text-right">Total Nilai</TableHead>
             </TableRow>
           </TableHeader>
@@ -399,24 +399,37 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
                         />
                     </TableCell>
                   <TableCell>{index + 1}</TableCell>
-                  <TableCell className='font-medium font-mono'>{shipment.transactionId}</TableCell>
+                  <TableCell className='font-medium font-mono text-xs'>{shipment.transactionId}</TableCell>
                   <TableCell>
-                      <div className="max-w-[150px] truncate" title={getUserNameDisplay(shipment.userId)}>
+                      <div className="max-w-[120px] truncate text-xs" title={getUserNameDisplay(shipment.userId)}>
                         {getUserNameDisplay(shipment.userId)}
                       </div>
                   </TableCell>
-                  <TableCell>{shipment.customerName}</TableCell>
+                  <TableCell className="text-xs font-medium">{shipment.customerName}</TableCell>
                   <TableCell>
-                      <div className="flex flex-col gap-1">
-                          {shipment.products.map(p => <Badge key={p.productId} variant="secondary" className="font-normal">{p.name} (x{p.quantity})</Badge>)}
+                      <div className="flex flex-col gap-0.5 text-[9px]">
+                          <div className="flex items-center gap-1 font-semibold uppercase">
+                                {shipment.deliveryMethod === 'Diambil di Toko' ? (
+                                    <><Store className="h-2.5 w-2.5 text-blue-600" /> Ambil</>
+                                ) : (
+                                    <><MapPin className="h-2.5 w-2.5 text-amber-600" /> Kurir</>
+                                )}
+                          </div>
+                          {shipment.deliveryMethod === 'Dikirim Kurir Toko' && (
+                              <span className="text-muted-foreground">{shipment.deliveryDistance} km</span>
+                          )}
                       </div>
                   </TableCell>
                   <TableCell>
-                      <Badge variant={getStatusVariant(shipment.status)}>{shipment.status === 'Pengemasan' ? 'Sedang Dijahit' : shipment.status}</Badge>
+                      <div className="flex flex-col gap-1">
+                          {shipment.products.map(p => <Badge key={p.productId} variant="secondary" className="text-[9px] py-0 px-1 h-4 font-normal">{p.name} (x{p.quantity})</Badge>)}
+                      </div>
                   </TableCell>
-                  <TableCell>{format(new Date(shipment.createdAt), 'dd MMM yyyy, HH:mm', { locale: id })}</TableCell>
-                  <TableCell className="text-right">{shipment.totalItems}</TableCell>
-                  <TableCell className="text-right font-medium">{formatRupiah(shipment.totalAmount)}</TableCell>
+                  <TableCell>
+                      <Badge variant={getStatusVariant(shipment.status)} className="text-[10px]">{shipment.status === 'Pengemasan' ? 'Sedang Dijahit' : shipment.status}</Badge>
+                  </TableCell>
+                  <TableCell className="text-[10px]">{format(new Date(shipment.createdAt), 'dd/MM/yy HH:mm', { locale: id })}</TableCell>
+                  <TableCell className="text-right font-bold text-primary text-xs">{formatRupiah(shipment.totalAmount)}</TableCell>
                 </TableRow>
               ))
             ) : (

@@ -18,7 +18,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, Receipt, Loader2, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
+import { CalendarIcon, Receipt, Loader2, AlertTriangle, CheckCircle2, Clock, Store, MapPin } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -101,6 +101,10 @@ function PaymentForm({ shipment, accounts, onFormSuccess }: { shipment: Shipment
                     <div className="flex justify-between">
                         <span className="text-muted-foreground">Pelanggan:</span>
                         <span className="font-medium">{shipment.customerName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Metode:</span>
+                        <span className="font-medium">{shipment.deliveryMethod} {shipment.deliveryDistance ? `(${shipment.deliveryDistance} km)` : ''}</span>
                     </div>
                     <div className="flex justify-between">
                         <span className="text-muted-foreground">Status Jahitan:</span>
@@ -226,6 +230,7 @@ export default function ReceivablesPage() {
                                 <TableRow>
                                     <TableHead>No. Transaksi</TableHead>
                                     <TableHead>Pelanggan</TableHead>
+                                    <TableHead>Pengambilan</TableHead>
                                     <TableHead>Status Jahitan</TableHead>
                                     <TableHead className="text-right">Total Nilai</TableHead>
                                     <TableHead className="text-right">Sudah DP</TableHead>
@@ -244,14 +249,28 @@ export default function ReceivablesPage() {
                                                 <TableCell className="font-mono text-xs font-medium">{item.transactionId}</TableCell>
                                                 <TableCell className="font-medium">{item.customerName}</TableCell>
                                                 <TableCell>
-                                                    <Badge variant={isFinished ? "default" : "outline"} className={cn("flex w-fit items-center gap-1", isFinished ? "bg-green-600" : "")}>
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <div className="flex items-center gap-1 text-[10px] font-medium">
+                                                            {item.deliveryMethod === 'Diambil di Toko' ? (
+                                                                <><Store className="h-3 w-3 text-blue-500" /> Toko</>
+                                                            ) : (
+                                                                <><MapPin className="h-3 w-3 text-amber-500" /> Kurir</>
+                                                            )}
+                                                        </div>
+                                                        {item.deliveryMethod === 'Dikirim Kurir Toko' && (
+                                                            <span className="text-[9px] text-muted-foreground ml-4">{item.deliveryDistance} km</span>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge variant={isFinished ? "default" : "outline"} className={cn("flex w-fit items-center gap-1 text-[10px]", isFinished ? "bg-green-600" : "")}>
                                                         {isFinished ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
                                                         {item.status === 'Proses' ? 'Baru' : item.status === 'Pengemasan' ? 'Sedang Dijahit' : 'Selesai'}
                                                     </Badge>
                                                 </TableCell>
-                                                <TableCell className="text-right text-muted-foreground">{formatRupiah(item.totalAmount)}</TableCell>
-                                                <TableCell className="text-right text-red-600">-{formatRupiah(item.downPayment || 0)}</TableCell>
-                                                <TableCell className="text-right font-bold text-primary">{formatRupiah(remaining)}</TableCell>
+                                                <TableCell className="text-right text-muted-foreground text-xs">{formatRupiah(item.totalAmount)}</TableCell>
+                                                <TableCell className="text-right text-red-600 text-xs">-{formatRupiah(item.downPayment || 0)}</TableCell>
+                                                <TableCell className="text-right font-bold text-primary text-sm">{formatRupiah(remaining)}</TableCell>
                                                 <TableCell className="text-center">
                                                     <PaymentForm shipment={item} accounts={accounts} onFormSuccess={fetchData} />
                                                 </TableCell>
@@ -260,7 +279,7 @@ export default function ReceivablesPage() {
                                     })
                                 ) : (
                                     <TableRow>
-                                        <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                                        <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
                                             <div className="flex flex-col items-center gap-2">
                                                 <CheckCircle2 className="h-8 w-8 text-green-500" />
                                                 <p>Semua transaksi telah lunas atau belum ada data baru.</p>
