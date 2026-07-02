@@ -68,8 +68,16 @@ export default function InvoicesPage() {
       );
   }
 
-  const packagingShipments = shipments.filter(s => s.status === 'Pengemasan');
-  const deliveredShipments = shipments.filter(s => s.status === 'Terkirim');
+  // UPDATED LOGIC: 
+  // Tab 1: Still being sewn OR finished but not yet paid
+  const packagingShipments = shipments.filter(s => 
+    s.status === 'Pengemasan' || (s.status === 'Terkirim' && s.paymentStatus === 'Belum Lunas')
+  );
+  
+  // Tab 2: Only finished AND fully paid
+  const deliveredShipments = shipments.filter(s => 
+    s.status === 'Terkirim' && s.paymentStatus === 'Lunas'
+  );
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -80,16 +88,16 @@ export default function InvoicesPage() {
               <p className="text-muted-foreground">Kelola pemesanan yang telah selesai atau sedang dalam tahap penyelesaian akhir.</p>
             </div>
             <TabsList>
-              <TabsTrigger value="packaging">Sedang Dijahit ({packagingShipments.length})</TabsTrigger>
-              <TabsTrigger value="archive">Arsip Selesai ({deliveredShipments.length})</TabsTrigger>
+              <TabsTrigger value="packaging">Aktif / Belum Lunas ({packagingShipments.length})</TabsTrigger>
+              <TabsTrigger value="archive">Arsip Lunas ({deliveredShipments.length})</TabsTrigger>
             </TabsList>
         </div>
         <TabsContent value="packaging">
             <Card>
                 <CardHeader>
-                    <CardTitle>Pesanan Sedang Diproses</CardTitle>
+                    <CardTitle>Pesanan Dalam Proses & Tunggu Pelunasan</CardTitle>
                     <CardDescription>
-                        Daftar pemesanan yang sedang dikerjakan oleh tim penjahit.
+                        Daftar pemesanan yang sedang dikerjakan atau sudah selesai namun belum dibayar lunas.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -105,9 +113,9 @@ export default function InvoicesPage() {
         <TabsContent value="archive">
             <Card>
                 <CardHeader>
-                    <CardTitle>Arsip Pemesanan Selesai</CardTitle>
+                    <CardTitle>Arsip Pemesanan Lunas</CardTitle>
                     <CardDescription>
-                       Riwayat seluruh pesanan jahitan yang telah selesai diproses dan diambil pelanggan.
+                       Riwayat seluruh pesanan jahitan yang telah selesai diproses dan lunas pembayarannya.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>

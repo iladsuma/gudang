@@ -100,14 +100,18 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
   }
 
   const handleProcessToDelivered = async () => {
-    if (selectedShipments.length === 0) {
-      toast({ variant: 'destructive', title: 'Tidak Ada Data Terpilih' });
+    const idsToProcess = filteredShipments
+        .filter(s => selectedShipments.includes(s.id) && s.status === 'Pengemasan')
+        .map(s => s.id);
+
+    if (idsToProcess.length === 0) {
+      toast({ variant: 'info', title: 'Info', description: 'Hanya pesanan berstatus "Sedang Dijahit" yang bisa ditandai selesai.' });
       return;
     }
     setIsProcessing(true);
     try {
-      await processShipmentsToDelivered(selectedShipments);
-      toast({ title: 'Sukses!', description: `${selectedShipments.length} pesanan berhasil ditandai selesai.` });
+      await processShipmentsToDelivered(idsToProcess);
+      toast({ title: 'Sukses!', description: `${idsToProcess.length} pesanan berhasil ditandai selesai.` });
       onUpdate();
     } catch (error) {
       toast({ variant: 'destructive', title: 'Gagal Memproses', description: error instanceof Error ? error.message : 'Terjadi kesalahan.' });
@@ -166,30 +170,34 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
     setIsPrinting(true);
     try {
       const doc = new jsPDF('p', 'pt', 'a4') as jsPDFWithAutoTable;
-      let isFirstPage = true;
+      let currentY = 40;
 
       for (const shipment of shipmentsToPrint) {
-        if (!isFirstPage) doc.addPage();
+        // Estimate height for this block: Header(100) + Table(60+) + Summary(100) = ~300pt
+        const estimatedHeight = 250 + (shipment.products.length * 20);
         
+        if (currentY + estimatedHeight > doc.internal.pageSize.getHeight() - 40) {
+            doc.addPage();
+            currentY = 40;
+        }
+
         const assignedIds = shipment.userId ? shipment.userId.split(',') : [];
         const userNames = assignedIds.map(id => allUsers.find(u => u.id === id)?.username || 'N/A').join(', ');
 
-        doc.setFontSize(16);
+        doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
-        doc.text('FAKTUR PENJUALAN', 40, 50);
+        doc.text('FAKTUR PENJUALAN', 40, currentY + 10);
         
-        doc.setFontSize(10);
+        doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
-        doc.text("Butik Anita", 40, 70);
-        doc.text("Jl. Utama No. 1, Butik Anita", 40, 85);
+        doc.text("Butik Anita - Perancang Busana", 40, currentY + 25);
 
         const rightX = doc.internal.pageSize.getWidth() - 40;
-        doc.text(`No Transaksi : ${shipment.transactionId}`, rightX, 70, { align: 'right' });
-        doc.text(`Pelanggan    : ${shipment.customerName}`, rightX, 85, { align: 'right' });
-        doc.text(`Tgl Pesan    : ${format(new Date(shipment.createdAt), 'dd/MM/yyyy HH:mm')}`, rightX, 100, { align: 'right' });
-        doc.text(`Tim Penjahit : ${userNames.toUpperCase()}`, rightX, 115, { align: 'right' });
+        doc.text(`No: ${shipment.transactionId}`, rightX, currentY + 10, { align: 'right' });
+        doc.text(`Pelanggan: ${shipment.customerName}`, rightX, currentY + 22, { align: 'right' });
+        doc.text(`Tgl: ${format(new Date(shipment.createdAt), 'dd/MM/yyyy HH:mm')}`, rightX, currentY + 34, { align: 'right' });
 
-        const tableColumn = ["No.", "Kategori Pesanan", "Jumlah", "Harga Jasa", "Total"];
+        const tableColumn = ["No.", "Item Pesanan", "Jumlah", "Harga Jasa", "Total"];
         const tableRows = shipment.products.map((p, i) => [
           i + 1, 
           p.name, 
@@ -199,67 +207,65 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
         ]);
 
         doc.autoTable({ 
-          startY: 140, 
+          startY: currentY + 50, 
           head: [tableColumn], 
           body: tableRows,
           theme: 'grid',
-          headStyles: { fillColor: [76, 175, 80], textColor: 255 },
+          headStyles: { fillColor: [60, 60, 60], textColor: 255 },
+          margin: { left: 40, right: 40 },
+          styles: { fontSize: 8 },
           columnStyles: {
             3: { halign: 'right' },
             4: { halign: 'right' }
           }
         });
 
-        const finalY = (doc as any).lastAutoTable.finalY + 20;
+        const finalY = (doc as any).lastAutoTable.finalY + 15;
         
-        // Summary calculations
         const subtotal = shipment.products.reduce((s, p) => s + (p.price * p.quantity), 0);
         const deliveryFee = shipment.deliveryFee || 0;
         const total = subtotal + deliveryFee;
         const dp = shipment.downPayment || 0;
         const remaining = total - dp;
 
-        doc.setFont('helvetica', 'bold');
-        const summaryLabelX = rightX - 120;
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        const summaryLabelX = rightX - 110;
         
         doc.text("Subtotal:", summaryLabelX, finalY, { align: 'right' });
         doc.text(formatRupiah(subtotal), rightX, finalY, { align: 'right' });
         
-        let currentY = finalY + 15;
+        let subY = finalY + 12;
         if (deliveryFee > 0) {
-            doc.setFont('helvetica', 'normal');
-            doc.text(`Ongkir (${shipment.deliveryDistance} km):`, summaryLabelX, currentY, { align: 'right' });
-            doc.text(formatRupiah(deliveryFee), rightX, currentY, { align: 'right' });
-            currentY += 15;
+            doc.text(`Ongkir (${shipment.deliveryDistance} km):`, summaryLabelX, subY, { align: 'right' });
+            doc.text(formatRupiah(deliveryFee), rightX, subY, { align: 'right' });
+            subY += 12;
         }
 
         doc.setFont('helvetica', 'bold');
-        doc.text("TOTAL TAGIHAN:", summaryLabelX, currentY, { align: 'right' });
-        doc.text(formatRupiah(total), rightX, currentY, { align: 'right' });
+        doc.text("TOTAL:", summaryLabelX, subY, { align: 'right' });
+        doc.text(formatRupiah(total), rightX, subY, { align: 'right' });
         
-        currentY += 20;
+        subY += 12;
         doc.setFont('helvetica', 'normal');
-        doc.setTextColor(200, 0, 0); // Red for DP
-        doc.text("Uang Muka (DP):", summaryLabelX, currentY, { align: 'right' });
-        doc.text(`- ${formatRupiah(dp)}`, rightX, currentY, { align: 'right' });
+        doc.text("DP:", summaryLabelX, subY, { align: 'right' });
+        doc.text(`- ${formatRupiah(dp)}`, rightX, subY, { align: 'right' });
         
-        currentY += 20;
-        doc.setTextColor(0, 0, 0); // Black for final
-        doc.setFontSize(12);
+        subY += 15;
+        doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
-        doc.text("SISA PELUNASAN:", summaryLabelX, currentY, { align: 'right' });
-        doc.text(formatRupiah(remaining), rightX, currentY, { align: 'right' });
+        doc.text("SISA:", summaryLabelX, subY, { align: 'right' });
+        doc.text(formatRupiah(remaining), rightX, subY, { align: 'right' });
 
-        // Footer note
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'italic');
-        doc.text("* Simpan bukti ini untuk pengambilan jahitan.", 40, doc.internal.pageSize.getHeight() - 40);
-
-        isFirstPage = false;
+        // Border separator for next invoice if not last
+        doc.setDrawColor(200, 200, 200);
+        doc.line(40, subY + 20, rightX, subY + 20);
+        
+        currentY = subY + 40;
       };
       
-      doc.save(`faktur_butik_anita_${Date.now()}.pdf`);
-      toast({ title: 'Sukses!', description: 'Faktur berhasil dibuat.' });
+      doc.save(`faktur_gabungan_butik_${Date.now()}.pdf`);
+      toast({ title: 'Sukses!', description: 'Semua faktur terpilih telah disatukan dalam satu PDF.' });
     } catch (err) {
       console.error(err);
       toast({ variant: 'destructive', title: "Gagal membuat PDF" });
@@ -347,23 +353,18 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
 
 
         <div className="flex justify-end w-full md:w-auto gap-2">
+            <Button onClick={handlePrintInvoices} disabled={selectedShipments.length === 0 || isPrinting} variant="outline">
+                {isPrinting ? <Loader2 className='mr-2' /> : <Printer className='mr-2' />}
+                Cetak Faktur ({selectedShipments.length})
+            </Button>
+            
             {tableType === 'packaging' && (
                  <>
-                    <Button onClick={handlePrintLabels} disabled={selectedShipments.length === 0 || isPrinting} variant="outline">
-                        {isPrinting ? <Loader2 className='mr-2' /> : <Printer className='mr-2' />}
-                        Cetak Label ({selectedShipments.length})
-                    </Button>
                     <Button onClick={handleProcessToDelivered} disabled={selectedShipments.length === 0 || isProcessing}>
                         {isProcessing ? <Loader2 className='mr-2' /> : <Send className='mr-2' />}
                         Tandai Selesai ({selectedShipments.length})
                     </Button>
                  </>
-            )}
-            {tableType === 'archive' && (
-                <Button onClick={handlePrintInvoices} disabled={selectedShipments.length === 0 || isPrinting}>
-                    {isPrinting ? <Loader2 className='mr-2' /> : <FileDown className='mr-2' />}
-                    Cetak Faktur ({selectedShipments.length})
-                </Button>
             )}
         </div>
       </div>
@@ -382,8 +383,8 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
               <TableHead>Penjahit</TableHead>
               <TableHead>Pelanggan</TableHead>
               <TableHead>Pengiriman</TableHead>
-              <TableHead>Produk</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Bayar</TableHead>
               <TableHead>Tanggal</TableHead>
               <TableHead className="text-right">Total Nilai</TableHead>
             </TableRow>
@@ -415,18 +416,13 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
                                     <><MapPin className="h-2.5 w-2.5 text-amber-600" /> Kurir</>
                                 )}
                           </div>
-                          {shipment.deliveryMethod === 'Dikirim Kurir Toko' && (
-                              <span className="text-muted-foreground">{shipment.deliveryDistance} km</span>
-                          )}
                       </div>
                   </TableCell>
                   <TableCell>
-                      <div className="flex flex-col gap-1">
-                          {shipment.products.map(p => <Badge key={p.productId} variant="secondary" className="text-[9px] py-0 px-1 h-4 font-normal">{p.name} (x{p.quantity})</Badge>)}
-                      </div>
+                      <Badge variant={getStatusVariant(shipment.status)} className="text-[10px]">{shipment.status === 'Pengemasan' ? 'Sedang Dijahit' : shipment.status === 'Terkirim' ? 'Sudah Selesai' : shipment.status}</Badge>
                   </TableCell>
                   <TableCell>
-                      <Badge variant={getStatusVariant(shipment.status)} className="text-[10px]">{shipment.status === 'Pengemasan' ? 'Sedang Dijahit' : shipment.status}</Badge>
+                      <Badge variant={shipment.paymentStatus === 'Lunas' ? 'default' : 'destructive'} className="text-[10px]">{shipment.paymentStatus}</Badge>
                   </TableCell>
                   <TableCell className="text-[10px]">{format(new Date(shipment.createdAt), 'dd/MM/yy HH:mm', { locale: id })}</TableCell>
                   <TableCell className="text-right font-bold text-primary text-xs">{formatRupiah(shipment.totalAmount)}</TableCell>
