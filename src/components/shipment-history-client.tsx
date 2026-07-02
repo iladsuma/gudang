@@ -13,7 +13,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
 import { processShipmentsToDelivered } from '@/lib/data';
-import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { DateRangePicker } from './ui/date-range-picker';
 import type { DateRange } from "react-day-picker";
@@ -123,7 +122,7 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
   const handlePrintInvoices = async () => {
     const shipmentsToPrint = filteredShipments.filter(s => selectedShipments.includes(s.id));
     if (shipmentsToPrint.length === 0) {
-      toast({ variant: 'destructive', title: "Tidak ada data terpilih" });
+      toast({ variant: 'destructive', title: "Pilih data terlebih dahulu" });
       return;
     }
 
@@ -131,125 +130,110 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
     try {
       const doc = new jsPDF('p', 'pt', 'a4') as jsPDFWithAutoTable;
       const margin = 40;
-      let currentY = 50;
-
-      // --- MAIN HEADER (Only once at the top of the first page) ---
+      
+      // HEADER DOKUMEN (Muncul di setiap halaman berkat autotable hook atau print sekali saja)
       doc.setFontSize(18);
       doc.setFont('helvetica', 'bold');
-      doc.text('BUTIK ANITA', margin, currentY);
+      doc.text('BUTIK ANITA', margin, 50);
       
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      doc.text("Jl. Utama No. 123, Perancang Busana & Jasa Jahit Berkualitas", margin, currentY + 15);
+      doc.text("Jl. Utama No. 123, Perancang Busana & Jasa Jahit Berkualitas", margin, 65);
       
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.text('REKAP FAKTUR PENJUALAN', margin, currentY + 40);
-      doc.line(margin, currentY + 45, doc.internal.pageSize.getWidth() - margin, currentY + 45);
-      
-      currentY += 65;
+      doc.text('REKAPITULASI FAKTUR PENJUALAN', margin, 90);
+      doc.line(margin, 95, doc.internal.pageSize.getWidth() - margin, 95);
 
-      for (let index = 0; index < shipmentsToPrint.length; index++) {
-        const shipment = shipmentsToPrint[index];
-        
-        // Estimate height for this section: Header info (40) + Table (row count * 20) + Summary (80)
-        const estimatedHeight = 120 + (shipment.products.length * 20);
-        
-        // Check if we need a new page
-        if (currentY + estimatedHeight > doc.internal.pageSize.getHeight() - margin) {
-            doc.addPage();
-            currentY = 50;
-            // Simplified page header for subsequent pages
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'bold');
-            doc.text('BUTIK ANITA - REKAP FAKTUR (Lanjutan)', margin, currentY);
-            doc.line(margin, currentY + 5, doc.internal.pageSize.getWidth() - margin, currentY + 5);
-            currentY += 30;
-        }
+      const tableColumn = ["Info Pesanan", "Rincian Item / Jasa Jahit", "Jumlah", "Harga Jasa", "Subtotal"];
+      const tableRows: any[] = [];
 
-        // --- COMPACT SHIPMENT INFO ---
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`${index + 1}. No: ${shipment.transactionId}`, margin, currentY);
-        
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        const rightX = doc.internal.pageSize.getWidth() - margin;
-        doc.text(`Pelanggan: ${shipment.customerName}`, rightX, currentY, { align: 'right' });
-        doc.text(`Tanggal: ${format(new Date(shipment.createdAt), 'dd/MM/yyyy HH:mm')}`, margin, currentY + 15);
+      shipmentsToPrint.forEach((shipment, sIdx) => {
+          const dateStr = format(new Date(shipment.createdAt), 'dd/MM/yyyy');
+          const infoCell = `${shipment.transactionId}\n${shipment.customerName}\n${dateStr}`;
+          
+          const subtotalItems = shipment.products.reduce((s, p) => s + (p.price * p.quantity), 0);
+          const deliveryFee = shipment.deliveryFee || 0;
+          const totalAmount = subtotalItems + deliveryFee;
+          const dp = shipment.downPayment || 0;
+          const sisa = totalAmount - dp;
 
-        // --- PRODUCT TABLE ---
-        const tableColumn = ["Item Pesanan", "Jumlah", "Harga Jasa", "Total"];
-        const tableRows = shipment.products.map((p) => [
-          p.name, 
-          `${p.quantity} PCS`, 
-          formatRupiah(p.price), 
-          formatRupiah(p.quantity * p.price)
-        ]);
+          // Item Rows
+          shipment.products.forEach((p, pIdx) => {
+              tableRows.push([
+                  pIdx === 0 ? { content: infoCell, styles: { fontStyle: 'bold', valign: 'top' } } : '',
+                  p.name,
+                  `${p.quantity} PCS`,
+                  formatRupiah(p.price),
+                  formatRupiah(p.price * p.quantity)
+              ]);
+          });
 
-        doc.autoTable({ 
-          startY: currentY + 25, 
-          head: [tableColumn], 
+          // Delivery Row
+          if (deliveryFee > 0) {
+              tableRows.push([
+                  '',
+                  `Biaya Pengiriman (Kurir Toko - ${shipment.deliveryDistance}km)`,
+                  '',
+                  '',
+                  formatRupiah(deliveryFee)
+              ]);
+          }
+
+          // Summary Rows for this order
+          tableRows.push([
+              '',
+              { content: 'TOTAL BELANJA', styles: { halign: 'right', fontStyle: 'bold' } },
+              '',
+              '',
+              { content: formatRupiah(totalAmount), styles: { fontStyle: 'bold' } }
+          ]);
+
+          if (dp > 0) {
+              tableRows.push([
+                  '',
+                  { content: 'Uang Muka (DP)', styles: { halign: 'right' } },
+                  '',
+                  '',
+                  { content: `- ${formatRupiah(dp)}`, styles: { textColor: [200, 0, 0] } }
+              ]);
+          }
+
+          tableRows.push([
+              '',
+              { content: 'SISA PELUNASAN', styles: { halign: 'right', fontStyle: 'bold', textColor: [0, 100, 0] } },
+              '',
+              '',
+              { content: formatRupiah(sisa), styles: { fontStyle: 'bold', textColor: [0, 100, 0] } }
+          ]);
+
+          // Separator row for visual grouping
+          if (sIdx < shipmentsToPrint.length - 1) {
+              tableRows.push([
+                  { content: '', colSpan: 5, styles: { minCellHeight: 12, fillColor: [240, 240, 240] } }
+              ]);
+          }
+      });
+
+      doc.autoTable({
+          startY: 110,
+          head: [tableColumn],
           body: tableRows,
           theme: 'grid',
-          headStyles: { fillColor: [80, 80, 80], textColor: 255 },
-          margin: { left: margin, right: margin },
-          styles: { fontSize: 8, cellPadding: 4 },
+          headStyles: { fillColor: [60, 60, 60], textColor: 255, fontSize: 9 },
+          styles: { fontSize: 8, cellPadding: 5 },
           columnStyles: {
-            1: { halign: 'center', cellWidth: 60 },
-            2: { halign: 'right', cellWidth: 80 },
-            3: { halign: 'right', cellWidth: 80 }
-          }
-        });
+              0: { cellWidth: 110 },
+              1: { cellWidth: 'auto' },
+              2: { halign: 'center', cellWidth: 50 },
+              3: { halign: 'right', cellWidth: 80 },
+              4: { halign: 'right', cellWidth: 80 }
+          },
+          margin: { left: margin, right: margin }
+      });
 
-        const finalY = (doc as any).lastAutoTable.finalY + 12;
-        
-        // --- SUMMARY ---
-        const subtotal = shipment.products.reduce((s, p) => s + (p.price * p.quantity), 0);
-        const deliveryFee = shipment.deliveryFee || 0;
-        const total = subtotal + deliveryFee;
-        const dp = shipment.downPayment || 0;
-        const remaining = total - dp;
-
-        doc.setFontSize(8);
-        const summaryLabelX = rightX - 100;
-        
-        doc.text("Subtotal:", summaryLabelX, finalY, { align: 'right' });
-        doc.text(formatRupiah(subtotal), rightX, finalY, { align: 'right' });
-        
-        let subY = finalY + 10;
-        if (deliveryFee > 0) {
-            doc.text(`Ongkir (${shipment.deliveryDistance}km):`, summaryLabelX, subY, { align: 'right' });
-            doc.text(formatRupiah(deliveryFee), rightX, subY, { align: 'right' });
-            subY += 10;
-        }
-
-        doc.setFont('helvetica', 'bold');
-        doc.text("TOTAL:", summaryLabelX, subY, { align: 'right' });
-        doc.text(formatRupiah(total), rightX, subY, { align: 'right' });
-        
-        subY += 10;
-        doc.setFont('helvetica', 'normal');
-        doc.text("Uang Muka (DP):", summaryLabelX, subY, { align: 'right' });
-        doc.text(`- ${formatRupiah(dp)}`, rightX, subY, { align: 'right' });
-        
-        subY += 12;
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(200, 0, 0); // Red for remaining
-        doc.text("SISA PELUNASAN:", summaryLabelX, subY, { align: 'right' });
-        doc.text(formatRupiah(remaining), rightX, subY, { align: 'right' });
-        doc.setTextColor(0, 0, 0); // Reset to black
-
-        // Subtle line between nota
-        doc.setDrawColor(230, 230, 230);
-        doc.line(margin, subY + 15, doc.internal.pageSize.getWidth() - margin, subY + 15);
-        
-        currentY = subY + 35;
-      }
-      
-      doc.save(`faktur_gabungan_butik_${Date.now()}.pdf`);
-      toast({ title: 'Sukses!', description: 'Faktur gabungan berhasil dibuat dalam satu dokumen.' });
+      doc.save(`rekap_faktur_butik_${Date.now()}.pdf`);
+      toast({ title: 'Sukses!', description: 'Faktur gabungan berhasil dicetak dalam format tabel terpadu.' });
     } catch (err) {
       console.error(err);
       toast({ variant: 'destructive', title: "Gagal membuat PDF" });

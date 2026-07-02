@@ -68,13 +68,13 @@ export default function InvoicesPage() {
       );
   }
 
-  // UPDATED LOGIC: 
-  // Tab 1: Still being sewn OR finished but not yet paid
+  // LOGIK FILTER BARU:
+  // Tab 1: Masih dijahit ATAU sudah selesai tapi belum dibayar (Tunggakan)
   const packagingShipments = shipments.filter(s => 
     s.status === 'Pengemasan' || (s.status === 'Terkirim' && s.paymentStatus === 'Belum Lunas')
   );
   
-  // Tab 2: Only finished AND fully paid
+  // Tab 2: HANYA yang sudah selesai dijahit DAN sudah lunas bayar
   const deliveredShipments = shipments.filter(s => 
     s.status === 'Terkirim' && s.paymentStatus === 'Lunas'
   );
@@ -84,8 +84,8 @@ export default function InvoicesPage() {
       <Tabs defaultValue="packaging">
         <div className="flex justify-between items-end mb-4">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Manajemen Arsip Pemesanan Butik</h1>
-              <p className="text-muted-foreground">Kelola pemesanan yang telah selesai atau sedang dalam tahap penyelesaian akhir.</p>
+              <h1 className="text-3xl font-bold tracking-tight">Manajemen Arsip Pemesanan</h1>
+              <p className="text-muted-foreground">Kelola pemesanan yang sedang dalam tahap penyelesaian atau menunggu pelunasan.</p>
             </div>
             <TabsList>
               <TabsTrigger value="packaging">Aktif / Belum Lunas ({packagingShipments.length})</TabsTrigger>
@@ -95,9 +95,9 @@ export default function InvoicesPage() {
         <TabsContent value="packaging">
             <Card>
                 <CardHeader>
-                    <CardTitle>Pesanan Dalam Proses & Tunggu Pelunasan</CardTitle>
+                    <CardTitle>Pesanan Aktif & Tunggu Pelunasan</CardTitle>
                     <CardDescription>
-                        Daftar pemesanan yang sedang dikerjakan atau sudah selesai namun belum dibayar lunas.
+                        Daftar pesanan yang sedang dijahit atau sudah selesai namun belum lunas pembayarannya.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -113,9 +113,9 @@ export default function InvoicesPage() {
         <TabsContent value="archive">
             <Card>
                 <CardHeader>
-                    <CardTitle>Arsip Pemesanan Lunas</CardTitle>
+                    <CardTitle>Arsip Selesai & Lunas</CardTitle>
                     <CardDescription>
-                       Riwayat seluruh pesanan jahitan yang telah selesai diproses dan lunas pembayarannya.
+                       Riwayat seluruh pesanan yang telah tuntas pengerjaannya dan sudah lunas pembayarannya.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
