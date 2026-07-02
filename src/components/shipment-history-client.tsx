@@ -131,7 +131,7 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
       const doc = new jsPDF('p', 'pt', 'a4') as jsPDFWithAutoTable;
       const margin = 40;
       
-      // HEADER DOKUMEN (Muncul di setiap halaman berkat autotable hook atau print sekali saja)
+      // HEADER DOKUMEN
       doc.setFontSize(18);
       doc.setFont('helvetica', 'bold');
       doc.text('BUTIK ANITA', margin, 50);
@@ -142,7 +142,7 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
       
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.text('REKAPITULASI FAKTUR PENJUALAN', margin, 90);
+      doc.text('REKAPITULASI PEMESANAN', margin, 90);
       doc.line(margin, 95, doc.internal.pageSize.getWidth() - margin, 95);
 
       const tableColumn = ["Info Pesanan", "Rincian Item / Jasa Jahit", "Jumlah", "Harga Jasa", "Subtotal"];
@@ -232,8 +232,8 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
           margin: { left: margin, right: margin }
       });
 
-      doc.save(`rekap_faktur_butik_${Date.now()}.pdf`);
-      toast({ title: 'Sukses!', description: 'Faktur gabungan berhasil dicetak dalam format tabel terpadu.' });
+      doc.save(`rekap_pemesanan_butik_${Date.now()}.pdf`);
+      toast({ title: 'Sukses!', description: 'Nota pemesanan gabungan berhasil dicetak dalam format tabel terpadu.' });
     } catch (err) {
       console.error(err);
       toast({ variant: 'destructive', title: "Gagal membuat PDF" });
@@ -323,7 +323,7 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
         <div className="flex justify-end w-full md:w-auto gap-2">
             <Button onClick={handlePrintInvoices} disabled={selectedShipments.length === 0 || isPrinting} variant="outline">
                 {isPrinting ? <Loader2 className='mr-2' /> : <Printer className='mr-2' />}
-                Cetak Faktur ({selectedShipments.length})
+                Cetak Nota Pemesanan ({selectedShipments.length})
             </Button>
             
             {tableType === 'packaging' && (

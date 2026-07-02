@@ -215,7 +215,7 @@ export default function ReceivablesPage() {
                     <div className="flex flex-col md:flex-row justify-between items-start gap-4">
                         <div>
                             <CardTitle>Transaksi (Pelunasan Pesanan)</CardTitle>
-                            <CardDescription>Daftar semua faktur penjualan kepada pelanggan yang masih memiliki sisa tagihan.</CardDescription>
+                            <CardDescription>Daftar semua pemesanan kepada pelanggan yang masih memiliki sisa tagihan.</CardDescription>
                         </div>
                         <div className="text-right p-4 bg-primary/5 rounded-lg border border-primary/10">
                              <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider">Total Tagihan Belum Lunas</p>
