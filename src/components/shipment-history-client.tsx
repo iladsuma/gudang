@@ -120,46 +120,6 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
     }
   };
 
-  const handlePrintLabels = async () => {
-    const shipmentsToPrint = shipments.filter(s => selectedShipments.includes(s.id) && s.receipt?.dataUrl);
-    if (shipmentsToPrint.length === 0) {
-      toast({ variant: "destructive", title: "Tidak ada data yang bisa dicetak." });
-      return;
-    }
-
-    setIsPrinting(true);
-    try {
-      const mergedPdf = await PDFDocument.create();
-      let counter = 1;
-      for (const shipment of shipmentsToPrint) {
-        const base64Data = shipment.receipt!.dataUrl.split(',')[1];
-        if (!base64Data) continue;
-        
-        try {
-          const pdfToMerge = await PDFDocument.load(base64Data);
-          const copiedPages = await mergedPdf.copyPages(pdfToMerge, pdfToMerge.getPageIndices());
-          if (copiedPages.length > 0) {
-            const firstPage = copiedPages[0];
-            firstPage.drawText(`Pesanan-${counter++}`, { x: 20, y: firstPage.getHeight() - 20, size: 10, font: await mergedPdf.embedFont(StandardFonts.Helvetica) });
-          }
-          copiedPages.forEach(page => mergedPdf.addPage(page));
-        } catch (e) { console.error(`Failed to process PDF for ${shipment.transactionId}:`, e); }
-      }
-
-      if (mergedPdf.getPageCount() > 0) {
-        const mergedPdfBytes = await mergedPdf.save();
-        const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
-        window.open(URL.createObjectURL(blob));
-      } else {
-        toast({ variant: "destructive", title: "Gagal membuat PDF gabungan." });
-      }
-    } catch (error) {
-      toast({ variant: "destructive", title: "Gagal membuat PDF", description: error instanceof Error ? error.message : 'Terjadi kesalahan.' });
-    } finally {
-      setIsPrinting(false);
-    }
-  };
-  
   const handlePrintInvoices = async () => {
     const shipmentsToPrint = filteredShipments.filter(s => selectedShipments.includes(s.id));
     if (shipmentsToPrint.length === 0) {
@@ -170,36 +130,57 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
     setIsPrinting(true);
     try {
       const doc = new jsPDF('p', 'pt', 'a4') as jsPDFWithAutoTable;
-      let currentY = 40;
+      const margin = 40;
+      let currentY = 50;
 
-      for (const shipment of shipmentsToPrint) {
-        // Estimate height for this block: Header(100) + Table(60+) + Summary(100) = ~300pt
-        const estimatedHeight = 250 + (shipment.products.length * 20);
+      // --- MAIN HEADER (Only once at the top of the first page) ---
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text('BUTIK ANITA', margin, currentY);
+      
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text("Jl. Utama No. 123, Perancang Busana & Jasa Jahit Berkualitas", margin, currentY + 15);
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('REKAP FAKTUR PENJUALAN', margin, currentY + 40);
+      doc.line(margin, currentY + 45, doc.internal.pageSize.getWidth() - margin, currentY + 45);
+      
+      currentY += 65;
+
+      for (let index = 0; index < shipmentsToPrint.length; index++) {
+        const shipment = shipmentsToPrint[index];
         
-        if (currentY + estimatedHeight > doc.internal.pageSize.getHeight() - 40) {
+        // Estimate height for this section: Header info (40) + Table (row count * 20) + Summary (80)
+        const estimatedHeight = 120 + (shipment.products.length * 20);
+        
+        // Check if we need a new page
+        if (currentY + estimatedHeight > doc.internal.pageSize.getHeight() - margin) {
             doc.addPage();
-            currentY = 40;
+            currentY = 50;
+            // Simplified page header for subsequent pages
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.text('BUTIK ANITA - REKAP FAKTUR (Lanjutan)', margin, currentY);
+            doc.line(margin, currentY + 5, doc.internal.pageSize.getWidth() - margin, currentY + 5);
+            currentY += 30;
         }
 
-        const assignedIds = shipment.userId ? shipment.userId.split(',') : [];
-        const userNames = assignedIds.map(id => allUsers.find(u => u.id === id)?.username || 'N/A').join(', ');
-
-        doc.setFontSize(14);
+        // --- COMPACT SHIPMENT INFO ---
+        doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
-        doc.text('FAKTUR PENJUALAN', 40, currentY + 10);
+        doc.text(`${index + 1}. No: ${shipment.transactionId}`, margin, currentY);
         
-        doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
-        doc.text("Butik Anita - Perancang Busana", 40, currentY + 25);
+        doc.setFontSize(9);
+        const rightX = doc.internal.pageSize.getWidth() - margin;
+        doc.text(`Pelanggan: ${shipment.customerName}`, rightX, currentY, { align: 'right' });
+        doc.text(`Tanggal: ${format(new Date(shipment.createdAt), 'dd/MM/yyyy HH:mm')}`, margin, currentY + 15);
 
-        const rightX = doc.internal.pageSize.getWidth() - 40;
-        doc.text(`No: ${shipment.transactionId}`, rightX, currentY + 10, { align: 'right' });
-        doc.text(`Pelanggan: ${shipment.customerName}`, rightX, currentY + 22, { align: 'right' });
-        doc.text(`Tgl: ${format(new Date(shipment.createdAt), 'dd/MM/yyyy HH:mm')}`, rightX, currentY + 34, { align: 'right' });
-
-        const tableColumn = ["No.", "Item Pesanan", "Jumlah", "Harga Jasa", "Total"];
-        const tableRows = shipment.products.map((p, i) => [
-          i + 1, 
+        // --- PRODUCT TABLE ---
+        const tableColumn = ["Item Pesanan", "Jumlah", "Harga Jasa", "Total"];
+        const tableRows = shipment.products.map((p) => [
           p.name, 
           `${p.quantity} PCS`, 
           formatRupiah(p.price), 
@@ -207,21 +188,23 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
         ]);
 
         doc.autoTable({ 
-          startY: currentY + 50, 
+          startY: currentY + 25, 
           head: [tableColumn], 
           body: tableRows,
           theme: 'grid',
-          headStyles: { fillColor: [60, 60, 60], textColor: 255 },
-          margin: { left: 40, right: 40 },
-          styles: { fontSize: 8 },
+          headStyles: { fillColor: [80, 80, 80], textColor: 255 },
+          margin: { left: margin, right: margin },
+          styles: { fontSize: 8, cellPadding: 4 },
           columnStyles: {
-            3: { halign: 'right' },
-            4: { halign: 'right' }
+            1: { halign: 'center', cellWidth: 60 },
+            2: { halign: 'right', cellWidth: 80 },
+            3: { halign: 'right', cellWidth: 80 }
           }
         });
 
-        const finalY = (doc as any).lastAutoTable.finalY + 15;
+        const finalY = (doc as any).lastAutoTable.finalY + 12;
         
+        // --- SUMMARY ---
         const subtotal = shipment.products.reduce((s, p) => s + (p.price * p.quantity), 0);
         const deliveryFee = shipment.deliveryFee || 0;
         const total = subtotal + deliveryFee;
@@ -229,43 +212,44 @@ export function ShipmentHistoryClient({ shipments, allUsers, onUpdate, tableType
         const remaining = total - dp;
 
         doc.setFontSize(8);
-        doc.setFont('helvetica', 'normal');
-        const summaryLabelX = rightX - 110;
+        const summaryLabelX = rightX - 100;
         
         doc.text("Subtotal:", summaryLabelX, finalY, { align: 'right' });
         doc.text(formatRupiah(subtotal), rightX, finalY, { align: 'right' });
         
-        let subY = finalY + 12;
+        let subY = finalY + 10;
         if (deliveryFee > 0) {
-            doc.text(`Ongkir (${shipment.deliveryDistance} km):`, summaryLabelX, subY, { align: 'right' });
+            doc.text(`Ongkir (${shipment.deliveryDistance}km):`, summaryLabelX, subY, { align: 'right' });
             doc.text(formatRupiah(deliveryFee), rightX, subY, { align: 'right' });
-            subY += 12;
+            subY += 10;
         }
 
         doc.setFont('helvetica', 'bold');
         doc.text("TOTAL:", summaryLabelX, subY, { align: 'right' });
         doc.text(formatRupiah(total), rightX, subY, { align: 'right' });
         
-        subY += 12;
+        subY += 10;
         doc.setFont('helvetica', 'normal');
-        doc.text("DP:", summaryLabelX, subY, { align: 'right' });
+        doc.text("Uang Muka (DP):", summaryLabelX, subY, { align: 'right' });
         doc.text(`- ${formatRupiah(dp)}`, rightX, subY, { align: 'right' });
         
-        subY += 15;
-        doc.setFontSize(10);
+        subY += 12;
+        doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
-        doc.text("SISA:", summaryLabelX, subY, { align: 'right' });
+        doc.setTextColor(200, 0, 0); // Red for remaining
+        doc.text("SISA PELUNASAN:", summaryLabelX, subY, { align: 'right' });
         doc.text(formatRupiah(remaining), rightX, subY, { align: 'right' });
+        doc.setTextColor(0, 0, 0); // Reset to black
 
-        // Border separator for next invoice if not last
-        doc.setDrawColor(200, 200, 200);
-        doc.line(40, subY + 20, rightX, subY + 20);
+        // Subtle line between nota
+        doc.setDrawColor(230, 230, 230);
+        doc.line(margin, subY + 15, doc.internal.pageSize.getWidth() - margin, subY + 15);
         
-        currentY = subY + 40;
-      };
+        currentY = subY + 35;
+      }
       
       doc.save(`faktur_gabungan_butik_${Date.now()}.pdf`);
-      toast({ title: 'Sukses!', description: 'Semua faktur terpilih telah disatukan dalam satu PDF.' });
+      toast({ title: 'Sukses!', description: 'Faktur gabungan berhasil dibuat dalam satu dokumen.' });
     } catch (err) {
       console.error(err);
       toast({ variant: 'destructive', title: "Gagal membuat PDF" });
